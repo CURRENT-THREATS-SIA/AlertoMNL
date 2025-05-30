@@ -1,0 +1,14 @@
+.bars-home-indicator {
+  height: 34px;
+  width: 375px;
+}
+
+.bars-home-indicator .rectangle {
+  background-color: #ffffff;
+  border-radius: 100px;
+  height: 7px;
+  left: 120px;
+  position: relative;
+  top: 19px;
+  width: 136px;
+}

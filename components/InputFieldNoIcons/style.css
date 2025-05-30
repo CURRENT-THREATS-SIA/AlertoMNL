@@ -1,0 +1,55 @@
+.input-field-no-icons {
+    align-items: flex-start;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  
+  .input-field-no-icons .email {
+    color: #150502;
+    font-family: "Poppins", Helvetica;
+    font-size: 16px;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 24px;
+    margin-top: -1.00px;
+    position: relative;
+    white-space: nowrap;
+    width: fit-content;
+  }
+  
+  .input-field-no-icons .frame {
+    align-items: center;
+    background-color: #ffffff;
+    border: 0.5px solid;
+    border-color: #15050266;
+    border-radius: 16px;
+    display: flex;
+    flex: 0 0 auto;
+    gap: 10px;
+    overflow: hidden;
+    padding: 14px 16px;
+    position: relative;
+    width: 327px;
+  }
+  
+  .input-field-no-icons .your-email {
+    color: #15050266;
+    font-family: "Poppins", Helvetica;
+    font-size: 16px;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 24px;
+    margin-top: -0.50px;
+    position: relative;
+    white-space: nowrap;
+    width: fit-content;
+  }
+  
+  .input-field-no-icons .mail-instance {
+    height: 24px !important;
+    position: relative !important;
+    width: 24px !important;
+  }
+  

@@ -1,0 +1,2 @@
+export { ButtonReg } from "./ButtonReg";
+
