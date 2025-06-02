@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -13,11 +15,35 @@ export default function SignUpPolice() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignUp = () => {
-    // Here you would typically handle the signup with your backend
-    // For now, we'll just redirect to login
-    router.push("/auth/Login");
-  };
+  const handleSignUp = async () => {
+    // Check if any field is empty
+  if (!firstName || !lastName || !badgeNumber || !email || !station || !phone || !password) {
+    alert("Please fill in all fields.");
+    return;
+  }
+  try {
+    const response = await fetch('http://mnl911.atwebpages.com/police_signup.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `f_name=${encodeURIComponent(firstName)}&l_name=${encodeURIComponent(lastName)}&m_number=${encodeURIComponent(phone)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&badge_number=${encodeURIComponent(badgeNumber)}&station_name=${encodeURIComponent(station)}`
+    });
+    const data = await response.json();
+    if (data.success) {
+      // add
+      if (data.police_id) {
+        await AsyncStorage.setItem('police_id', data.police_id.toString());
+      }
+      // end
+      alert("Signup successful! Please log in.");
+      router.push("/auth/Login");
+    } else {
+      alert(data.message || "Signup failed");
+    }
+  } catch (error) {
+    console.log(error)
+    alert("Network error. Please try again.");
+  }
+};
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -108,9 +134,9 @@ export default function SignUpPolice() {
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => router.push("/auth/Login")}>
-        <Text style={styles.buttonText}>Sign up</Text>
-      </TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+     <Text style={styles.buttonText}>Sign up</Text>
+   </TouchableOpacity>
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
         <Text style={{ color: '#000' }}>Already a member? </Text>

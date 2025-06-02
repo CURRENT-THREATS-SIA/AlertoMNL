@@ -1,22 +1,44 @@
-import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-export default function SignUpPolice() {
+export default function SignUpRegular() {
   const router = useRouter();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [badgeNumber, setBadgeNumber] = useState("");
   const [email, setEmail] = useState("");
-  const [station, setStation] = useState("Default");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignUp = () => {
-    // Here you would typically handle the signup with your backend
-    // For now, we'll just redirect to login
-    router.push("/auth/Login");
+  const handleSignUp = async () => {
+    // Check if any field is empty
+    if (!firstName || !lastName || !email || !phone || !password) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    try {
+      const response = await fetch('http://mnl911.atwebpages.com/regular_signup.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `f_name=${encodeURIComponent(firstName)}&l_name=${encodeURIComponent(lastName)}&m_number=${encodeURIComponent(phone)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+      });
+      const data = await response.json();
+      if (data.success) {
+        // add
+        if (data.nuser_id) {
+          await AsyncStorage.setItem('nuser_id', data.nuser_id.toString());
+        }
+        // end
+        alert("Signup successful! Please log in.");
+        router.push("/auth/Login");
+      } else {
+        alert(data.message || "Signup failed");
+      }
+    } catch (error) {
+      console.log(error);
+      alert("Network error. Please try again.");
+    }
   };
 
   return (
@@ -46,17 +68,6 @@ export default function SignUpPolice() {
           onChangeText={setLastName}
         />
       </View>
-      {/* Police Badge Number */}
-      <View style={{ marginBottom: 18 }}>
-        <Text style={styles.label}>Police Badge Number</Text>
-        <TextInput
-          style={styles.input}
-          placeholderTextColor="#0000004D"
-          placeholder="Input police badge number"
-          value={badgeNumber}
-          onChangeText={setBadgeNumber}
-        />
-      </View>
       {/* Email Address */}
       <View style={{ marginBottom: 18 }}>
         <Text style={styles.label}>Email Address</Text>
@@ -68,19 +79,6 @@ export default function SignUpPolice() {
           onChangeText={setEmail}
           keyboardType="email-address"
         />
-      </View>
-      {/* Station Dropdown */}
-      <View style={{ marginBottom: 18 }}>
-        <Text style={styles.label}>Station</Text>
-        <Picker
-          style={styles.input}
-          selectedValue={station}
-          onValueChange={(itemValue: string) => setStation(itemValue)}
-        >
-          <Picker.Item label="Default" value="Default" />
-          <Picker.Item label="Station 1" value="Station 1" />
-          <Picker.Item label="Station 2" value="Station 2" />
-        </Picker>
       </View>
 
       {/* Phone Number */}
@@ -108,9 +106,9 @@ export default function SignUpPolice() {
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={() => router.push("/auth/Login")}>
-        <Text style={styles.buttonText}>Sign up</Text>
-      </TouchableOpacity>
+      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+     <Text style={styles.buttonText}>Sign up</Text>
+   </TouchableOpacity>
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
         <Text style={{ color: '#000' }}>Already a member? </Text>
