@@ -1,7 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -40,6 +42,34 @@ const formFields: FormField[] = [
 const AddContacts: React.FC = () => {
   const router = useRouter();
 
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [relationship, setRelationship] = useState('');
+
+  const handleSave = async () => {
+    if (!name || !phone || !relationship) {
+      Alert.alert('Please fill all required fields.');
+      return;
+    }
+    const nuser_id = await AsyncStorage.getItem('nuser_id');
+    if (!nuser_id) {
+      Alert.alert('User not found. Please log in again.');
+      return;
+    }
+    const response = await fetch('http://mnl911.atwebpages.com/add_contact1.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `nuser_id=${nuser_id}&contact_name=${encodeURIComponent(name)}&contact_number=${encodeURIComponent(phone)}&relationship=${encodeURIComponent(relationship)}`
+    });
+    const data = await response.json();
+    if (data.success) {
+      Alert.alert('Contact added!');
+      router.back();
+    } else {
+      Alert.alert(data.message || "Failed to add contact");
+    }
+  };
+
   const handleCancel = () => {
     router.back();
   };
@@ -64,19 +94,46 @@ const AddContacts: React.FC = () => {
 
           {/* Form Fields */}
           <View style={styles.form}>
-            {formFields.map((field) => (
-              <View key={field.id} style={styles.fieldContainer}>
-                <View style={styles.labelContainer}>
-                  <Text style={styles.label}>{field.label}</Text>
-                  <Text style={styles.required}>*</Text>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder={field.placeholder}
-                  placeholderTextColor="#7e7e7e"
-                />
+            <View style={styles.fieldContainer}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Name</Text>
+                <Text style={styles.required}>*</Text>
               </View>
-            ))}
+              <TextInput
+                style={styles.input}
+                placeholder="Enter full name of contact"
+                placeholderTextColor="#7e7e7e"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+            <View style={styles.fieldContainer}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.required}>*</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter phone number of contact"
+                placeholderTextColor="#7e7e7e"
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View style={styles.fieldContainer}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Relationship</Text>
+                <Text style={styles.required}>*</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter relationship to you"
+                placeholderTextColor="#7e7e7e"
+                value={relationship}
+                onChangeText={setRelationship}
+              />
+            </View>
           </View>
 
           {/* Buttons Container */}
@@ -87,7 +144,7 @@ const AddContacts: React.FC = () => {
             >
               <Text style={[styles.buttonText, styles.cancelButtonText]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.saveButton]}>
+            <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleSave}>
               <Text style={[styles.buttonText, styles.saveButtonText]}>Save Contact</Text>
             </TouchableOpacity>
           </View>

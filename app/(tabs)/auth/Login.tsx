@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -7,15 +8,31 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = () => {
-    // Check password to determine user type
-    if (password === "police123") {
-      router.push("/(tabs)/police-officer/PoliceOfficerHome");
-    } else if (password === "regular123") {
-      router.push("/regular-user");
-    } else {
-      // You might want to show an error message here
-      alert("Invalid credentials");
+  const handleLogin = async () => {
+    if (!email || !password) {
+      alert("Please enter both email and password.");
+      return;
+    }
+    try {
+      const response = await fetch('http://mnl911.atwebpages.com/login.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+      });
+      const data = await response.json();
+      if (data.success) {
+        if (data.user_type === "police") {
+          router.push("/(tabs)/police-officer/PoliceOfficerHome");
+        } else if (data.user_type === "regular") {
+          await AsyncStorage.setItem('nuser_id', data.nuser_id.toString());
+          router.push("/regular-user");
+        }
+      } else {
+        alert(data.message || "Invalid credentials");
+      }
+    } catch (error) {
+      console.log(error)
+      alert("Network error. Please try again.");
     }
   };
 
