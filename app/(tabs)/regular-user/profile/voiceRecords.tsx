@@ -1,26 +1,48 @@
+import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
-
-interface VoiceRecord {
-  id: string;
-  title: string;
-  duration: string;
-  date: string;
-}
-
-const dummyRecords: VoiceRecord[] = [
-  { id: '1', title: 'Voice record 1', duration: '1:30', date: '04/30/2025' },
-  { id: '2', title: 'Voice record 1', duration: '1:30', date: '04/30/2025' },
-  { id: '3', title: 'Voice record 1', duration: '1:30', date: '04/30/2025' },
-  { id: '4', title: 'Voice record 1', duration: '1:30', date: '04/30/2025' },
-  { id: '5', title: 'Voice record 1', duration: '1:30', date: '04/30/2025' },
-  { id: '6', title: 'Voice record 1', duration: '1:30', date: '04/30/2025' },
-];
+import { useVoiceRecords, VoiceRecord } from '../../../context/VoiceRecordContext';
 
 const VoiceRecordItem: React.FC<{ record: VoiceRecord }> = ({ record }) => {
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const playSound = async () => {
+    try {
+      if (isPlaying && sound) {
+        await sound.stopAsync();
+        setIsPlaying(false);
+        return;
+      }
+
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: record.uri },
+        { shouldPlay: true }
+      );
+      setSound(newSound);
+      setIsPlaying(true);
+
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && !status.isPlaying) {
+          setIsPlaying(false);
+        }
+      });
+    } catch (error) {
+      console.error('Error playing sound:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
   return (
     <View style={styles.recordItemContainer}>
       <View style={styles.recordItem}>
@@ -33,9 +55,13 @@ const VoiceRecordItem: React.FC<{ record: VoiceRecord }> = ({ record }) => {
             <Text style={styles.recordDate}>{record.date}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.playButton}>
+        <TouchableOpacity style={styles.playButton} onPress={playSound}>
           <View style={styles.playButtonContainer}>
-            <MaterialIcons name="play-circle-filled" size={32} color="#e02323" />
+            <MaterialIcons 
+              name={isPlaying ? "stop-circle" : "play-circle-filled"} 
+              size={32} 
+              color="#e02323" 
+            />
           </View>
         </TouchableOpacity>
       </View>
@@ -45,6 +71,7 @@ const VoiceRecordItem: React.FC<{ record: VoiceRecord }> = ({ record }) => {
 
 const VoiceRecords: React.FC = () => {
   const router = useRouter();
+  const { records } = useVoiceRecords();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -65,9 +92,16 @@ const VoiceRecords: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          {dummyRecords.map((record) => (
-            <VoiceRecordItem key={record.id} record={record} />
-          ))}
+          {records.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="mic-none" size={48} color="#666" />
+              <Text style={styles.emptyStateText}>No recordings yet</Text>
+            </View>
+          ) : (
+            records.map((record) => (
+              <VoiceRecordItem key={record.id} record={record} />
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -175,6 +209,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(224, 35, 35, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontFamily: fonts.poppins.medium,
+    color: '#666',
   },
 });
 

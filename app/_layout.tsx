@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { theme, ThemeProvider, useTheme } from './context/ThemeContext';
+import { VoiceRecordProvider } from "./context/VoiceRecordContext";
 
 function RootLayoutContent() {
   const { isDarkMode } = useTheme();
@@ -36,7 +37,9 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <RootLayoutContent />
+      <VoiceRecordProvider>
+        <RootLayoutContent />
+      </VoiceRecordProvider>
     </ThemeProvider>
   );
 }
