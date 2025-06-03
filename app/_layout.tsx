@@ -1,9 +1,13 @@
 import * as Font from 'expo-font';
 import { Stack } from 'expo-router';
 import React, { useEffect } from 'react';
+import { View } from 'react-native';
+import { theme, ThemeProvider, useTheme } from './context/ThemeContext';
 
+function RootLayoutContent() {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
-export default function RootLayout() {
   useEffect(() => {
     async function loadFonts() {
       await Font.loadAsync({
@@ -18,8 +22,21 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <View style={{ flex: 1, backgroundColor: currentTheme.background }}>
+      <Stack screenOptions={{ 
+        headerShown: false,
+        contentStyle: { backgroundColor: currentTheme.background }
+      }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+    </View>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
   );
 }

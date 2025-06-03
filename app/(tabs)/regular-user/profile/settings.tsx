@@ -2,23 +2,23 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
-import { fonts } from '../../../../config/fonts';
-import { theme, useTheme } from '../../../../context/ThemeContext';
+import { fonts } from '../../../config/fonts';
+import { theme, useTheme } from '../../../context/ThemeContext';
 
-interface PreferenceItem {
+interface SettingItem {
   icon: keyof typeof Feather.glyphMap;
   label: string;
-  description?: string;
+  description: string;
   defaultValue?: boolean;
   onToggle?: (value: boolean) => void;
 }
 
-export default function PreferencesScreen() {
+export default function SettingsScreen() {
   const router = useRouter();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [pressedIndex, setPressedIndex] = React.useState<number | null>(null);
 
-  const preferenceItems: PreferenceItem[] = [
+  const settingItems: SettingItem[] = [
     {
       icon: 'moon',
       label: 'Dark mode',
@@ -47,7 +47,7 @@ export default function PreferencesScreen() {
   ];
 
   const [switchStates, setSwitchStates] = React.useState(
-    preferenceItems.map(item => item.defaultValue || false)
+    settingItems.map(item => item.defaultValue || false)
   );
 
   const currentTheme = isDarkMode ? theme.dark : theme.light;
@@ -62,32 +62,32 @@ export default function PreferencesScreen() {
         >
           <Feather name="arrow-left" size={24} color={currentTheme.headerText} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: currentTheme.headerText }]}>Preferences</Text>
+        <Text style={[styles.headerTitle, { color: currentTheme.headerText }]}>Settings</Text>
       </View>
 
-      {/* Preference Items */}
-      <View style={[styles.preferencesContainer, { backgroundColor: currentTheme.surface }]}>
-        {preferenceItems.map((item, index) => (
+      {/* Settings Items */}
+      <View style={[styles.settingsContainer, { backgroundColor: currentTheme.surface }]}>
+        {settingItems.map((item, index) => (
           <TouchableOpacity
             key={index}
             activeOpacity={0.7}
             onPressIn={() => setPressedIndex(index)}
             onPressOut={() => setPressedIndex(null)}
             style={[
-              styles.preferenceCard,
-              pressedIndex === index && styles.preferenceCardPressed,
+              styles.settingCard,
+              pressedIndex === index && styles.settingCardPressed,
               { backgroundColor: currentTheme.surface }
             ]}
           >
-            <View style={styles.preferenceContent}>
+            <View style={styles.settingContent}>
               <View style={styles.iconContainer}>
                 <View style={[styles.iconBackground, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(224, 35, 35, 0.1)' }]}>
                   <Feather name={item.icon} size={20} color={isDarkMode ? '#fff' : '#E02323'} />
                 </View>
               </View>
               <View style={styles.textContainer}>
-                <Text style={[styles.preferenceLabel, { color: currentTheme.text }]}>{item.label}</Text>
-                <Text style={[styles.preferenceDescription, { color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#666' }]}>
+                <Text style={[styles.settingLabel, { color: currentTheme.text }]}>{item.label}</Text>
+                <Text style={[styles.settingDescription, { color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#666' }]}>
                   {item.description}
                 </Text>
               </View>
@@ -102,7 +102,6 @@ export default function PreferencesScreen() {
                   setSwitchStates(newStates);
                   item.onToggle?.(newValue);
                 }}
-                style={styles.switch}
               />
             </View>
           </TouchableOpacity>
@@ -138,12 +137,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: fonts.poppins.bold,
   },
-  preferencesContainer: {
+  settingsContainer: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 16,
   },
-  preferenceCard: {
+  settingCard: {
     marginBottom: 12,
     borderRadius: 12,
     shadowColor: '#000',
@@ -155,11 +154,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2.22,
     elevation: 2,
   },
-  preferenceCardPressed: {
+  settingCardPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
   },
-  preferenceContent: {
+  settingContent: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
@@ -178,17 +177,14 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
-  preferenceLabel: {
+  settingLabel: {
     fontSize: 16,
     fontFamily: fonts.poppins.semiBold,
     marginBottom: 4,
   },
-  preferenceDescription: {
+  settingDescription: {
     fontSize: 12,
     fontFamily: fonts.poppins.regular,
     lineHeight: 16,
   },
-  switch: {
-    transform: [{ scale: 0.9 }],
-  },
-}); 
+});

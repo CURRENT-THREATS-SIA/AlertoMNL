@@ -1,0 +1,255 @@
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+    SafeAreaView,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { fonts } from '../../../config/fonts';
+
+interface UserData {
+  label: string;
+  value: string;
+  key: string;
+  isPassword?: boolean;
+}
+
+const AccountDetails: React.FC = () => {
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalData, setOriginalData] = useState<UserData[]>([
+    { label: "First Name", value: "Juan", key: "firstName" },
+    { label: "Last Name", value: "Dela Cruz", key: "lastName" },
+    { label: "Email Address", value: "example@gmail.com", key: "email" },
+    { label: "Phone Number", value: "0917***1232", key: "phone" },
+    { label: "Password", value: "••••••••", key: "password", isPassword: true },
+  ]);
+  const [editableData, setEditableData] = useState<UserData[]>([...originalData]);
+
+  const handleInputChange = (text: string, key: string) => {
+    setEditableData(prevData =>
+      prevData.map(field =>
+        field.key === key ? { ...field, value: text } : field
+      )
+    );
+  };
+
+  const handleSave = () => {
+    setOriginalData([...editableData]);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditableData([...originalData]);
+    setIsEditing(false);
+  };
+
+  const startEditing = () => {
+    setEditableData([...originalData]);
+    setIsEditing(true);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Account Details</Text>
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Profile Picture */}
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <MaterialIcons name="person" size={40} color="#e02323" />
+          </View>
+          {isEditing && (
+            <TouchableOpacity style={styles.editAvatarButton}>
+              <Text style={styles.editAvatarText}>Change Photo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Form Fields */}
+        <View style={styles.formContainer}>
+          {editableData.map((field) => (
+            <View key={field.key} style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>{field.label}</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  !isEditing && styles.inputDisabled
+                ]}
+                value={field.value}
+                onChangeText={(text) => handleInputChange(text, field.key)}
+                editable={isEditing && !field.isPassword}
+                secureTextEntry={field.isPassword}
+                placeholderTextColor="#666666"
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.buttonContainer}>
+          {isEditing ? (
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={handleCancel}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.saveButton]}
+                onPress={handleSave}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={[styles.button, styles.saveButton]}
+              onPress={startEditing}
+            >
+              <Text style={styles.saveButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e5e5',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    marginLeft: 8,
+    fontSize: 20,
+    fontFamily: fonts.poppins.bold,
+    color: '#212121',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    padding: 16,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  avatar: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: '#ffd1d1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editAvatarButton: {
+    marginTop: 8,
+    padding: 8,
+  },
+  editAvatarText: {
+    color: '#e02323',
+    fontFamily: fonts.poppins.medium,
+    fontSize: 14,
+  },
+  formContainer: {
+    gap: 16,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    position: 'absolute',
+    top: -8,
+    left: 12,
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 4,
+    fontSize: 12,
+    color: '#666666',
+    fontFamily: fonts.poppins.regular,
+    zIndex: 1,
+  },
+  input: {
+    height: 56,
+    borderWidth: 1,
+    borderColor: '#15050266',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontFamily: fonts.poppins.regular,
+    color: '#212121',
+    backgroundColor: '#ffffff',
+  },
+  inputDisabled: {
+    backgroundColor: '#f5f5f5',
+    color: '#666666',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 32,
+    paddingHorizontal: 4,
+  },
+  button: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#15050266',
+  },
+  saveButton: {
+    backgroundColor: '#e02323',
+  },
+  cancelButtonText: {
+    color: '#15050266',
+    fontFamily: fonts.poppins.semiBold,
+    fontSize: 16,
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontFamily: fonts.poppins.semiBold,
+    fontSize: 16,
+  },
+});
+
+export default AccountDetails;
