@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -7,6 +8,16 @@ interface RegularUserHeaderProps {
 }
 
 export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderProps) {
+  const router = useRouter();
+
+  const handleProfilePress = () => {
+    if (onProfilePress) {
+      onProfilePress();
+    } else {
+      router.push('/regular-user/Profile');
+    }
+  };
+
   return (
     <View style={styles.header}>
       {/* Logo and Title */}
@@ -22,7 +33,7 @@ export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderP
         </View>
       </View>
 
-      <TouchableOpacity style={styles.profileButton} onPress={onProfilePress}>
+      <TouchableOpacity style={styles.profileButton} onPress={handleProfilePress}>
         <User size={24} color="#000000" />
       </TouchableOpacity>
     </View>

@@ -13,13 +13,17 @@ export default function RegularUserLayout() {
     : pathname.includes('/regular-user/AddContacts') || pathname === '/regular-user/Contacts' ? 'Contacts'
     : 'Home';
 
+  const isProfileRoute = pathname.includes('/profile') || pathname === '/regular-user/Profile';
+  const showHeader = !isProfileRoute;
+  const showTabBar = !isProfileRoute;
+
   return (
     <View style={styles.container}>
-      <RegularUserHeader />
+      {showHeader && <RegularUserHeader />}
       <View style={styles.content}>
         <Slot />
       </View>
-      <CustomTabBar activeScreen={activeScreen} />
+      {showTabBar && <CustomTabBar activeScreen={activeScreen} />}
     </View>
   );
 }

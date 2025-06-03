@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { fonts } from '../../../../app/config/fonts';
+import { fonts } from '../../../config/fonts';
 
 interface Feature {
   title: string;
@@ -263,5 +263,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { About };
-
+export default About;

@@ -1,9 +1,8 @@
 import { Stack } from "expo-router";
-import React from "react";
 import { View } from "react-native";
-import { theme, useTheme } from "../context/ThemeContext";
+import { theme, useTheme } from "../../../context/ThemeContext";
 
-export default function TabLayout() {
+export default function ProfileLayout() {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
 
@@ -13,13 +12,16 @@ export default function TabLayout() {
         screenOptions={{ 
           headerShown: false,
           contentStyle: { backgroundColor: currentTheme.background },
-          animation: 'fade',
+          animation: 'slide_from_right',
         }}
       >
         <Stack.Screen name="index" />
-        <Stack.Screen name="auth" />
-        <Stack.Screen name="police-officer" />
-        <Stack.Screen name="regular-user" />
+        <Stack.Screen name="accountDetails" />
+        <Stack.Screen name="setUpSOS" />
+        <Stack.Screen name="voiceRecords" />
+        <Stack.Screen name="appPermission" />
+        <Stack.Screen name="privacyPolicy" />
+        <Stack.Screen name="about" />
       </Stack>
     </View>
   );

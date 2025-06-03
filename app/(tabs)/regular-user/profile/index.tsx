@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { fonts } from '../../config/fonts';
+import { fonts } from '../../../config/fonts';
 
 interface SettingsMenuItem {
   title: string;
@@ -18,37 +18,32 @@ const Profile: React.FC = () => {
     {
       title: "Account Details",
       icon: "settings",
-      route: "/regular-user/profile/accountDetails/",
+      route: "accountDetails",
     },
     {
       title: "SetUpSOS",
       icon: "security",
-      route: "/regular-user/profile/setUpSOS",
-    },
-    {
-      title: "Settings",
-      icon: "security",
-      route: "/regular-user/profile/settings",
+      route: "setUpSOS",
     },
     {
       title: "Voice Records",
       icon: "security",
-      route: "/regular-user/profile/voiceRecords",
+      route: "voiceRecords",
     },
     {
       title: "App Permissions",
       icon: "security",
-      route: "/regular-user/profile/appPermission",
+      route: "appPermission",
     },
     {
       title: "Privacy Policy",
       icon: "privacy-tip",
-      route: "/regular-user/profile/privacyPolicy",
+      route: "privacyPolicy",
     },
     {
       title: "About",
       icon: "info",
-      route: "/regular-user/profile/about",
+      route: "about",
     },
   ];
 

@@ -11,7 +11,7 @@ import {
   useWindowDimensions
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import NavBottomBar from '../../../components/NavBottomBar';
+import CustomTabBar from '../../../app/components/CustomTabBar';
 import { fonts } from '../../config/fonts';
 
 // Placeholder icons
@@ -188,7 +188,7 @@ const CrimeMap: React.FC = () => {
         </View>
       </ScrollView>
 
-      <NavBottomBar activeScreen="Home" />
+      <CustomTabBar activeScreen="CrimeMap" />
     </SafeAreaView>
   );
 };

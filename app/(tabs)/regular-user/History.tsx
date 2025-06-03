@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import NavBottomBar from '../../../components/NavBottomBar';
+import CustomTabBar from '../../../app/components/CustomTabBar';
 import { fonts } from '../../config/fonts';
 
 interface HistoryItem {
@@ -94,7 +94,7 @@ const History: React.FC = () => {
         </View>
       </ScrollView>
 
-      <NavBottomBar activeScreen="History" />
+      <CustomTabBar activeScreen="History" />
     </SafeAreaView>
   );
 };

@@ -48,14 +48,8 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
     <View style={[styles.bottomNav, Platform.select({
       android: {
         elevation: 8,
-        paddingBottom: 8
+        paddingBottom: 8,
       },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4
-      }
     })]}>
       <View style={styles.bottomNavRow}>
         {navItems.map((item, idx) => (

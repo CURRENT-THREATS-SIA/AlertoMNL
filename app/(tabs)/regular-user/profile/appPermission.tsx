@@ -1,18 +1,9 @@
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  SafeAreaView,
-  StatusBar,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import Feather from 'react-native-vector-icons/Feather';
+import { SafeAreaView, StatusBar, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 
-// Define TypeScript interfaces
 interface Permission {
   name: string;
   iconName: string;
@@ -24,32 +15,32 @@ interface Permission {
 const initialPermissions: Permission[] = [
   {
     name: 'Location',
-    iconName: 'map-pin',
+    iconName: 'location-on',
     enabled: true,
-    description: 'Access your location to respond to nearby incidents and coordinate with other officers',
+    description: 'Access your location to show nearby incidents and send accurate emergency alerts',
   },
   {
     name: 'Microphone',
     iconName: 'mic',
     enabled: true,
-    description: 'Record voice messages and audio during emergency response situations',
+    description: 'Record voice messages and audio during emergency situations',
   },
   {
     name: 'SMS',
-    iconName: 'message-square',
+    iconName: 'message',
     enabled: true,
-    description: 'Send and receive emergency SMS alerts and updates from the command center',
+    description: 'Send emergency SMS alerts to your emergency contacts',
   },
   {
     name: 'Storage',
     iconName: 'folder',
     enabled: true,
-    description: 'Store incident reports, evidence files, and other important documents locally on your device',
+    description: 'Store emergency information and media files locally on your device',
   },
 ];
 
-export const Permissions: React.FC = () => {
-  const navigation = useNavigation();
+const AppPermission: React.FC = () => {
+  const router = useRouter();
   const [permissions, setPermissions] = useState<Permission[]>(initialPermissions);
 
   const togglePermission = (index: number) => {
@@ -68,19 +59,19 @@ export const Permissions: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
-          onPress={() => navigation.goBack()}
           style={styles.backButton}
+          onPress={() => router.back()}
         >
-          <Feather name="arrow-left" size={24} color="#000000" />
+          <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>App Permissions</Text>
       </View>
 
       {/* Description */}
       <View style={styles.descriptionContainer}>
-        <Feather name="shield" size={24} color="#666" />
+        <MaterialIcons name="security" size={24} color="#666" />
         <Text style={styles.descriptionText}>
-          These permissions are required for ALERTO MNL to function properly and enable effective emergency response operations.
+          These permissions are required for ALERTO MNL to function properly and provide emergency assistance when needed.
         </Text>
       </View>
 
@@ -91,7 +82,7 @@ export const Permissions: React.FC = () => {
             <View style={styles.permissionHeader}>
               <View style={styles.permissionInfo}>
                 <View style={[styles.iconContainer, !permission.enabled && styles.iconContainerDisabled]}>
-                  <Feather 
+                  <MaterialIcons 
                     name={permission.iconName} 
                     size={24} 
                     color={permission.enabled ? "#e02323" : "#999"} 
@@ -216,4 +207,6 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.9 }],
   },
 });
+
+export default AppPermission;
   
