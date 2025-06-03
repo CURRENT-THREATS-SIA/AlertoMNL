@@ -1,8 +1,193 @@
+import { MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import * as Location from 'expo-location';
 import { Mic } from "lucide-react-native";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import WaveformVisualizer from "../../components/WaveformVisualizer";
+import { useVoiceRecords } from "../../context/VoiceRecordContext";
 
 export default function RegularUserHome() {
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [locationAddress, setLocationAddress] = useState<string>("Fetching location...");
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSendingSOS, setIsSendingSOS] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const { addRecord } = useVoiceRecords();
+
+  useEffect(() => {
+    (async () => {
+      // Request location permissions
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required for this app.');
+        return;
+      }
+
+      // Request audio permissions
+      const audioStatus = await Audio.requestPermissionsAsync();
+      if (audioStatus.status !== 'granted') {
+        Alert.alert('Permission Denied', 'Audio recording permission is required for this app.');
+        return;
+      }
+
+      // Start watching location
+      startLocationUpdates();
+    })();
+
+    return () => {
+      // Cleanup location subscription when component unmounts
+      stopLocationUpdates();
+    };
+  }, []);
+
+  const startLocationUpdates = async () => {
+    try {
+      // Watch position with high accuracy
+      Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000,
+          distanceInterval: 5,
+        },
+        async (newLocation) => {
+          setLocation(newLocation);
+          try {
+            // Reverse geocode to get address
+            const addresses = await Location.reverseGeocodeAsync({
+              latitude: newLocation.coords.latitude,
+              longitude: newLocation.coords.longitude,
+            });
+            if (addresses && addresses[0]) {
+              const address = addresses[0];
+              setLocationAddress(`${address.district || address.subregion || ''}, ${address.city || ''}`);
+            }
+          } catch (error) {
+            console.error('Error getting address:', error);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Error starting location updates:', error);
+      Alert.alert('Error', 'Failed to get location updates.');
+    }
+  };
+
+  const stopLocationUpdates = () => {
+    // Implement cleanup for location subscription if needed
+  };
+
+  const startRecording = async () => {
+    try {
+      // Prepare recording
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      Alert.alert('Error', 'Failed to start recording.');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      setIsRecording(false);
+
+      if (uri) {
+        // Add the recording to the voice records
+        addRecord({
+          id: Date.now().toString(),
+          title: `Emergency Recording ${new Date().toLocaleDateString()}`,
+          duration: '1:30', // You would need to calculate actual duration
+          date: new Date().toLocaleDateString(),
+          uri: uri,
+        });
+      }
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      Alert.alert('Error', 'Failed to save recording.');
+    }
+  };
+
+  const handleSOS = async () => {
+    if (isSendingSOS) return;
+
+    // Start countdown
+    setIsSendingSOS(true);
+    setCountdown(5);
+
+    // Create countdown timer
+    for (let i = 5; i > 0; i--) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setCountdown(i - 1);
+    }
+
+    try {
+      Vibration.vibrate(500);
+
+      // Start recording automatically
+      await startRecording();
+
+      if (!location) {
+        Alert.alert('Error', 'Unable to get your location. Please try again.');
+        setIsSendingSOS(false);
+        setCountdown(null);
+        return;
+      }
+
+      // TODO: Replace with your actual API endpoint
+      const response = await fetch('YOUR_API_ENDPOINT/sos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          address: locationAddress,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to send SOS');
+
+      // Stop recording after 30 seconds
+      setTimeout(async () => {
+        await stopRecording();
+        setIsSendingSOS(false);
+        setCountdown(null);
+      }, 30000);
+
+      Alert.alert(
+        'SOS Sent',
+        'Emergency services have been notified. Recording will stop in 30 seconds.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error sending SOS:', error);
+      Alert.alert('Error', 'Failed to send SOS. Please try again.');
+      setIsSendingSOS(false);
+      setCountdown(null);
+      if (isRecording) {
+        await stopRecording();
+      }
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Main Content */}
@@ -17,31 +202,64 @@ export default function RegularUserHome() {
           </View>
 
           {/* SOS Button */}
-          <TouchableOpacity style={styles.sosButton}>
+          <TouchableOpacity 
+            style={styles.sosButton}
+            onPress={handleSOS}
+            disabled={isSendingSOS}
+          >
             <View style={styles.sosRing1} />
             <View style={styles.sosRing2} />
             <View style={styles.sosRing3} />
-            <View style={styles.sosCenter}>
-              <Text style={styles.sosText}>SOS</Text>
+            <View style={[styles.sosCenter, isSendingSOS && styles.sosCenterPressed]}>
+              {countdown !== null ? (
+                <View style={styles.countdownContainer}>
+                  <Text style={styles.countdownText}>{countdown}</Text>
+                  <Text style={styles.countdownLabel}>seconds</Text>
+                </View>
+              ) : (
+                <Text style={styles.sosText}>SOS</Text>
+              )}
             </View>
           </TouchableOpacity>
 
           {/* Location Info */}
           <View style={styles.locationInfo}>
-            <Text style={styles.locationText}>Pandacan, Manila</Text>
+            <Text style={styles.locationText}>{locationAddress}</Text>
             <Text style={styles.coordinatesText}>
               <Text style={styles.redText}>Latitude: </Text>
-              <Text style={styles.boldText}>14.68</Text>
+              <Text style={styles.boldText}>
+                {location?.coords.latitude.toFixed(2) || '---'}
+              </Text>
               <Text style={styles.redText}>  Longitude: </Text>
-              <Text style={styles.boldText}>121.98</Text>
+              <Text style={styles.boldText}>
+                {location?.coords.longitude.toFixed(2) || '---'}
+              </Text>
             </Text>
           </View>
         </View>
 
         {/* Voice Recording Button */}
-        <TouchableOpacity style={styles.voiceButton}>
-          <Mic size={24} color="#e02323" />
-          <Text style={styles.voiceButtonText}>Voice Recording</Text>
+        <TouchableOpacity 
+          style={[styles.voiceButton, isRecording && styles.voiceButtonRecording]}
+          onPress={isRecording ? stopRecording : startRecording}
+        >
+          <View style={styles.voiceButtonContent}>
+            {isRecording ? (
+              <>
+                <MaterialIcons name="stop-circle" size={24} color="#ffffff" />
+                <View style={styles.waveformContainer}>
+                  <WaveformVisualizer isRecording={isRecording} />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.voiceButtonInner}>
+                  <Mic size={24} color="#e02323" />
+                  <Text style={styles.voiceButtonText}>Voice Recording</Text>
+                </View>
+              </>
+            )}
+          </View>
         </TouchableOpacity>
       </View>
     </View>
@@ -138,6 +356,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  sosCenterPressed: {
+    backgroundColor: "#b01c1c",
+  },
   sosText: {
     color: "white",
     fontSize: 40,
@@ -154,18 +375,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   voiceButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
     backgroundColor: "#ffd8d8",
-    height: 45,
     borderRadius: 16,
     marginTop: 20,
+    overflow: 'hidden',
+    minHeight: 45,
+  },
+  voiceButtonRecording: {
+    backgroundColor: "#e02323",
+  },
+  voiceButtonContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    height: 45,
+  },
+  voiceButtonInner: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
   voiceButtonText: {
     color: "#e02323",
     fontSize: 12,
+  },
+  waveformContainer: {
+    flex: 1,
+    marginLeft: 12,
   },
   bottomNav: {
     backgroundColor: "white",
@@ -203,5 +442,20 @@ const styles = StyleSheet.create({
     height: 7,
     backgroundColor: "#a4a4a4",
     borderRadius: 100,
+  },
+  countdownContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countdownText: {
+    color: 'white',
+    fontSize: 48,
+    fontWeight: 'bold',
+  },
+  countdownLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+    opacity: 0.8,
   },
 });
