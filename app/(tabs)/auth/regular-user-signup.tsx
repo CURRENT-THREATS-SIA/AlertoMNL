@@ -3,6 +3,8 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 export default function SignUpRegular() {
   const router = useRouter();
   const [firstName, setFirstName] = useState("");
@@ -15,6 +17,14 @@ export default function SignUpRegular() {
     // Check if any field is empty
     if (!firstName || !lastName || !email || !phone || !password) {
       alert("Please fill in all fields.");
+      return;
+    }
+    if (phone.length !== 11) {
+      alert("Phone number must be exactly 11 digits.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      alert("Please enter a valid email address.");
       return;
     }
     try {
@@ -30,8 +40,8 @@ export default function SignUpRegular() {
           await AsyncStorage.setItem('nuser_id', data.nuser_id.toString());
         }
         // end
-        alert("Signup successful! Please log in.");
-        router.push("/auth/Login");
+        alert("Signup successful! Please continue to set permissions.");
+        router.push("/auth/Permissions");
       } else {
         alert(data.message || "Signup failed");
       }
@@ -89,7 +99,10 @@ export default function SignUpRegular() {
           placeholderTextColor="#0000004D"
           placeholder="Input phone number"
           value={phone}
-          onChangeText={setPhone}
+          onChangeText={text => {
+            const cleaned = text.replace(/[^0-9]/g, '').slice(0, 11);
+            setPhone(cleaned);
+          }}
           keyboardType="phone-pad"
         />
       </View>

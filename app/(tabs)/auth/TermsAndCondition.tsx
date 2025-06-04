@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
-export const TermsAndCondition: React.FC = () => {
+// modified line 5
+export const TermsAndConditionScreen: React.FC = () => {
     const router = useRouter();
     
     return (
@@ -42,10 +42,8 @@ export const TermsAndCondition: React.FC = () => {
                 </View>
                 <TouchableOpacity 
                     style={styles.acceptButton}
-                    onPress={() => router.push("/police-officer/PoliceOfficerHome")}
-                >
+                    onPress={() => router.push("/auth/Login")} > 
                     <Text style={styles.acceptButtonText}>Accept Terms and Conditions</Text>
-                    
                 </TouchableOpacity>
             </View>
         </View>
@@ -121,4 +119,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TermsAndCondition;
+export default TermsAndConditionScreen; // modified
