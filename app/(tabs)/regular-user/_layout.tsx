@@ -9,7 +9,7 @@ export default function RegularUserLayout() {
   const pathname = usePathname();
   
   const activeScreen: ActiveScreen = pathname === '/regular-user/CrimeMap' ? 'CrimeMap'
-    : pathname === '/regular-user/History' ? 'History'
+    : pathname.toLowerCase().includes('/regular-user/history') ? 'History'
     : pathname.includes('/regular-user/AddContacts') || pathname === '/regular-user/Contacts' ? 'Contacts'
     : 'Home';
 

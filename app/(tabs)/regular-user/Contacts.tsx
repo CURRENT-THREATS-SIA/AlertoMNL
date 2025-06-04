@@ -17,19 +17,19 @@ const ContactCard: React.FC<{ contact: Contact }> = ({ contact }) => {
   return (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        <View>
-          <Text style={styles.contactName}>{contact.contact_name}</Text>
-          <Text style={styles.contactPhone}>{contact.contact_number}</Text>
-          <Text style={styles.contactPhone}>{contact.relationship}</Text>
+        <View style={styles.leftContent}>
+          <View style={styles.iconContainer}>
+            <PersonAlertIcon size={30} />
+          </View>
+          <View>
+            <Text style={styles.contactName}>{contact.contact_name}</Text>
+            <Text style={styles.contactPhone}>{contact.contact_number}</Text>
+            <Text style={styles.contactPhone}>{contact.relationship}</Text>
+          </View>
         </View>
-        <View style={styles.cardActions}>
-          <TouchableOpacity style={styles.alertButton}>
-            <PersonAlertIcon size={24} />
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <MoreVertical size={24} color="#7e7e7e" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity>
+          <MoreVertical size={24} color="#7e7e7e" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    padding: 14,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -142,24 +142,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 48,
+    height: 48,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 24,
+  },
   contactName: {
     fontSize: 14,
     fontFamily: fonts.poppins.semiBold,
     color: '#000712',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   contactPhone: {
     fontSize: 12,
     fontFamily: fonts.poppins.medium,
     color: '#7e7e7e',
-  },
-  cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  alertButton: {
-    padding: 4,
   },
   addButton: {
     flexDirection: 'row',
