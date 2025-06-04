@@ -5,6 +5,8 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 export default function SignUpPolice() {
   const router = useRouter();
   const [firstName, setFirstName] = useState("");
@@ -17,33 +19,41 @@ export default function SignUpPolice() {
 
   const handleSignUp = async () => {
     // Check if any field is empty
-  if (!firstName || !lastName || !badgeNumber || !email || !station || !phone || !password) {
-    alert("Please fill in all fields.");
-    return;
-  }
-  try {
-    const response = await fetch('http://mnl911.atwebpages.com/police_signup.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `f_name=${encodeURIComponent(firstName)}&l_name=${encodeURIComponent(lastName)}&m_number=${encodeURIComponent(phone)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&badge_number=${encodeURIComponent(badgeNumber)}&station_name=${encodeURIComponent(station)}`
-    });
-    const data = await response.json();
-    if (data.success) {
-      // add
-      if (data.police_id) {
-        await AsyncStorage.setItem('police_id', data.police_id.toString());
-      }
-      // end
-      alert("Signup successful! Please log in.");
-      router.push("/auth/Login");
-    } else {
-      alert(data.message || "Signup failed");
+    if (!firstName || !lastName || !badgeNumber || !email || !station || !phone || !password) {
+      alert("Please fill in all fields.");
+      return;
     }
-  } catch (error) {
-    console.log(error)
-    alert("Network error. Please try again.");
-  }
-};
+    if (phone.length !== 11) {
+      alert("Phone number must be exactly 11 digits.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    try {
+      const response = await fetch('http://mnl911.atwebpages.com/police_signup.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `f_name=${encodeURIComponent(firstName)}&l_name=${encodeURIComponent(lastName)}&m_number=${encodeURIComponent(phone)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&badge_number=${encodeURIComponent(badgeNumber)}&station_name=${encodeURIComponent(station)}`
+      });
+      const data = await response.json();
+      if (data.success) {
+        // add
+        if (data.police_id) {
+          await AsyncStorage.setItem('police_id', data.police_id.toString());
+        }
+        // end
+        alert("Signup successful! Please continue to set permissions.");
+        router.push("/auth/Permissions");
+      } else {
+        alert(data.message || "Signup failed");
+      }
+    } catch (error) {
+      console.log(error)
+      alert("Network error. Please try again.");
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -117,7 +127,10 @@ export default function SignUpPolice() {
           placeholderTextColor="#0000004D"
           placeholder="Input phone number"
           value={phone}
-          onChangeText={setPhone}
+          onChangeText={text => {
+            const cleaned = text.replace(/[^0-9]/g, '').slice(0, 11);
+            setPhone(cleaned);
+          }}
           keyboardType="phone-pad"
         />
       </View>

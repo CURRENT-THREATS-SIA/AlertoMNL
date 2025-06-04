@@ -1,3 +1,4 @@
+import { Audio } from "expo-av"; // added code m
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -8,8 +9,18 @@ const ButtonReg = ({ text, onPress }: { text: string; onPress?: () => void }) =>
   </TouchableOpacity>
 );
 
-export const Permissions1: React.FC = () => {
+export const MicrophonePermission: React.FC = () => {
   const router = useRouter();
+  // added code 15-22 m
+  const requestMicrophonePermission = async () => {
+    const { status } = await Audio.requestPermissionsAsync();
+    if (status === "granted") {
+      router.push("/auth/TermsAndCondition");
+    } else {
+      alert("Microphone permission is required to proceed.");
+    }
+  };
+
   
   return (
     <View style={styles.container}>
@@ -26,9 +37,9 @@ export const Permissions1: React.FC = () => {
           </View>
         </View>
 
-        <ButtonReg text="Allow" onPress={() => router.push("/auth/TermsAndCondition")} />
-
-        <TouchableOpacity>
+        <ButtonReg text="Allow" onPress={requestMicrophonePermission} />
+        {/* modified line 42-44 */}
+        <TouchableOpacity onPress={() => router.push("/auth/TermsAndCondition")}>
           <Text style={styles.skip}>Skip for now</Text>
         </TouchableOpacity>
       </View>
@@ -85,4 +96,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Permissions1;
+export default MicrophonePermission; // modified

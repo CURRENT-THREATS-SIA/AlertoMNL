@@ -1,3 +1,4 @@
+import * as Location from "expo-location"; // added code m
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -9,8 +10,17 @@ const ButtonReg = ({ text, onPress }: { text: string; onPress?: () => void }) =>
   </TouchableOpacity>
 );
 
-export const Location: React.FC = () => {
-  const router = useRouter();
+export const LocationPermission: React.FC = () => {
+  const router = useRouter(); 
+  // next line is the added code 15-23 m
+  const requestLocationPermission = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status === "granted") {
+      router.push("/auth/Permissions1");
+    } else {
+      alert("Location permission is required to proceed.");
+    }
+  };
   return (
     <View style={styles.container}>
       {/* Main Content */}
@@ -27,9 +37,9 @@ export const Location: React.FC = () => {
         </View>
 
         
-        <ButtonReg text="Allow" onPress={() => router.push("/auth/Permissions1")} />
-
-        <TouchableOpacity>
+        <ButtonReg text="Allow" onPress={requestLocationPermission} />
+        {/* modified line 42-44 */}
+        <TouchableOpacity onPress={() => router.push("/auth/Permissions1")}>
           <Text style={styles.skip}>Skip for now</Text>
         </TouchableOpacity>
 
@@ -87,4 +97,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Location;
+export default LocationPermission; // modified
