@@ -62,7 +62,7 @@ const Profile: React.FC = () => {
 
   const handleLogout = () => {
     console.log("Logout pressed");
-    // Add your logout logic here
+    router.replace('/auth/Login');
   };
 
   return (
