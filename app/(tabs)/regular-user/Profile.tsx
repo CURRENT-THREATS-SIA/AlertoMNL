@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../config/fonts';
 
@@ -61,8 +61,18 @@ const Profile: React.FC = () => {
   };
 
   const handleLogout = () => {
-    console.log("Logout pressed");
-    router.replace('/auth/Login');
+    // Add your logout logic here (e.g., clearing tokens, user state, etc.)
+    Alert.alert(
+      "Logout Successful",
+      "You have been logged out.",
+      [
+        {
+          text: "OK",
+          onPress: () => router.replace('/auth/Login'), // or '/auth/Login' if your routing is case-sensitive
+        }
+      ],
+      { cancelable: false }
+    );
   };
 
   return (
