@@ -35,11 +35,14 @@ export default function SignUpRegular() {
       });
       const data = await response.json();
       if (data.success) {
-        // add
         if (data.nuser_id) {
           await AsyncStorage.setItem('nuser_id', data.nuser_id.toString());
+          await AsyncStorage.setItem('firstName', data.first_name);
+          await AsyncStorage.setItem('lastName', data.last_name);
+          await AsyncStorage.setItem('email', data.email);
+          await AsyncStorage.setItem('phone', data.phone);
+          // Do NOT store password!
         }
-        // end
         alert("Signup successful! Please continue to set permissions.");
         router.push("/auth/Permissions");
       } else {

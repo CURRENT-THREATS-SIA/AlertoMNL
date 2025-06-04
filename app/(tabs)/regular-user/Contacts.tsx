@@ -80,8 +80,8 @@ const Contacts: React.FC = () => {
       } else {
         Alert.alert(data.message || 'Failed to delete contact');
       }
-    } catch (error) {
-      Alert.alert('Network error. Please try again.');
+    } catch (error: Error | unknown) {
+      Alert.alert('Network error', error instanceof Error ? error.message : 'Please try again.');
     }
   };
 

@@ -1,4 +1,5 @@
-import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
@@ -26,7 +27,23 @@ const activityData: ActivityData[] = [
 ];
 
 const Profile: React.FC = () => {
-  const [isOnShift, setIsOnShift] = React.useState(true);
+  const [isOnShift, setIsOnShift] = useState(true);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [station, setStation] = useState('');
+  const [badge, setBadge] = useState('');
+
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      setFirstName(await AsyncStorage.getItem('firstName') || '');
+      setLastName(await AsyncStorage.getItem('lastName') || '');
+      setPhone(await AsyncStorage.getItem('phone') || '');
+      setStation(await AsyncStorage.getItem('station') || '');
+      setBadge(await AsyncStorage.getItem('badge') || '');
+    };
+    loadUserInfo();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,10 +63,18 @@ const Profile: React.FC = () => {
               </View>
               
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>PO1 Juan Dela Cruz</Text>
-                <Text style={styles.userPhone}>Mobile Number: 0917****12</Text>
-                <Text style={styles.userStation}>Police Station 1</Text>
-                <Text style={styles.userBadge}>Badge #1234</Text>
+                <Text style={styles.userName}>
+                  {firstName && lastName ? `PO1 ${firstName} ${lastName}` : 'PO1'}
+                </Text>
+                <Text style={styles.userPhone}>
+                  {phone ? `Mobile Number: ${phone}` : ''}
+                </Text>
+                <Text style={styles.userStation}>
+                  {station ? station : ''}
+                </Text>
+                <Text style={styles.userBadge}>
+                  {badge ? `Badge #${badge}` : ''}
+                </Text>
               </View>
             </View>
           </View>
