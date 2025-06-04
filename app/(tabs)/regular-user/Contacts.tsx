@@ -17,19 +17,17 @@ const ContactCard: React.FC<{ contact: Contact; onMorePress: (contact: Contact) 
   return (
     <View style={styles.card}>
       <View style={styles.cardContent}>
-        <View>
+        <View style={styles.alertButtonContainer}>
+          <PersonAlertIcon size={28} />
+        </View>
+        <View style={styles.contactInfo}>
           <Text style={styles.contactName}>{contact.contact_name}</Text>
           <Text style={styles.contactPhone}>{contact.contact_number}</Text>
           <Text style={styles.contactPhone}>{contact.relationship}</Text>
         </View>
-        <View style={styles.cardActions}>
-          <TouchableOpacity style={styles.alertButton}>
-            <PersonAlertIcon size={24} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onMorePress(contact)}>
-            <MoreVertical size={24} color="#7e7e7e" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.moreButton} onPress={() => onMorePress(contact)}>
+          <MoreVertical size={24} color="#7e7e7e" />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -82,8 +80,8 @@ const Contacts: React.FC = () => {
       } else {
         Alert.alert(data.message || 'Failed to delete contact');
       }
-    } catch (error) {
-      Alert.alert('Network error. Please try again.');
+    } catch (error: Error | unknown) {
+      Alert.alert('Network error', error instanceof Error ? error.message : 'Please try again.');
     }
   };
 
@@ -180,8 +178,20 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 16,
+  },
+  alertButtonContainer: {
+    backgroundColor: '#FFF1F1',
+    borderRadius: 8,
+    padding: 8,
+  },
+  alertButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contactInfo: {
+    flex: 1,
   },
   contactName: {
     fontSize: 14,
@@ -194,12 +204,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.medium,
     color: '#7e7e7e',
   },
-  cardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  alertButton: {
+  moreButton: {
     padding: 4,
   },
   addButton: {
