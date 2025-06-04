@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fonts } from '../config/fonts';
@@ -8,6 +8,7 @@ type NavItem = {
   icon: React.ReactNode;
   label: string;
   active: boolean;
+  path: string;
 };
 
 interface CustomTabBarProps {
@@ -16,32 +17,49 @@ interface CustomTabBarProps {
 
 const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Determine if we're in the History section (including nested routes)
+  const isHistorySection = pathname.includes('/history/') || pathname === '/regular-user/History';
+  // Similarly for other sections
+  const isHomeSection = pathname === '/regular-user';
+  const isCrimeMapSection = pathname === '/regular-user/CrimeMap';
+  const isContactsSection = pathname === '/regular-user/Contacts';
 
   const navItems: NavItem[] = [
     { 
-      icon: <MaterialIcons name="home" size={24} color={activeScreen === 'Home' ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="home" size={24} color={isHomeSection ? "#E02323" : "#A4A4A4"} />, 
       label: 'Home', 
-      active: activeScreen === 'Home' 
+      active: isHomeSection,
+      path: '/regular-user'
     },
     { 
-      icon: <MaterialIcons name="map" size={24} color={activeScreen === 'CrimeMap' ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="map" size={24} color={isCrimeMapSection ? "#E02323" : "#A4A4A4"} />, 
       label: 'Crime Map', 
-      active: activeScreen === 'CrimeMap' 
+      active: isCrimeMapSection,
+      path: '/regular-user/CrimeMap'
     },
     { 
-      icon: <MaterialIcons name="history" size={24} color={activeScreen === 'History' ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="history" size={24} color={isHistorySection ? "#E02323" : "#A4A4A4"} />, 
       label: 'History', 
-      active: activeScreen === 'History' 
+      active: isHistorySection,
+      path: '/regular-user/History'
     },
     { 
-      icon: <MaterialIcons name="people" size={24} color={activeScreen === 'Contacts' ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="people" size={24} color={isContactsSection ? "#E02323" : "#A4A4A4"} />, 
       label: 'Contacts', 
-      active: activeScreen === 'Contacts' 
+      active: isContactsSection,
+      path: '/regular-user/Contacts'
     },
   ];
 
-  const handleNavigation = (screen: string) => {
-    router.push(screen);
+  const handleNavigation = (path: string, isCurrentTab: boolean) => {
+    // If we're already on the History tab and viewing history content,
+    // don't navigate away from the detail view
+    if (isCurrentTab && pathname.includes('/history/')) {
+      return;
+    }
+    router.push(path);
   };
 
   return (
@@ -57,22 +75,7 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
             key={idx} 
             style={styles.bottomNavItem}
             activeOpacity={0.7}
-            onPress={() => {
-              switch (item.label) {
-                case 'Home':
-                  handleNavigation('/regular-user');
-                  break;
-                case 'Crime Map':
-                  handleNavigation('/regular-user/CrimeMap');
-                  break;
-                case 'History':
-                  handleNavigation('/regular-user/History');
-                  break;
-                case 'Contacts':
-                  handleNavigation('/regular-user/Contacts');
-                  break;
-              }
-            }}
+            onPress={() => handleNavigation(item.path, item.active)}
           >
             <View style={styles.bottomNavIconContainer}>
               {item.icon}

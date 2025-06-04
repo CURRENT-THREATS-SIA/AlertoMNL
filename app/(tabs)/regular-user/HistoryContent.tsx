@@ -46,7 +46,7 @@ const crimeReport: CrimeReport = {
   },
 };
 
-const HistoryContent: React.FC = () => {
+export const HistoryContent: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
