@@ -13,7 +13,7 @@ interface Contact {
   relationship: string;
 }
 
-const ContactCard: React.FC<{ contact: Contact }> = ({ contact }) => {
+const ContactCard: React.FC<{ contact: Contact; onMorePress: (contact: Contact) => void }> = ({ contact, onMorePress }) => {
   return (
     <View style={styles.card}>
       <View style={styles.cardContent}>
@@ -26,7 +26,7 @@ const ContactCard: React.FC<{ contact: Contact }> = ({ contact }) => {
           <TouchableOpacity style={styles.alertButton}>
             <PersonAlertIcon size={24} />
           </TouchableOpacity>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => onMorePress(contact)}>
             <MoreVertical size={24} color="#7e7e7e" />
           </TouchableOpacity>
         </View>
@@ -37,6 +37,8 @@ const ContactCard: React.FC<{ contact: Contact }> = ({ contact }) => {
 
 const Contacts: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
   const fetchContacts = async () => {
     const nuser_id = await AsyncStorage.getItem('nuser_id');
@@ -59,6 +61,31 @@ const Contacts: React.FC = () => {
   const handleAddContact = () => {
     router.push('/regular-user/AddContacts');
   };
+  const handleMorePress = (contact: Contact) => {
+    setSelectedContact(contact);
+    setShowMenu(true);
+  };
+
+  const handleDelete = async () => {
+    setShowMenu(false);
+    if (!selectedContact) return;
+    try {
+      const response = await fetch('http://mnl911.atwebpages.com/delete_contact.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `contact_id=${selectedContact.contact_id}`,
+      });
+      const data = await response.json();
+      if (data.success) {
+        Alert.alert('Contact deleted!');
+        fetchContacts();
+      } else {
+        Alert.alert(data.message || 'Failed to delete contact');
+      }
+    } catch (error) {
+      Alert.alert('Network error. Please try again.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -80,7 +107,7 @@ const Contacts: React.FC = () => {
           {/* Contact List */}
           <View style={styles.contactList}>
             {contacts.map((contact) => (
-              <ContactCard key={contact.contact_id} contact={contact} />
+              <ContactCard key={contact.contact_id} contact={contact} onMorePress={handleMorePress} />
             ))}
           </View>
 
@@ -91,6 +118,20 @@ const Contacts: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+       {/* Bottom Sheet Menu */}
+       {showMenu && (
+        <View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, zIndex: 10,
+          shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 10,
+        }}>
+          <TouchableOpacity onPress={handleDelete} style={{ padding: 16 }}>
+            <Text style={{ color: '#e33c3c', fontSize: 18 }}>Delete</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowMenu(false)} style={{ padding: 16 }}>
+            <Text style={{ color: '#888', fontSize: 18 }}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
