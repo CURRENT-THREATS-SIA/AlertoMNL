@@ -22,9 +22,21 @@ export default function Login() {
       const data = await response.json();
       if (data.success) {
         if (data.user_type === "police") {
+          await AsyncStorage.setItem('police_id', data.police_id.toString());
+          await AsyncStorage.setItem('firstName', data.first_name);
+          await AsyncStorage.setItem('lastName', data.last_name);
+          await AsyncStorage.setItem('email', data.email);
+          await AsyncStorage.setItem('phone', data.phone);
+          await AsyncStorage.setItem('badge', data.badge_number);
+          await AsyncStorage.setItem('station', data.station_name);
           router.push("/(tabs)/police-officer/PoliceOfficerHome");
         } else if (data.user_type === "regular") {
           await AsyncStorage.setItem('nuser_id', data.nuser_id.toString());
+          await AsyncStorage.setItem('firstName', data.first_name);
+          await AsyncStorage.setItem('lastName', data.last_name);
+          await AsyncStorage.setItem('email', data.email);
+          await AsyncStorage.setItem('phone', data.phone);
+          // Do NOT store password!
           router.push("/regular-user");
         }
       } else {

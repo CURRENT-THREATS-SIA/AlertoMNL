@@ -1,14 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
@@ -24,13 +25,37 @@ const AccountDetails: React.FC = () => {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [originalData, setOriginalData] = useState<UserData[]>([
-    { label: "First Name", value: "Juan", key: "firstName" },
-    { label: "Last Name", value: "Dela Cruz", key: "lastName" },
-    { label: "Email Address", value: "example@gmail.com", key: "email" },
-    { label: "Phone Number", value: "0917***1232", key: "phone" },
+    { label: "First Name", value: "", key: "firstName" },
+    { label: "Last Name", value: "", key: "lastName" },
+    { label: "Email Address", value: "", key: "email" },
+    { label: "Phone Number", value: "", key: "phone" },
     { label: "Password", value: "••••••••", key: "password", isPassword: true },
   ]);
   const [editableData, setEditableData] = useState<UserData[]>([...originalData]);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      const firstName = await AsyncStorage.getItem('firstName');
+      const lastName = await AsyncStorage.getItem('lastName');
+      const email = await AsyncStorage.getItem('email');
+      const phone = await AsyncStorage.getItem('phone');
+      setOriginalData([
+        { label: "First Name", value: firstName || "", key: "firstName" },
+        { label: "Last Name", value: lastName || "", key: "lastName" },
+        { label: "Email Address", value: email || "", key: "email" },
+        { label: "Phone Number", value: phone || "", key: "phone" },
+        { label: "Password", value: "••••••••", key: "password", isPassword: true },
+      ]);
+      setEditableData([
+        { label: "First Name", value: firstName || "", key: "firstName" },
+        { label: "Last Name", value: lastName || "", key: "lastName" },
+        { label: "Email Address", value: email || "", key: "email" },
+        { label: "Phone Number", value: phone || "", key: "phone" },
+        { label: "Password", value: "••••••••", key: "password", isPassword: true },
+      ]);
+    };
+    loadUserData();
+  }, []);
 
   const handleInputChange = (text: string, key: string) => {
     setEditableData(prevData =>
@@ -40,19 +65,48 @@ const AccountDetails: React.FC = () => {
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setOriginalData([...editableData]);
     setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditableData([...originalData]);
-    setIsEditing(false);
+  
+    // Save updated info to AsyncStorage
+    let userData: { [key: string]: string } = {};
+    for (const field of editableData) {
+      if (field.key !== "password") {
+        await AsyncStorage.setItem(field.key, field.value);
+        userData[field.key] = field.value;
+      }
+    }
+  
+    // Get nuser_id from AsyncStorage
+    const nuser_id = await AsyncStorage.getItem('nuser_id');
+  
+    // Send update to backend
+    try {
+      const response = await fetch('http://mnl911.atwebpages.com/update_profile.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `nuser_id=${encodeURIComponent(nuser_id || "")}&firstName=${encodeURIComponent(userData.firstName || "")}&lastName=${encodeURIComponent(userData.lastName || "")}&email=${encodeURIComponent(userData.email || "")}&phone=${encodeURIComponent(userData.phone || "")}`
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("Profile updated successfully!");
+      } else {
+        alert(data.message || "Update failed");
+      }
+    } catch (error) {
+      alert("Network error. Please try again.");
+    }
   };
 
   const startEditing = () => {
     setEditableData([...originalData]);
     setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setEditableData([...originalData]);
+    setIsEditing(false);
   };
 
   return (
