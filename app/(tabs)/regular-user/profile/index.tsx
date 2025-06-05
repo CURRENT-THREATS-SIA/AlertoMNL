@@ -1,8 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+
 
 interface SettingsMenuItem {
   title: string;
@@ -58,6 +60,15 @@ const Profile: React.FC = () => {
   const handleLogout = () => {
     console.log("Logout pressed");
     // Add your logout logic here
+  };
+
+  const handleSOS = async () => {
+    const nuserId = await AsyncStorage.getItem('nuser_id');
+    if (!nuserId) {
+      Alert.alert('Error', 'User ID not found. Please log in again.');
+      return;
+    }
+    // Add your SOS logic here
   };
 
   return (
