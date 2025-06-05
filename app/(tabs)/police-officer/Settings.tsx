@@ -49,19 +49,16 @@ const Settings: React.FC = () => {
 
   const handleLogout = () => {
     // Add your logout logic here (e.g., clearing tokens, user state, etc.)
+    router.replace('/auth/Login'); // Navigate immediately
+  
+    // Show alert after navigation (optional, but won't block navigation)
     Alert.alert(
       "Logout Successful",
       "You have been logged out.",
-      [
-        {
-          text: "OK",
-          onPress: () => router.replace('/auth/Login'), // or '/auth/Login' if your routing is case-sensitive
-        }
-      ],
+      [{ text: "OK" }],
       { cancelable: false }
     );
-  };
-
+  };  
   return (
     <SafeAreaView style={styles.container}>
       <Header />
