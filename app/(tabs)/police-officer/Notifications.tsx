@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -39,44 +40,36 @@ const NotificationCard: React.FC<{ notification: Notification }> = ({ notificati
 
 const Notifications: React.FC = () => {
   const router = useRouter();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const notifications: Notification[] = [
-    {
-      type: "alert",
-      title: "Crime Incident Alert",
-      description: "A crime incident has been reported at Tondo by User 1",
-    },
-    {
-      type: "update",
-      title: "A new update from crime map",
-      description: "New crime incidents have been added on the map.",
-    },
-    {
-      type: "alert",
-      title: "Crime Incident Alert",
-      description: "A crime incident has been reported at Blumentrit by User 2",
-    },
-    {
-      type: "alert",
-      title: "Crime Incident Alert",
-      description: "A crime incident has been reported at Pandacan by User 3",
-    },
-    {
-      type: "update",
-      title: "A new update from crime map",
-      description: "New crime incidents have been added on the map.",
-    },
-    {
-      type: "update",
-      title: "A new update from crime map",
-      description: "New crime incidents have been added on the map.",
-    },
-    {
-      type: "alert",
-      title: "Crime Incident Alert",
-      description: "A crime incident has been reported at Sta. Mesa by User 4",
-    },
-  ];
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    const fetchNotifications = async () => {
+      try {
+        const policeId = await AsyncStorage.getItem('police_id');
+        if (!policeId) return;
+        const response = await fetch(`http://mnl911.atwebpages.com/get_notifications.php?police_id=${policeId}`);
+        const data = await response.json();
+        if (data.success) {
+          setNotifications(
+            data.notifications.map((n: any) => ({
+              type: 'alert', // You can adjust this if your backend provides a type
+              title: n.title,
+              description: n.description,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNotifications();
+    interval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,9 +91,15 @@ const Notifications: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
       >
-        {notifications.map((notification, index) => (
-          <NotificationCard key={index} notification={notification} />
-        ))}
+        {loading ? (
+          <Text>Loading...</Text>
+        ) : notifications.length === 0 ? (
+          <Text>No notifications.</Text>
+        ) : (
+          notifications.map((notification, index) => (
+            <NotificationCard key={index} notification={notification} />
+          ))
+        )}
       </ScrollView>
 
       {/* Bottom Indicator */}
