@@ -51,6 +51,10 @@ const AddContacts: React.FC = () => {
       Alert.alert('Please fill all required fields.');
       return;
     }
+    if (phone.length !== 11) {
+      Alert.alert('Phone number must be exactly 11 digits.');
+      return;
+    }
     const nuser_id = await AsyncStorage.getItem('nuser_id');
     if (!nuser_id) {
       Alert.alert('User not found. Please log in again.');
@@ -117,8 +121,9 @@ const AddContacts: React.FC = () => {
                 placeholder="Enter phone number of contact"
                 placeholderTextColor="#7e7e7e"
                 value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
+                onChangeText={text => setPhone(text.replace(/[^0-9]/g, ''))} // Only numbers
+                keyboardType="number-pad"
+                maxLength={11} // Prevents typing more than 11 digits
               />
             </View>
             <View style={styles.fieldContainer}>

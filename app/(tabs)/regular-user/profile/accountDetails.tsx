@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import * as React from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -23,17 +23,17 @@ interface UserData {
 
 const AccountDetails: React.FC = () => {
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
-  const [originalData, setOriginalData] = useState<UserData[]>([
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [originalData, setOriginalData] = React.useState<UserData[]>([
     { label: "First Name", value: "", key: "firstName" },
     { label: "Last Name", value: "", key: "lastName" },
     { label: "Email Address", value: "", key: "email" },
     { label: "Phone Number", value: "", key: "phone" },
-    { label: "Password", value: "••••••••", key: "password", isPassword: true },
+    { label: "Password", value: "", key: "password", isPassword: true },
   ]);
-  const [editableData, setEditableData] = useState<UserData[]>([...originalData]);
+  const [editableData, setEditableData] = React.useState<UserData[]>([...originalData]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const loadUserData = async () => {
       const firstName = await AsyncStorage.getItem('firstName');
       const lastName = await AsyncStorage.getItem('lastName');
@@ -44,14 +44,14 @@ const AccountDetails: React.FC = () => {
         { label: "Last Name", value: lastName || "", key: "lastName" },
         { label: "Email Address", value: email || "", key: "email" },
         { label: "Phone Number", value: phone || "", key: "phone" },
-        { label: "Password", value: "••••••••", key: "password", isPassword: true },
+        { label: "Password", value: "", key: "password", isPassword: true },
       ]);
       setEditableData([
         { label: "First Name", value: firstName || "", key: "firstName" },
         { label: "Last Name", value: lastName || "", key: "lastName" },
         { label: "Email Address", value: email || "", key: "email" },
         { label: "Phone Number", value: phone || "", key: "phone" },
-        { label: "Password", value: "••••••••", key: "password", isPassword: true },
+        { label: "Password", value: "", key: "password", isPassword: true },
       ]);
     };
     loadUserData();
@@ -66,7 +66,10 @@ const AccountDetails: React.FC = () => {
   };
 
   const handleSave = async () => {
-    setOriginalData([...editableData]);
+    setOriginalData([
+      ...editableData.slice(0, 4),
+      { ...editableData[4], value: "" }
+    ]);
     setIsEditing(false);
   
     // Save updated info to AsyncStorage
@@ -81,12 +84,25 @@ const AccountDetails: React.FC = () => {
     // Get nuser_id from AsyncStorage
     const nuser_id = await AsyncStorage.getItem('nuser_id');
   
+    // Prepare body
+    let body = `nuser_id=${encodeURIComponent(nuser_id || "")}` +
+      `&firstName=${encodeURIComponent(userData.firstName || "")}` +
+      `&lastName=${encodeURIComponent(userData.lastName || "")}` +
+      `&email=${encodeURIComponent(userData.email || "")}` +
+      `&phone=${encodeURIComponent(userData.phone || "")}`;
+  
+    // If password is not empty, include it
+    const passwordField = editableData.find(f => f.key === "password");
+    if (passwordField && passwordField.value) {
+      body += `&password=${encodeURIComponent(passwordField.value)}`;
+    }
+  
     // Send update to backend
     try {
       const response = await fetch('http://mnl911.atwebpages.com/update_profile.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `nuser_id=${encodeURIComponent(nuser_id || "")}&firstName=${encodeURIComponent(userData.firstName || "")}&lastName=${encodeURIComponent(userData.lastName || "")}&email=${encodeURIComponent(userData.email || "")}&phone=${encodeURIComponent(userData.phone || "")}`
+        body
       });
       const data = await response.json();
       if (data.success) {
@@ -105,7 +121,10 @@ const AccountDetails: React.FC = () => {
   };
 
   const handleCancel = () => {
-    setEditableData([...originalData]);
+    setEditableData([
+      ...originalData.slice(0, 4),
+      { ...originalData[4], value: "" }
+    ]);
     setIsEditing(false);
   };
 
@@ -151,10 +170,19 @@ const AccountDetails: React.FC = () => {
                   styles.input,
                   !isEditing && styles.inputDisabled
                 ]}
-                value={field.value}
+                value={
+                  field.isPassword
+                    ? (isEditing ? field.value : '******')
+                    : field.value
+                }
                 onChangeText={(text) => handleInputChange(text, field.key)}
-                editable={isEditing && !field.isPassword}
-                secureTextEntry={field.isPassword}
+                editable={isEditing && (field.key !== "password" ? true : true)}
+                secureTextEntry={field.isPassword && !isEditing}
+                placeholder={
+                  field.isPassword && isEditing
+                    ? "Enter new password (leave blank to keep current)"
+                    : undefined
+                }
                 placeholderTextColor="#666666"
               />
             </View>
