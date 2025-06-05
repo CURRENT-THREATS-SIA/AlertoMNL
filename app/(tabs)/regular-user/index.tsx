@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { Mic } from "lucide-react-native";
@@ -126,11 +127,9 @@ export default function RegularUserHome() {
   const handleSOS = async () => {
     if (isSendingSOS) return;
 
-    // Start countdown
     setIsSendingSOS(true);
     setCountdown(5);
 
-    // Create countdown timer
     for (let i = 5; i > 0; i--) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setCountdown(i - 1);
@@ -138,8 +137,6 @@ export default function RegularUserHome() {
 
     try {
       Vibration.vibrate(500);
-
-      // Start recording automatically
       await startRecording();
 
       if (!location) {
@@ -149,23 +146,39 @@ export default function RegularUserHome() {
         return;
       }
 
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch('YOUR_API_ENDPOINT/sos', {
+      // Get nuser_id from AsyncStorage
+      const nuserId = await AsyncStorage.getItem('nuser_id');
+      if (!nuserId) {
+        Alert.alert('Error', 'User ID not found. Please log in again.');
+        setIsSendingSOS(false);
+        setCountdown(null);
+        return;
+      }
+
+      // Create SOS alert
+      const createResponse = await fetch('http://mnl911.atwebpages.com/create_sos_alert.php', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          address: locationAddress,
-          timestamp: new Date().toISOString(),
-        }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `nuser_id=${nuserId}&a_latitude=${location.coords.latitude}&a_longitude=${location.coords.longitude}&a_audio=`,
       });
+      const createData = await createResponse.json();
+      if (!createData.success) throw new Error('Failed to create SOS alert');
+      const alertId = createData.alert_id;
 
-      if (!response.ok) throw new Error('Failed to send SOS');
+      // Fetch police officers
+      const officersResponse = await fetch('http://mnl911.atwebpages.com/get_police_officers.php');
+      const officersData = await officersResponse.json();
+      if (!officersData.success || officersData.officers.length === 0) throw new Error('No police officers available');
 
-      // Stop recording after 30 seconds
+      // Assign the alert to ALL police officers
+      for (const officer of officersData.officers) {
+        await fetch('http://mnl911.atwebpages.com/accept_sos_alert.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `alert_id=${alertId}&police_id=${officer.police_id}`,
+        });
+      }
+
       setTimeout(async () => {
         await stopRecording();
         setIsSendingSOS(false);
