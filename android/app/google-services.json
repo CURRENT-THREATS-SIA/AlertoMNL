@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:947694478167:android:bf3d3d94f17fb18d42d412",
+        "mobilesdk_app_id": "1:947694478167:android:2a17b7544d5a479c42d412",
         "android_client_info": {
-          "package_name": "com.anonymous.ALERTOMNL_WEBAPP"
+          "package_name": "com.anonymous.ALERTO_MNL_WEBAPP"
         }
       },
       "oauth_client": [],
