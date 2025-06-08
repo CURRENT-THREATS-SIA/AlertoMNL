@@ -1,5 +1,7 @@
+import { Picker } from '@react-native-picker/picker';
 import React from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
@@ -37,6 +39,14 @@ const severityLevels: SeverityLevel[] = [
   { level: 'High', color: '#ff0000' },
 ];
 
+const crimeTypes = [
+  "Theft", "Robbery", "Assault", "Homicide", "Vandalism", "Drugs", "Other"
+];
+const stations = [
+  "Ermita Police Station", "Sampaloc Police Station", "Tondo Police Station",
+  "Malate Police Station", "Sta. Cruz Police Station", "Other"
+];
+
 const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
@@ -45,6 +55,10 @@ const CrimeMap: React.FC = () => {
 
   // Calculate stats card width based on screen width
   const statsCardWidth = (width - 40 - 16) / 3; // 40 for container padding, 16 for gaps
+
+  // Dropdown state
+  const [selectedCrimeType, setSelectedCrimeType] = React.useState('');
+  const [selectedStation, setSelectedStation] = React.useState('');
 
   return (
     <SafeAreaView style={styles.rootBg}>
@@ -97,31 +111,55 @@ const CrimeMap: React.FC = () => {
 
             {/* Selectors and stats */}
             <View style={styles.selectorsStatsSection}>
-              <TouchableOpacity 
-                style={[styles.selectorBtn, { marginBottom: 8 }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.selectorBtnText, 
-                  styles.defaultFont,
-                  isSmallDevice && { fontSize: 14 }
-                ]}>
-                  Select Crime Type
+              {/* Crime Type Dropdown Button */}
+              <View style={[styles.selectorBtn, { marginBottom: 8, position: 'relative', overflow: 'hidden', flexDirection: 'row', alignItems: 'center' }]}>
+                <Text style={[styles.selectorBtnText, styles.defaultFont, isSmallDevice && { fontSize: 14 }]}>
+                  {selectedCrimeType || "Select Crime Type"}
                 </Text>
-              </TouchableOpacity>
+                <MaterialIcons
+                  name="arrow-drop-down"
+                  size={28}
+                  color="#fff"
+                  style={styles.dropdownIcon}
+                />
+                <Picker
+                  selectedValue={selectedCrimeType}
+                  onValueChange={setSelectedCrimeType}
+                  style={styles.pickerOverlay}
+                  dropdownIconColor="#fff"
+                  itemStyle={styles.pickerItem}
+                >
+                  <Picker.Item label="Select Crime Type" value="" enabled={false} color="#212121" />
+                  {crimeTypes.map(type => (
+                    <Picker.Item key={type} label={type} value={type} color="#212121" />
+                  ))}
+                </Picker>
+              </View>
               
-              <TouchableOpacity 
-                style={[styles.selectorBtn, { marginBottom: 16 }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.selectorBtnText, 
-                  styles.defaultFont,
-                  isSmallDevice && { fontSize: 14 }
-                ]}>
-                  Select Station
+              {/* Station Dropdown Button */}
+              <View style={[styles.selectorBtn, { marginBottom: 16, position: 'relative', overflow: 'hidden', flexDirection: 'row', alignItems: 'center' }]}>
+                <Text style={[styles.selectorBtnText, styles.defaultFont, isSmallDevice && { fontSize: 14 }]}>
+                  {selectedStation || "Select Station"}
                 </Text>
-              </TouchableOpacity>
+                <MaterialIcons
+                  name="arrow-drop-down"
+                  size={28}
+                  color="#fff"
+                  style={styles.dropdownIcon}
+                />
+                <Picker
+                  selectedValue={selectedStation}
+                  onValueChange={setSelectedStation}
+                  style={styles.pickerOverlay}
+                  dropdownIconColor="#fff"
+                  itemStyle={styles.pickerItem}
+                >
+                  <Picker.Item label="Select Station" value="" enabled={false} color="#212121" />
+                  {stations.map(station => (
+                    <Picker.Item key={station} label={station} value={station} color="#212121" />
+                  ))}
+                </Picker>
+              </View>
 
               <View style={styles.statsRow}>
                 {crimeStats.map((stat, index) => (
@@ -434,5 +472,23 @@ const styles = StyleSheet.create({
   defaultFont: {
     fontFamily: fonts.poppins.regular,
   },
+  dropdownIcon: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    marginTop: -14,
+    zIndex: 1,
+  },
+  pickerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    color: 'transparent',
+    backgroundColor: 'transparent',
+    opacity: 0,
+    width: '100%',
+    height: '100%',
+  },
+  pickerItem: {
+    color: '#212121',
+    backgroundColor: '#fff',
+  },
 });
-  
