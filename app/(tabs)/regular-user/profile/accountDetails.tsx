@@ -25,6 +25,46 @@ interface UserData {
   isPassword?: boolean;
 }
 
+const fetchProfileFromBackend = async (
+  setOriginalData: React.Dispatch<React.SetStateAction<UserData[]>>,
+  setEditableData: React.Dispatch<React.SetStateAction<UserData[]>>,
+  setIsLockedOut: React.Dispatch<React.SetStateAction<boolean>>,
+  setLockoutUntil: React.Dispatch<React.SetStateAction<number | null>>,
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+  const nuser_id = await AsyncStorage.getItem('nuser_id');
+  if (!nuser_id) return;
+  try {
+    const response = await fetch(`http://mnl911.atwebpages.com/get_user_profile.php?nuser_id=${nuser_id}`);
+    const data = await response.json();
+    if (data.success) {
+      setOriginalData([
+        { label: "First Name", value: data.firstName || "", key: "firstName" },
+        { label: "Last Name", value: data.lastName || "", key: "lastName" },
+        { label: "Email Address", value: data.email || "", key: "email" },
+        { label: "Phone Number", value: data.phone || "", key: "phone" },
+      ]);
+      setEditableData([
+        { label: "First Name", value: data.firstName || "", key: "firstName" },
+        { label: "Last Name", value: data.lastName || "", key: "lastName" },
+        { label: "Email Address", value: data.email || "", key: "email" },
+        { label: "Phone Number", value: data.phone || "", key: "phone" },
+      ]);
+      // Set lockout state
+      if (data.profile_lockout_until && Date.now() < data.profile_lockout_until) {
+        setIsLockedOut(true);
+        setLockoutUntil(data.profile_lockout_until);
+        setIsEditing(false);
+      } else {
+        setIsLockedOut(false);
+        setLockoutUntil(null);
+      }
+    }
+  } catch (e) {
+    // Optionally handle error
+  }
+};
+
 const AccountDetails: React.FC = () => {
   const router = useRouter();
   const [isEditing, setIsEditing] = React.useState(false);
@@ -42,31 +82,37 @@ const AccountDetails: React.FC = () => {
   // Backend-driven lockout state
   const [isLockedOut, setIsLockedOut] = React.useState(false);
   const [lockoutMessage, setLockoutMessage] = React.useState('');
+  const [lockoutUntil, setLockoutUntil] = React.useState<number | null>(null);
+  const [lockoutCountdown, setLockoutCountdown] = React.useState("");
 
   React.useEffect(() => {
-    const loadUserData = async () => {
-      const firstName = await AsyncStorage.getItem('firstName');
-      const lastName = await AsyncStorage.getItem('lastName');
-      const email = await AsyncStorage.getItem('email');
-      const phone = await AsyncStorage.getItem('phone');
-      const nuser_id = await AsyncStorage.getItem('nuser_id');
-      setOriginalData([
-        { label: "First Name", value: firstName || "", key: "firstName" },
-        { label: "Last Name", value: lastName || "", key: "lastName" },
-        { label: "Email Address", value: email || "", key: "email" },
-        { label: "Phone Number", value: phone || "", key: "phone" },
-      ]);
-      setEditableData([
-        { label: "First Name", value: firstName || "", key: "firstName" },
-        { label: "Last Name", value: lastName || "", key: "lastName" },
-        { label: "Email Address", value: email || "", key: "email" },
-        { label: "Phone Number", value: phone || "", key: "phone" },
-      ]);
-      setCurrentPassword("");
-      setNewPassword("");
-    };
-    loadUserData();
+    fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing);
   }, []);
+
+  React.useEffect(() => {
+    if (!lockoutUntil) {
+      setLockoutCountdown("");
+      return;
+    }
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remaining = lockoutUntil - now;
+      if (remaining <= 0) {
+        setLockoutUntil(null);
+        setIsLockedOut(false);
+        setLockoutMessage('');
+        setLockoutCountdown("");
+        clearInterval(interval);
+      } else {
+        const min = Math.floor(remaining / 60000);
+        const sec = Math.floor((remaining % 60000) / 1000);
+        setLockoutCountdown(
+          `You've tried to change your password too many times. You cannot update your profile for ${min > 0 ? min + " minute(s) " : ""}${sec} second(s)`
+        );
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
 
   const handleInputChange = (text: string, key: string) => {
     setEditableData(prevData =>
@@ -115,21 +161,33 @@ const AccountDetails: React.FC = () => {
       });
       const data = await response.json();
       if (data.success) {
-        alert("Profile updated successfully!");
-        setIsEditing(false);
+        // Update AsyncStorage with new values
+        await AsyncStorage.setItem('firstName', data.firstName || "");
+        await AsyncStorage.setItem('lastName', data.lastName || "");
+        await AsyncStorage.setItem('email', data.email || "");
+        await AsyncStorage.setItem('phone', data.phone || "");
+
+        // Refresh UI state from backend
+        fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing);
+
         setCurrentPassword("");
         setNewPassword("");
+        setIsEditing(false);
+
+        // Show success alert
+        alert(data.message || "Profile updated successfully");
+      } else if (data.lockout) {
+        setIsLockedOut(true);
+        setLockoutMessage(data.message || "You've tried to change your password too many times. You cannot update your profile for");
+        setLockoutUntil(data.lockout_until || null);
+        setIsEditing(false);
+        alert((data.message || "You've tried to change your password too many times. You cannot update your profile for") + (lockoutCountdown ? ' ' + lockoutCountdown : ''));
+      } else {
         setIsLockedOut(false);
         setLockoutMessage('');
-      } else {
-        if (data.lockout) {
-          setIsLockedOut(true);
-          setLockoutMessage(data.message || "You are temporarily locked out.");
-          alert(data.message || "You are temporarily locked out.");
-        } else {
-          alert(data.message || "Update failed");
-        }
-        // Stay in edit mode
+        setLockoutUntil(null);
+        setIsEditing(true); // stay in edit mode for user to fix
+        alert(data.message || "Something went wrong. Please try again.");
       }
     } catch (error) {
       alert("Network error. Please try again.");
@@ -191,7 +249,9 @@ const AccountDetails: React.FC = () => {
           {/* Lockout Message */}
           {isLockedOut && (
             <View style={{ marginBottom: 16, backgroundColor: '#fff3cd', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#ffeeba' }}>
-              <Text style={{ color: '#856404', fontSize: 15, textAlign: 'center' }}>{lockoutMessage}</Text>
+              <Text style={{ color: '#856404', fontSize: 15, textAlign: 'center' }}>
+                {lockoutCountdown ? lockoutCountdown : lockoutMessage}
+              </Text>
             </View>
           )}
 
