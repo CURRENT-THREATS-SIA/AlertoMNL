@@ -179,8 +179,25 @@ const AccountDetails: React.FC = () => {
       } else if (data.lockout) {
         setIsLockedOut(true);
         setLockoutMessage(data.message || "You've tried to change your password too many times. You cannot update your profile for");
-        setLockoutUntil(data.lockout_until || null);
+        const until = data.profile_lockout_until || data.lockout_until || null;
+        setLockoutUntil(until);
         setIsEditing(false);
+        // Immediately set the countdown so the timer appears right away
+        if (until) {
+          const now = Date.now();
+          const remaining = until - now;
+          if (remaining > 0) {
+            const min = Math.floor(remaining / 60000);
+            const sec = Math.floor((remaining % 60000) / 1000);
+            setLockoutCountdown(
+              `You've tried to change your password too many times. You cannot update your profile for ${min > 0 ? min + " minute(s) " : ""}${sec} second(s)`
+            );
+          } else {
+            setLockoutCountdown("");
+          }
+        } else {
+          setLockoutCountdown("");
+        }
         alert((data.message || "You've tried to change your password too many times. You cannot update your profile for") + (lockoutCountdown ? ' ' + lockoutCountdown : ''));
       } else {
         setIsLockedOut(false);
