@@ -1,8 +1,8 @@
-import { Picker } from '@react-native-picker/picker';
-import React from 'react';
-import { Image, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
+import MapComponent from '../../../components/MapComponent';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
 
@@ -14,6 +14,25 @@ const mapBgUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/frame-3997.png';
 const locationUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location.png';
 const location1Uri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location-1.png';
 const location2Uri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location-2.png';
+
+// Crime types and stations data
+const crimeTypes = [
+  { id: 1, label: 'Theft', value: 'theft' },
+  { id: 2, label: 'Robbery', value: 'robbery' },
+  { id: 3, label: 'Assault', value: 'assault' },
+  { id: 4, label: 'Homicide', value: 'homicide' },
+  { id: 5, label: 'Drug-related', value: 'drug' },
+  { id: 6, label: 'Others', value: 'others' },
+];
+
+const policeStations = [
+  { id: 1, label: 'MPD Station 1 - Raxabago', value: 'station1' },
+  { id: 2, label: 'MPD Station 2 - Moriones', value: 'station2' },
+  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'station3' },
+  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'station4' },
+  { id: 5, label: 'MPD Station 5 - Ermita', value: 'station5' },
+  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'station6' },
+];
 
 export type CrimeStat = {
   title: string;
@@ -39,14 +58,6 @@ const severityLevels: SeverityLevel[] = [
   { level: 'High', color: '#ff0000' },
 ];
 
-const crimeTypes = [
-  "Theft", "Robbery", "Assault", "Homicide", "Vandalism", "Drugs", "Other"
-];
-const stations = [
-  "Ermita Police Station", "Sampaloc Police Station", "Tondo Police Station",
-  "Malate Police Station", "Sta. Cruz Police Station", "Other"
-];
-
 const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
@@ -56,9 +67,22 @@ const CrimeMap: React.FC = () => {
   // Calculate stats card width based on screen width
   const statsCardWidth = (width - 40 - 16) / 3; // 40 for container padding, 16 for gaps
 
-  // Dropdown state
-  const [selectedCrimeType, setSelectedCrimeType] = React.useState('');
-  const [selectedStation, setSelectedStation] = React.useState('');
+  // State for dropdowns
+  const [selectedCrimeType, setSelectedCrimeType] = useState('');
+  const [selectedStation, setSelectedStation] = useState('');
+  const [showCrimeTypeModal, setShowCrimeTypeModal] = useState(false);
+  const [showStationModal, setShowStationModal] = useState(false);
+
+  // Function to handle selection
+  const handleCrimeTypeSelect = (value: string) => {
+    setSelectedCrimeType(value);
+    setShowCrimeTypeModal(false);
+  };
+
+  const handleStationSelect = (value: string) => {
+    setSelectedStation(value);
+    setShowStationModal(false);
+  };
 
   return (
     <SafeAreaView style={styles.rootBg}>
@@ -70,153 +94,188 @@ const CrimeMap: React.FC = () => {
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.container}>
-          {/* Map section */}
-          <View style={styles.contentWrapper}>
-            <View style={[styles.mapSection, { height: mapHeight }]}>
-              <Image 
-                source={{ uri: mapBgUri }} 
-                style={styles.mapBg}
-                resizeMode="cover"
-              />
-              <View style={[styles.mapOverlay, { padding: containerPadding }]}>
-                {/* Search bar */}
-                <View style={styles.searchBar}>
-                  <SearchIcon />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search…"
-                    placeholderTextColor="#c6c6c6"
-                  />
-                </View>
-                {/* Map controls */}
-                <View style={styles.mapControlsRow}>
-                  <Image source={{ uri: locationUri }} style={styles.locationIcon} />
-                  <Image source={{ uri: location1Uri }} style={styles.locationSmallIcon} />
-                </View>
-                {/* Legend and location2 */}
-                <View style={styles.legendRow}>
-                  <View style={styles.legendCard}>
-                    {severityLevels.map((item, idx) => (
-                      <View key={idx} style={styles.legendItemRow}>
-                        <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                        <Text style={[styles.legendLabel, styles.defaultFont]}>{item.level}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <Image source={{ uri: location2Uri }} style={styles.location2Icon} />
-                </View>
-              </View>
-            </View>
+        <View style={styles.contentWrapper}>
+          <View style={[styles.mapSection, { height: mapHeight }]}>
+            {MapComponent && <MapComponent />}
+          </View>
 
-            {/* Selectors and stats */}
-            <View style={styles.selectorsStatsSection}>
-              {/* Crime Type Dropdown Button */}
-              <View style={[styles.selectorBtn, { marginBottom: 8, position: 'relative', overflow: 'hidden', flexDirection: 'row', alignItems: 'center' }]}>
-                <Text style={[styles.selectorBtnText, styles.defaultFont, isSmallDevice && { fontSize: 14 }]}>
-                  {selectedCrimeType || "Select Crime Type"}
-                </Text>
-                <MaterialIcons
-                  name="arrow-drop-down"
-                  size={28}
-                  color="#fff"
-                  style={styles.dropdownIcon}
-                />
-                <Picker
-                  selectedValue={selectedCrimeType}
-                  onValueChange={setSelectedCrimeType}
-                  style={styles.pickerOverlay}
-                  dropdownIconColor="#fff"
-                  itemStyle={styles.pickerItem}
-                >
-                  <Picker.Item label="Select Crime Type" value="" enabled={false} color="#212121" />
-                  {crimeTypes.map(type => (
-                    <Picker.Item key={type} label={type} value={type} color="#212121" />
-                  ))}
-                </Picker>
-              </View>
-              
-              {/* Station Dropdown Button */}
-              <View style={[styles.selectorBtn, { marginBottom: 16, position: 'relative', overflow: 'hidden', flexDirection: 'row', alignItems: 'center' }]}>
-                <Text style={[styles.selectorBtnText, styles.defaultFont, isSmallDevice && { fontSize: 14 }]}>
-                  {selectedStation || "Select Station"}
-                </Text>
-                <MaterialIcons
-                  name="arrow-drop-down"
-                  size={28}
-                  color="#fff"
-                  style={styles.dropdownIcon}
-                />
-                <Picker
-                  selectedValue={selectedStation}
-                  onValueChange={setSelectedStation}
-                  style={styles.pickerOverlay}
-                  dropdownIconColor="#fff"
-                  itemStyle={styles.pickerItem}
-                >
-                  <Picker.Item label="Select Station" value="" enabled={false} color="#212121" />
-                  {stations.map(station => (
-                    <Picker.Item key={station} label={station} value={station} color="#212121" />
-                  ))}
-                </Picker>
-              </View>
+          {/* Selectors and stats */}
+          <TouchableOpacity 
+            style={[styles.selectorBtn, { marginBottom: 8 }]}
+            activeOpacity={0.7}
+            onPress={() => setShowCrimeTypeModal(true)}
+          >
+            <Text style={[
+              styles.selectorBtnText, 
+              styles.defaultFont,
+              isSmallDevice && { fontSize: 14 }
+            ]}>
+              {selectedCrimeType ? 
+                crimeTypes.find(ct => ct.value === selectedCrimeType)?.label : 
+                'Select Crime Type'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.selectorBtn, { marginBottom: 16 }]}
+            activeOpacity={0.7}
+            onPress={() => setShowStationModal(true)}
+          >
+            <Text style={[
+              styles.selectorBtnText, 
+              styles.defaultFont,
+              isSmallDevice && { fontSize: 14 }
+            ]}>
+              {selectedStation ? 
+                policeStations.find(ps => ps.value === selectedStation)?.label : 
+                'Select Station'}
+            </Text>
+          </TouchableOpacity>
 
-              <View style={styles.statsRow}>
-                {crimeStats.map((stat, index) => (
-                  <View 
-                    key={index} 
-                    style={[
-                      styles.statCard,
-                      { width: statsCardWidth }
-                    ]}
+          {/* Crime Type Modal */}
+          <Modal
+            visible={showCrimeTypeModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowCrimeTypeModal(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay} 
+              activeOpacity={1} 
+              onPress={() => setShowCrimeTypeModal(false)}
+            >
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Crime Type</Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowCrimeTypeModal(false)}
+                    style={styles.closeButton}
                   >
-                    <Text 
+                    <MaterialIcons name="close" size={24} color="#000" />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView>
+                  {crimeTypes.map((type) => (
+                    <TouchableOpacity
+                      key={type.id}
                       style={[
-                        styles.statTitle, 
-                        styles.defaultFont,
-                        isSmallDevice && { fontSize: 9 }
+                        styles.modalOption,
+                        selectedCrimeType === type.value && styles.modalOptionSelected
                       ]}
-                      numberOfLines={2}
+                      onPress={() => handleCrimeTypeSelect(type.value)}
                     >
-                      {stat.title}
-                    </Text>
-                    
-                    {stat.location ? (
-                      <>
-                        <Text 
-                          style={[
-                            styles.statLocation, 
-                            styles.defaultFont,
-                            isSmallDevice && { fontSize: 11 }
-                          ]}
-                        >
-                          {stat.location}
-                        </Text>
-                        <Text 
-                          style={[
-                            styles.statType, 
-                            styles.defaultFont,
-                            isSmallDevice && { fontSize: 10 }
-                          ]}
-                        >
-                          {stat.type}
-                        </Text>
-                      </>
-                    ) : null}
-                    
-                    <Text 
-                      style={[
-                        styles.statValue, 
-                        styles.defaultFont,
-                        isSmallDevice && { fontSize: 16 }
-                      ]}
-                    >
-                      {stat.value}
-                    </Text>
-                  </View>
-                ))}
+                      <Text style={[
+                        styles.modalOptionText,
+                        selectedCrimeType === type.value && styles.modalOptionTextSelected
+                      ]}>
+                        {type.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
-            </View>
+            </TouchableOpacity>
+          </Modal>
+
+          {/* Station Modal */}
+          <Modal
+            visible={showStationModal}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setShowStationModal(false)}
+          >
+            <TouchableOpacity 
+              style={styles.modalOverlay} 
+              activeOpacity={1} 
+              onPress={() => setShowStationModal(false)}
+            >
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Police Station</Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowStationModal(false)}
+                    style={styles.closeButton}
+                  >
+                    <MaterialIcons name="close" size={24} color="#000" />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView>
+                  {policeStations.map((station) => (
+                    <TouchableOpacity
+                      key={station.id}
+                      style={[
+                        styles.modalOption,
+                        selectedStation === station.value && styles.modalOptionSelected
+                      ]}
+                      onPress={() => handleStationSelect(station.value)}
+                    >
+                      <Text style={[
+                        styles.modalOptionText,
+                        selectedStation === station.value && styles.modalOptionTextSelected
+                      ]}>
+                        {station.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
+          <View style={styles.statsRow}>
+            {crimeStats.map((stat, index) => (
+              <View 
+                key={index} 
+                style={[
+                  styles.statCard,
+                  { width: statsCardWidth }
+                ]}
+              >
+                <Text 
+                  style={[
+                    styles.statTitle, 
+                    styles.defaultFont,
+                    isSmallDevice && { fontSize: 9 }
+                  ]}
+                  numberOfLines={2}
+                >
+                  {stat.title}
+                </Text>
+                
+                {stat.location ? (
+                  <>
+                    <Text 
+                      style={[
+                        styles.statLocation, 
+                        styles.defaultFont,
+                        isSmallDevice && { fontSize: 11 }
+                      ]}
+                    >
+                      {stat.location}
+                    </Text>
+                    <Text 
+                      style={[
+                        styles.statType, 
+                        styles.defaultFont,
+                        isSmallDevice && { fontSize: 10 }
+                      ]}
+                    >
+                      {stat.type}
+                    </Text>
+                  </>
+                ) : null}
+                
+                <Text 
+                  style={[
+                    styles.statValue, 
+                    styles.defaultFont,
+                    isSmallDevice && { fontSize: 16 }
+                  ]}
+                >
+                  {stat.value}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
       </ScrollView>
@@ -231,23 +290,21 @@ export default CrimeMap;
 const styles = StyleSheet.create({
   rootBg: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   scrollView: {
     flex: 1,
   },
   scrollViewContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  container: {
-    flex: 1,
+    flexGrow: 1,
   },
   contentWrapper: {
     flex: 1,
+    padding: 20,
   },
   mapSection: {
     width: '100%',
-    borderRadius: 25,
+    borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 16,
   },
@@ -322,25 +379,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   selectorBtn: {
-    width: '100%',
-    backgroundColor: '#E02323',
-    borderRadius: 10,
-    paddingVertical: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: '#212121',
+    borderRadius: 8,
+    padding: 12,
   },
   selectorBtnText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: fonts.poppins.bold,
+    fontFamily: fonts.poppins.regular,
   },
   statsRow: {
     flexDirection: 'row',
@@ -472,23 +518,49 @@ const styles = StyleSheet.create({
   defaultFont: {
     fontFamily: fonts.poppins.regular,
   },
-  dropdownIcon: {
-    position: 'absolute',
-    right: 12,
-    top: '50%',
-    marginTop: -14,
-    zIndex: 1,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  pickerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    color: 'transparent',
-    backgroundColor: 'transparent',
-    opacity: 0,
-    width: '100%',
-    height: '100%',
-  },
-  pickerItem: {
-    color: '#212121',
+  modalContent: {
     backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
+    color: '#000',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalOption: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalOptionSelected: {
+    backgroundColor: '#FFE5E5',
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontFamily: fonts.poppins.regular,
+    color: '#000',
+  },
+  modalOptionTextSelected: {
+    color: '#E02323',
+    fontFamily: fonts.poppins.semiBold,
   },
 });
