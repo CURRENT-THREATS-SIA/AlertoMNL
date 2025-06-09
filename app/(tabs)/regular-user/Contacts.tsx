@@ -144,6 +144,7 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     padding: 20,
+    paddingBottom: 100,
   },
   content: {
     flex: 1,
@@ -216,6 +217,7 @@ const styles = StyleSheet.create({
     padding: 10,
     gap: 8,
     marginTop: 16,
+    marginBottom: 20,
   },
   addButtonText: {
     color: '#FFFFFF',

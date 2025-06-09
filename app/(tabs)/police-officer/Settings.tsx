@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -47,18 +48,30 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here (e.g., clearing tokens, user state, etc.)
-    router.replace('/auth/Login'); // Navigate immediately
-  
-    // Show alert after navigation (optional, but won't block navigation)
+  const handleLogout = async () => {
+    // Remove all user-related keys
+    await AsyncStorage.removeItem('police_id');
+    await AsyncStorage.removeItem('nuser_id');
+    await AsyncStorage.removeItem('firstName');
+    await AsyncStorage.removeItem('lastName');
+    await AsyncStorage.removeItem('email');
+    await AsyncStorage.removeItem('phone');
+    await AsyncStorage.removeItem('badge');
+    await AsyncStorage.removeItem('station');
+    // Optionally, clear all AsyncStorage (be careful if you store other data)
+    // await AsyncStorage.clear();
+
+    router.replace('/auth/Login'); // Navigate to login
+
+    // Show alert after navigation (optional)
     Alert.alert(
       "Logout Successful",
       "You have been logged out.",
       [{ text: "OK" }],
       { cancelable: false }
     );
-  };  
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header />
