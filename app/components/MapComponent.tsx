@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import WebView from 'react-native-webview';
 
 // Manila coordinates
@@ -145,6 +145,23 @@ window.addEventListener('message', (event) => {
 `;
 
 const MapComponent: React.FC = () => {
+  if (Platform.OS === 'web') {
+    // For web platform, return an iframe with the Mapbox content
+    return (
+      <View style={styles.container}>
+        <iframe
+          srcDoc={mapboxHTML}
+          style={{
+            width: '100%',
+            height: '100%',
+            border: 'none'
+          }}
+        />
+      </View>
+    );
+  }
+
+  // For mobile platforms, use WebView
   return (
     <View style={styles.container}>
       <WebView
