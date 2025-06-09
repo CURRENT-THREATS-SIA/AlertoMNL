@@ -1,10 +1,11 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
-import { Platform, SafeAreaView, StatusBar, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 
@@ -47,23 +48,32 @@ const AppPermission: React.FC = () => {
   const router = useRouter();
   const [permissions, setPermissions] = useState<Permission[]>(initialPermissions);
 
+  // Function to check and update permissions
+  const checkPermissions = async () => {
+    const checkedPermissions: Permission[] = [];
+    // Location
+    const { status: locationStatus } = await Location.getForegroundPermissionsAsync();
+    checkedPermissions.push({ ...initialPermissions[0], enabled: locationStatus === 'granted' });
+    // Microphone
+    const { status: micStatus } = await Audio.getPermissionsAsync();
+    checkedPermissions.push({ ...initialPermissions[1], enabled: micStatus === 'granted' });
+    // SMS (can only check if available, not permission)
+    const isSMSAvailable = await SMS.isAvailableAsync();
+    checkedPermissions.push({ ...initialPermissions[2], enabled: isSMSAvailable });
+    // Storage
+    const { status: storageStatus } = await MediaLibrary.getPermissionsAsync();
+    checkedPermissions.push({ ...initialPermissions[3], enabled: storageStatus === 'granted' });
+    setPermissions(checkedPermissions);
+  };
+
+  // Re-check permissions when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      checkPermissions();
+    }, [])
+  );
+
   useEffect(() => {
-    const checkPermissions = async () => {
-      const checkedPermissions: Permission[] = [];
-      // Location
-      const { status: locationStatus } = await Location.getForegroundPermissionsAsync();
-      checkedPermissions.push({ ...initialPermissions[0], enabled: locationStatus === 'granted' });
-      // Microphone
-      const { status: micStatus } = await Audio.getPermissionsAsync();
-      checkedPermissions.push({ ...initialPermissions[1], enabled: micStatus === 'granted' });
-      // SMS (can only check if available, not permission)
-      const isSMSAvailable = await SMS.isAvailableAsync();
-      checkedPermissions.push({ ...initialPermissions[2], enabled: isSMSAvailable });
-      // Storage
-      const { status: storageStatus } = await MediaLibrary.getPermissionsAsync();
-      checkedPermissions.push({ ...initialPermissions[3], enabled: storageStatus === 'granted' });
-      setPermissions(checkedPermissions);
-    };
     checkPermissions();
   }, []);
 
@@ -100,11 +110,15 @@ const AppPermission: React.FC = () => {
         alert('Permission not granted.');
       }
     } else {
-      // User is turning OFF, just update UI (cannot revoke permission programmatically)
-      newPermissions[index].enabled = false;
-      setPermissions(newPermissions);
-      // Optionally, show a message:
-      // alert('To fully disable this permission, go to your device settings.');
+      // User is turning OFF, open app settings
+      Alert.alert(
+        'Change Permission',
+        `To turn off ${perm.name} permission, please go to your device settings.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
     }
   };
 
@@ -132,7 +146,7 @@ const AppPermission: React.FC = () => {
       </View>
 
       {/* Permissions List */}
-      <View style={styles.permissionsList}>
+      <ScrollView contentContainerStyle={styles.permissionsList} showsVerticalScrollIndicator={false}>
         {permissions.map((permission, index) => (
           <View key={index} style={styles.permissionCard}>
             <View style={styles.permissionHeader}>
@@ -162,7 +176,7 @@ const AppPermission: React.FC = () => {
             </Text>
           </View>
         ))}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
