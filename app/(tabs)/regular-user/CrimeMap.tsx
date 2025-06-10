@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { Feature, Point } from 'geojson';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   SafeAreaView,
@@ -11,29 +12,51 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
-import MapComponent from '../../../components/MapComponent';
+import { crimeData, StationName, totalRates } from '../../../constants/mapData';
+import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
+
+interface CrimeFeature extends Feature<Point> {
+  properties: {
+    station: StationName;
+    crimeType: string;
+    count: number;
+    isIndexCrime: boolean;
+  };
+}
 
 // Placeholder icons
 const SearchIcon = () => <MaterialIcons name="search" size={24} color="#A4A4A4" />;
 
 // Crime types and stations data
 const crimeTypes = [
-  { id: 1, label: 'Theft', value: 'theft' },
-  { id: 2, label: 'Robbery', value: 'robbery' },
-  { id: 3, label: 'Assault', value: 'assault' },
-  { id: 4, label: 'Homicide', value: 'homicide' },
-  { id: 5, label: 'Drug-related', value: 'drug' },
-  { id: 6, label: 'Others', value: 'others' },
+  { id: 1, label: 'Murder', value: 'Murder' },
+  { id: 2, label: 'Homicide', value: 'Homicide' },
+  { id: 3, label: 'Physical Injuries', value: 'Physical Injury' },
+  { id: 4, label: 'Rape', value: 'Rape' },
+  { id: 5, label: 'Robbery', value: 'Robbery' },
+  { id: 6, label: 'Theft', value: 'Theft' },
+  { id: 7, label: 'Carnapping MV', value: 'Carnapping MV' },
+  { id: 8, label: 'Carnapping MC', value: 'Carnapping MC' },
+  { id: 9, label: 'Complex Crime', value: 'Complex Crime' },
+  { id: 10, label: 'Non-Index Crime', value: 'Non-Index Crime' },
 ];
 
 const policeStations = [
-  { id: 1, label: 'MPD Station 1 - Raxabago', value: 'station1' },
-  { id: 2, label: 'MPD Station 2 - Moriones', value: 'station2' },
-  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'station3' },
-  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'station4' },
-  { id: 5, label: 'MPD Station 5 - Ermita', value: 'station5' },
-  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'station6' },
+  { id: 1, label: 'MPD Station 1 - Raxa Bago', value: 'MPD Station 1 - Raxa Bago' },
+  { id: 2, label: 'MPD Station 2 - Tondo', value: 'MPD Station 2 - Tondo' },
+  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'MPD Station 3 - Sta Cruz' },
+  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'MPD Station 4 - Sampaloc' },
+  { id: 5, label: 'MPD Station 5 - Ermita', value: 'MPD Station 5 - Ermita' },
+  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'MPD Station 6 - Sta Ana' },
+  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'MPD Station 7 - J. A. Santos' },
+  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'MPD Station 8 - Sta. Mesa' },
+  { id: 9, label: 'MPD Station 9 - Malate', value: 'MPD Station 9 - Malate' },
+  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'MPD Station 10 - Pandacan' },
+  { id: 11, label: 'MPD Station 11 - Meisic', value: 'MPD Station 11 - Meisic' },
+  { id: 12, label: 'MPD Station 12 - Delpan', value: 'MPD Station 12 - Delpan' },
+  { id: 13, label: 'MPD Station 13 - Baseco', value: 'MPD Station 13 - Baseco' },
+  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'MPD Station 14 - Barbosa' },
 ];
 
 export type CrimeStat = {
@@ -48,12 +71,6 @@ export type SeverityLevel = {
   color: string;
 };
 
-const crimeStats: CrimeStat[] = [
-  { title: 'Index Total Rate', value: '84.41%' },
-  { title: 'Non-index Total Rate', value: '505.7%' },
-  { title: 'Highest Crime', location: 'Ermita', type: 'Theft', value: '231' },
-];
-
 const severityLevels: SeverityLevel[] = [
   { level: 'Low', color: '#65ee15' },
   { level: 'Medium', color: '#f89900' },
@@ -66,11 +83,102 @@ const CrimeMap: React.FC = () => {
   const containerPadding = isSmallDevice ? 12 : 1;
   const mapHeight = Math.min(height * 0.35, 400);
 
-  // State for dropdowns
+  // State for dropdowns and stats
   const [selectedCrimeType, setSelectedCrimeType] = useState('');
-  const [selectedStation, setSelectedStation] = useState('');
+  const [selectedStation, setSelectedStation] = useState<StationName | null>(null);
   const [showCrimeTypeModal, setShowCrimeTypeModal] = useState(false);
   const [showStationModal, setShowStationModal] = useState(false);
+  const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
+
+  // Function to calculate crime statistics based on filters
+  const calculateCrimeStats = () => {
+    let filteredFeatures = crimeData.features as CrimeFeature[];
+    
+    // Apply crime type filter if selected
+    if (selectedCrimeType) {
+      filteredFeatures = filteredFeatures.filter(feature => 
+        feature.properties.crimeType === selectedCrimeType
+      );
+    }
+
+    let highestCrime = { count: 0, location: '', type: '' };
+
+    // If a station is selected, show its specific rates
+    if (selectedStation) {
+      const stationRates = totalRates[selectedStation];
+      
+      // Find highest crime for the selected station
+      filteredFeatures
+        .filter(feature => feature.properties.station === selectedStation)
+        .forEach((feature: CrimeFeature) => {
+          const { station, crimeType, count } = feature.properties;
+          if (count > highestCrime.count) {
+            highestCrime = {
+              count,
+              location: station.split(' - ')[1],
+              type: crimeType
+            };
+          }
+        });
+
+      setCrimeStats([
+        { 
+          title: 'Index Total Rate', 
+          value: `${stationRates.indexRate}%`
+        },
+        { 
+          title: 'Non-index Total Rate', 
+          value: `${stationRates.nonIndexRate}%`
+        },
+        { 
+          title: 'Highest Crime', 
+          location: highestCrime.location || 'N/A', 
+          type: highestCrime.type || 'N/A', 
+          value: highestCrime.count.toString() 
+        },
+      ]);
+      return;
+    }
+
+    // If no station is selected, calculate averages of all stations
+    const stations = Object.keys(totalRates) as StationName[];
+    const avgIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].indexRate, 0) / stations.length).toFixed(2);
+    const avgNonIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].nonIndexRate, 0) / stations.length).toFixed(2);
+
+    // Find highest crime across all stations
+    filteredFeatures.forEach((feature: CrimeFeature) => {
+      const { station, crimeType, count } = feature.properties;
+      if (count > highestCrime.count) {
+        highestCrime = {
+          count,
+          location: station.split(' - ')[1],
+          type: crimeType
+        };
+      }
+    });
+
+    setCrimeStats([
+      { 
+        title: 'Average Index Rate', 
+        value: `${avgIndexRate}%`
+      },
+      { 
+        title: 'Average Non-index Rate', 
+        value: `${avgNonIndexRate}%`
+      },
+      { 
+        title: 'Highest Crime', 
+        location: highestCrime.location || 'N/A', 
+        type: highestCrime.type || 'N/A', 
+        value: highestCrime.count.toString() 
+      },
+    ]);
+  };
+
+  // Recalculate stats when filters change
+  useEffect(() => {
+    calculateCrimeStats();
+  }, [selectedCrimeType, selectedStation]);
 
   // Function to handle selection
   const handleCrimeTypeSelect = (value: string) => {
@@ -79,7 +187,7 @@ const CrimeMap: React.FC = () => {
   };
 
   const handleStationSelect = (value: string) => {
-    setSelectedStation(value);
+    setSelectedStation(value as StationName);
     setShowStationModal(false);
   };
 
@@ -92,7 +200,12 @@ const CrimeMap: React.FC = () => {
       >
         <View style={styles.contentWrapper}>
           <View style={[styles.mapSection, { height: mapHeight }]}>
-            <MapComponent />
+            <MapComponent 
+              selectedCrimeType={selectedCrimeType} 
+              selectedStation={selectedStation}
+              userType="regular"
+              data={crimeData}
+            />
           </View>
 
           {/* Selectors and stats */}
@@ -107,7 +220,7 @@ const CrimeMap: React.FC = () => {
               isSmallDevice && { fontSize: 14 }
             ]}>
               {selectedCrimeType ? 
-                crimeTypes.find(ct => ct.value === selectedCrimeType)?.label : 
+                crimeTypes.find(ct => ct.value === selectedCrimeType)?.label || selectedCrimeType : 
                 'Select Crime Type'}
             </Text>
           </TouchableOpacity>
@@ -158,7 +271,7 @@ const CrimeMap: React.FC = () => {
                         styles.modalOption,
                         selectedCrimeType === type.value && styles.modalOptionSelected
                       ]}
-                      onPress={() => handleCrimeTypeSelect(type.value)}
+                      onPress={() => handleCrimeTypeSelect(type.label)}
                     >
                       <Text style={[
                         styles.modalOptionText,

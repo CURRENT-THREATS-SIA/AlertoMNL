@@ -1,6 +1,14 @@
+import { FeatureCollection, Point } from 'geojson';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import WebView from 'react-native-webview';
+
+interface MapComponentProps {
+  selectedCrimeType: string;
+  selectedStation: string | null;
+  userType: 'regular' | 'police';
+  data: FeatureCollection<Point>;
+}
 
 // Manila coordinates
 const MANILA_CENTER = {
@@ -9,7 +17,8 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const mapboxHTML = `
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data }) => {
+  const mapboxHTML = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -135,8 +144,10 @@ map.addControl(new mapboxgl.GeolocateControl({
 // Handle messages from React Native
 window.addEventListener('message', (event) => {
   const data = JSON.parse(event.data);
-  if (data.type === 'updateMarkers') {
-    // Update markers on the map
+  if (data.type === 'updateFilters') {
+    // Update map based on filters
+    console.log('Filters updated:', data.crimeType, data.station);
+    // Add your filter logic here
   }
 });
 </script>
@@ -144,9 +155,36 @@ window.addEventListener('message', (event) => {
 </html>
 `;
 
-const MapComponent: React.FC = () => {
+  const sendFiltersToMap = () => {
+    const message = {
+      type: 'updateFilters',
+      crimeType: selectedCrimeType,
+      station: selectedStation
+    };
+    if (Platform.OS === 'web') {
+      // For web platform
+      const iframe = document.querySelector('iframe');
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(JSON.stringify(message), '*');
+      }
+    } else {
+      // For mobile platforms
+      webViewRef.current?.injectJavaScript(`
+        window.dispatchEvent(new MessageEvent('message', {
+          data: '${JSON.stringify(message)}'
+        }));
+        true;
+      `);
+    }
+  };
+
+  React.useEffect(() => {
+    sendFiltersToMap();
+  }, [selectedCrimeType, selectedStation]);
+
+  const webViewRef = React.useRef<WebView>(null);
+
   if (Platform.OS === 'web') {
-    // For web platform, return an iframe with the Mapbox content
     return (
       <View style={styles.container}>
         <iframe
@@ -161,17 +199,16 @@ const MapComponent: React.FC = () => {
     );
   }
 
-  // For mobile platforms, use WebView
   return (
     <View style={styles.container}>
       <WebView
+        ref={webViewRef}
         source={{ html: mapboxHTML }}
         style={styles.webview}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         startInLoadingState={true}
         onMessage={(event) => {
-          // Handle messages from the WebView
           const data = JSON.parse(event.nativeEvent.data);
           console.log('Message from WebView:', data);
         }}

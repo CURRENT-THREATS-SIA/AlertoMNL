@@ -2,27 +2,39 @@ import React, { useState } from 'react';
 import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
-import MapComponent from '../../../components/MapComponent';
 import NavBottomBar from '../../../components/NavBottomBar';
+import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
 
 // Crime types and stations data
 const crimeTypes = [
-  { id: 1, label: 'Theft', value: 'theft' },
-  { id: 2, label: 'Robbery', value: 'robbery' },
-  { id: 3, label: 'Assault', value: 'assault' },
-  { id: 4, label: 'Homicide', value: 'homicide' },
-  { id: 5, label: 'Drug-related', value: 'drug' },
-  { id: 6, label: 'Others', value: 'others' },
+  { id: 1, label: 'Murder', value: 'murder' },
+  { id: 2, label: 'Homicide', value: 'homicide' },
+  { id: 3, label: 'Physical Injuries', value: 'physical_injuries' },
+  { id: 4, label: 'Rape', value: 'rape' },
+  { id: 5, label: 'Robbery', value: 'robbery' },
+  { id: 6, label: 'Theft', value: 'theft' },
+  { id: 7, label: 'Carnapping MV', value: 'carnapping_mv' },
+  { id: 8, label: 'Carnapping MC', value: 'carnapping_mc' },
+  { id: 9, label: 'Complex Crime', value: 'complex_crime' },
+  { id: 10, label: 'Non-Index Crime', value: 'non_index_crime' },
 ];
 
 const policeStations = [
-  { id: 1, label: 'MPD Station 1 - Raxabago', value: 'station1' },
-  { id: 2, label: 'MPD Station 2 - Moriones', value: 'station2' },
+  { id: 1, label: 'MPD Station 1 - Raxa Bago', value: 'station1' },
+  { id: 2, label: 'MPD Station 2 - Tondo', value: 'station2' },
   { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'station3' },
   { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'station4' },
   { id: 5, label: 'MPD Station 5 - Ermita', value: 'station5' },
   { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'station6' },
+  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'station7' },
+  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'station8' },
+  { id: 9, label: 'MPD Station 9 - Malate', value: 'station9' },
+  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'station10' },
+  { id: 11, label: 'MPD Station 11 - Meisic', value: 'station11' },
+  { id: 12, label: 'MPD Station 12 - Delpan', value: 'station12' },
+  { id: 13, label: 'MPD Station 13 - Baseco', value: 'station13' },
+  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'station14' },
 ];
 
 export type CrimeStat = {

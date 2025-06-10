@@ -138,6 +138,8 @@ export const IncidentForm: React.FC = () => {
   );
 };
 
+export default IncidentForm;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
