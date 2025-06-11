@@ -1,40 +1,41 @@
-import React, { useState } from 'react';
-import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
+import { crimeData, StationName, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
 
 // Crime types and stations data
 const crimeTypes = [
-  { id: 1, label: 'Murder', value: 'murder' },
-  { id: 2, label: 'Homicide', value: 'homicide' },
-  { id: 3, label: 'Physical Injuries', value: 'physical_injuries' },
-  { id: 4, label: 'Rape', value: 'rape' },
-  { id: 5, label: 'Robbery', value: 'robbery' },
-  { id: 6, label: 'Theft', value: 'theft' },
-  { id: 7, label: 'Carnapping MV', value: 'carnapping_mv' },
-  { id: 8, label: 'Carnapping MC', value: 'carnapping_mc' },
-  { id: 9, label: 'Complex Crime', value: 'complex_crime' },
-  { id: 10, label: 'Non-Index Crime', value: 'non_index_crime' },
+  { id: 1, label: 'Murder', value: 'Murder' },
+  { id: 2, label: 'Homicide', value: 'Homicide' },
+  { id: 3, label: 'Physical Injuries', value: 'Physical Injury' },
+  { id: 4, label: 'Rape', value: 'Rape' },
+  { id: 5, label: 'Robbery', value: 'Robbery' },
+  { id: 6, label: 'Theft', value: 'Theft' },
+  { id: 7, label: 'Carnapping MV', value: 'Carnapping MV' },
+  { id: 8, label: 'Carnapping MC', value: 'Carnapping MC' },
+  { id: 9, label: 'Complex Crime', value: 'Complex Crime' },
+  { id: 10, label: 'Non-Index Crime', value: 'Non-Index Crime' },
 ];
 
 const policeStations = [
-  { id: 1, label: 'MPD Station 1 - Raxa Bago', value: 'station1' },
-  { id: 2, label: 'MPD Station 2 - Tondo', value: 'station2' },
-  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'station3' },
-  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'station4' },
-  { id: 5, label: 'MPD Station 5 - Ermita', value: 'station5' },
-  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'station6' },
-  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'station7' },
-  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'station8' },
-  { id: 9, label: 'MPD Station 9 - Malate', value: 'station9' },
-  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'station10' },
-  { id: 11, label: 'MPD Station 11 - Meisic', value: 'station11' },
-  { id: 12, label: 'MPD Station 12 - Delpan', value: 'station12' },
-  { id: 13, label: 'MPD Station 13 - Baseco', value: 'station13' },
-  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'station14' },
+  { id: 1, label: 'MPD Station 1 - Raxa Bago', value: 'MPD Station 1 - Raxa Bago' },
+  { id: 2, label: 'MPD Station 2 - Tondo', value: 'MPD Station 2 - Tondo' },
+  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'MPD Station 3 - Sta Cruz' },
+  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'MPD Station 4 - Sampaloc' },
+  { id: 5, label: 'MPD Station 5 - Ermita', value: 'MPD Station 5 - Ermita' },
+  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'MPD Station 6 - Sta Ana' },
+  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'MPD Station 7 - J. A. Santos' },
+  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'MPD Station 8 - Sta. Mesa' },
+  { id: 9, label: 'MPD Station 9 - Malate', value: 'MPD Station 9 - Malate' },
+  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'MPD Station 10 - Pandacan' },
+  { id: 11, label: 'MPD Station 11 - Meisic', value: 'MPD Station 11 - Meisic' },
+  { id: 12, label: 'MPD Station 12 - Delpan', value: 'MPD Station 12 - Delpan' },
+  { id: 13, label: 'MPD Station 13 - Baseco', value: 'MPD Station 13 - Baseco' },
+  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'MPD Station 14 - Barbosa' },
 ];
 
 export type CrimeStat = {
@@ -49,29 +50,107 @@ export type SeverityLevel = {
   color: string;
 };
 
-const crimeStats: CrimeStat[] = [
-  { title: 'Index Total Rate', value: '84.41%' },
-  { title: 'Non-index Total Rate', value: '505.7%' },
-  { title: 'Highest Crime', location: 'Ermita', type: 'Theft', value: '231' },
-];
-
 const severityLevels: SeverityLevel[] = [
   { level: 'Low', color: '#65ee15' },
   { level: 'Medium', color: '#f89900' },
   { level: 'High', color: '#ff0000' },
 ];
 
-const CrimeMap: React.FC = () => {
+const PoliceOfficerHome: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
-  const containerPadding = isSmallDevice ? 12 : 1;
   const mapHeight = Math.min(height * 0.35, 400);
 
-  // State for dropdowns
+  // State for dropdowns and stats
   const [selectedCrimeType, setSelectedCrimeType] = useState('');
-  const [selectedStation, setSelectedStation] = useState('');
+  const [selectedStation, setSelectedStation] = useState<StationName | null>(null);
   const [showCrimeTypeModal, setShowCrimeTypeModal] = useState(false);
   const [showStationModal, setShowStationModal] = useState(false);
+  const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
+
+  // Function to calculate crime statistics based on filters
+  const calculateCrimeStats = () => {
+    let filteredFeatures = crimeData.features;
+    
+    // Apply crime type filter if selected
+    if (selectedCrimeType) {
+      filteredFeatures = filteredFeatures.filter(feature => 
+        feature.properties.crimeType === selectedCrimeType
+      );
+    }
+
+    let highestCrime = { count: 0, location: '', type: '' };
+
+    // If a station is selected, show its specific rates
+    if (selectedStation) {
+      const stationRates = totalRates[selectedStation];
+      
+      // Find highest crime for the selected station
+      filteredFeatures
+        .filter(feature => feature.properties.station === selectedStation)
+        .forEach(feature => {
+          const { station, crimeType, count } = feature.properties;
+          if (count > highestCrime.count) {
+            highestCrime = {
+              count,
+              location: station.split(' - ')[1],
+              type: crimeType
+            };
+          }
+        });
+
+      setCrimeStats([
+        { 
+          title: 'Index Total Rate', 
+          value: `${stationRates.indexRate}%`
+        },
+        { 
+          title: 'Non-index Total Rate', 
+          value: `${stationRates.nonIndexRate}%`
+        },
+        { 
+          title: 'Highest Crime', 
+          location: highestCrime.location || 'N/A', 
+          type: highestCrime.type || 'N/A', 
+          value: highestCrime.count.toString() 
+        },
+      ]);
+      return;
+    }
+
+    // If no station is selected, calculate averages of all stations
+    const stations = Object.keys(totalRates) as StationName[];
+    const avgIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].indexRate, 0) / stations.length).toFixed(2);
+    const avgNonIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].nonIndexRate, 0) / stations.length).toFixed(2);
+
+    // Find highest crime across all stations
+    filteredFeatures.forEach(feature => {
+      const { station, crimeType, count } = feature.properties;
+      if (count > highestCrime.count) {
+        highestCrime = {
+          count,
+          location: station.split(' - ')[1],
+          type: crimeType
+        };
+      }
+    });
+
+    setCrimeStats([
+      { title: 'Index Total Rate', value: `${avgIndexRate}%` },
+      { title: 'Non-index Total Rate', value: `${avgNonIndexRate}%` },
+      { 
+        title: 'Highest Crime',
+        location: highestCrime.location,
+        type: highestCrime.type,
+        value: highestCrime.count.toString()
+      },
+    ]);
+  };
+
+  // Update stats when filters change
+  useEffect(() => {
+    calculateCrimeStats();
+  }, [selectedCrimeType, selectedStation]);
 
   // Function to handle selection
   const handleCrimeTypeSelect = (value: string) => {
@@ -79,14 +158,13 @@ const CrimeMap: React.FC = () => {
     setShowCrimeTypeModal(false);
   };
 
-  const handleStationSelect = (value: string) => {
+  const handleStationSelect = (value: StationName) => {
     setSelectedStation(value);
     setShowStationModal(false);
   };
 
   return (
     <SafeAreaView style={styles.rootBg}>
-      {/* Header */}
       <Header />
       
       <ScrollView 
@@ -96,7 +174,12 @@ const CrimeMap: React.FC = () => {
       >
         <View style={styles.contentWrapper}>
           <View style={[styles.mapSection, { height: mapHeight }]}>
-            <MapComponent />
+            <MapComponent 
+              data={crimeData}
+              userType="police"
+              selectedCrimeType={selectedCrimeType}
+              selectedStation={selectedStation}
+            />
           </View>
 
           {/* Selectors and stats */}
@@ -207,7 +290,7 @@ const CrimeMap: React.FC = () => {
                         styles.modalOption,
                         selectedStation === station.value && styles.modalOptionSelected
                       ]}
-                      onPress={() => handleStationSelect(station.value)}
+                      onPress={() => handleStationSelect(station.value as StationName)}
                     >
                       <Text style={[
                         styles.modalOptionText,
@@ -222,7 +305,8 @@ const CrimeMap: React.FC = () => {
             </TouchableOpacity>
           </Modal>
 
-          <View style={styles.statsRow}>
+          {/* Crime Stats */}
+          <View style={styles.statsContainer}>
             {crimeStats.map((stat, index) => (
               <View 
                 key={index} 
@@ -288,7 +372,7 @@ const CrimeMap: React.FC = () => {
 const styles = StyleSheet.create({
   rootBg: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
   scrollView: {
     flex: 1,
@@ -297,8 +381,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   contentWrapper: {
-    flex: 1,
-    padding: 20,
+    padding: 16,
   },
   mapSection: {
     width: '100%',
@@ -307,13 +390,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   selectorBtn: {
-    backgroundColor: '#212121',
-    borderRadius: 8,
+    backgroundColor: 'white',
     padding: 12,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   selectorBtnText: {
-    color: '#fff',
     fontSize: 16,
+    color: '#212121',
+  },
+  defaultFont: {
     fontFamily: fonts.poppins.regular,
   },
   modalOverlay: {
@@ -322,10 +412,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: 20,
     maxHeight: '80%',
   },
   modalHeader: {
@@ -334,12 +423,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#E5E5E5',
   },
   modalTitle: {
     fontSize: 18,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#000',
+    fontFamily: fonts.poppins.medium,
+    color: '#212121',
   },
   closeButton: {
     padding: 4,
@@ -347,37 +436,32 @@ const styles = StyleSheet.create({
   modalOption: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#E5E5E5',
   },
   modalOptionSelected: {
-    backgroundColor: '#FFE5E5',
+    backgroundColor: '#F0F0F0',
   },
   modalOptionText: {
     fontSize: 16,
+    color: '#212121',
     fontFamily: fonts.poppins.regular,
-    color: '#000',
   },
   modalOptionTextSelected: {
-    color: '#E02323',
-    fontFamily: fonts.poppins.semiBold,
+    color: '#007AFF',
+    fontFamily: fonts.poppins.medium,
   },
-  defaultFont: {
-    fontFamily: fonts.poppins.regular,
-  },
-  statsRow: {
+  statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     marginTop: 16,
   },
   statCard: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: 'white',
     padding: 12,
+    borderRadius: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -404,5 +488,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CrimeMap;
+export default PoliceOfficerHome;
   

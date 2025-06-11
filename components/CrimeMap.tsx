@@ -1,32 +1,38 @@
 import Mapbox from '@rnmapbox/maps';
 import { Feature, FeatureCollection, Point } from 'geojson';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { MAPBOX_TOKEN } from '../constants/mapData';
+import { dbscan, DBSCANCluster } from '../utils/dbscan';
 
 // Initialize Mapbox only once at the module level
 Mapbox.setAccessToken(MAPBOX_TOKEN);
 
-interface CrimeMapProps {
-  data: FeatureCollection<Point>;
-  userType: 'regular' | 'police';
-  selectedCrimeType?: string;
-  selectedStation?: string;
+interface CrimeProperties {
+  id: string;
+  crimeType: string;
+  station: string;
+  count: number;
+  isIndexCrime: boolean;
 }
 
 interface CrimeFeature extends Feature<Point> {
-  properties: {
-    station: string;
-    crimeType: string;
-    count: number;
-    isIndexCrime: boolean;
-  };
+  properties: CrimeProperties;
+}
+
+interface CrimeMapProps {
+  data: FeatureCollection<Point>;
+  userType: string;
+  selectedCrimeType: string | null;
+  selectedStation: string | null;
 }
 
 export const CrimeMap: React.FC<CrimeMapProps> = ({ data, userType, selectedCrimeType, selectedStation }) => {
   const [selectedCrimeCategory, setSelectedCrimeCategory] = useState<'all' | 'index' | 'non-index'>('all');
   const [filteredData, setFilteredData] = useState<FeatureCollection<Point>>(data);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [clusters, setClusters] = useState<DBSCANCluster[]>([]);
+  const [zoomLevel, setZoomLevel] = useState(12);
 
   // Log props changes
   useEffect(() => {
@@ -34,7 +40,7 @@ export const CrimeMap: React.FC<CrimeMapProps> = ({ data, userType, selectedCrim
       selectedCrimeType,
       selectedStation,
       totalDataPoints: data.features.length,
-      dataExample: data.features[0]?.properties
+      dataExample: (data.features[0] as CrimeFeature)?.properties
     });
   }, [data, selectedCrimeType, selectedStation]);
 
@@ -53,66 +59,67 @@ export const CrimeMap: React.FC<CrimeMapProps> = ({ data, userType, selectedCrim
     initializeMap();
   }, []);
 
+  // Filter data based on selected crime type and station
   useEffect(() => {
-    console.log('Starting data filtering:', {
-      selectedStation,
-      selectedCrimeType,
-      selectedCrimeCategory,
-      totalDataPoints: data.features.length
-    });
-
-    // Filter data based on selected filters
-    const filtered: FeatureCollection<Point> = {
+    const filtered = {
       type: 'FeatureCollection',
       features: data.features.filter((feature) => {
         const crimeFeature = feature as CrimeFeature;
-        
-        // Log each feature being processed
-        console.log('Processing feature:', {
-          station: crimeFeature.properties.station,
-          crimeType: crimeFeature.properties.crimeType,
-          coordinates: crimeFeature.geometry.coordinates
-        });
-
-        const stationMatch = !selectedStation || crimeFeature.properties.station === selectedStation;
-        const crimeTypeMatch = !selectedCrimeType || crimeFeature.properties.crimeType === selectedCrimeType;
-        const crimeCategoryMatch = 
-          selectedCrimeCategory === 'all' ||
-          (selectedCrimeCategory === 'index' && crimeFeature.properties.isIndexCrime) ||
-          (selectedCrimeCategory === 'non-index' && !crimeFeature.properties.isIndexCrime);
-        
-        // Log any mismatches
-        if (!stationMatch) {
-          console.log('Station mismatch:', {
-            expected: selectedStation,
-            got: crimeFeature.properties.station,
-            exact: selectedStation === crimeFeature.properties.station
-          });
-        }
-        if (!crimeTypeMatch) {
-          console.log('Crime type mismatch:', {
-            expected: selectedCrimeType,
-            got: crimeFeature.properties.crimeType,
-            exact: selectedCrimeType === crimeFeature.properties.crimeType
-          });
-        }
-        
-        return stationMatch && crimeTypeMatch && crimeCategoryMatch;
+        const matchesCrimeType = !selectedCrimeType || crimeFeature.properties.crimeType === selectedCrimeType;
+        const matchesStation = !selectedStation || crimeFeature.properties.station === selectedStation;
+        return matchesCrimeType && matchesStation;
       })
-    };
-
-    console.log('Filtering complete:', {
-      totalFiltered: filtered.features.length,
-      samplePoint: filtered.features[0]?.properties,
-      selectedFilters: {
-        station: selectedStation,
-        crimeType: selectedCrimeType,
-        category: selectedCrimeCategory
-      }
-    });
+    } as FeatureCollection<Point>;
 
     setFilteredData(filtered);
-  }, [selectedStation, selectedCrimeType, selectedCrimeCategory, data]);
+  }, [data, selectedCrimeType, selectedStation]);
+
+  // Apply DBSCAN clustering
+  useEffect(() => {
+    if (filteredData.features.length === 0) return;
+
+    // Adjust eps (radius) based on zoom level
+    const eps = Math.max(0.2, 1.0 - (zoomLevel - 10) * 0.1); // Decrease radius as zoom increases
+    const minPoints = Math.max(2, Math.floor(filteredData.features.length * 0.02)); // At least 2% of total points
+
+    const newClusters = dbscan(filteredData.features, eps, minPoints);
+    setClusters(newClusters);
+  }, [filteredData, zoomLevel]);
+
+  // Create cluster features for rendering
+  const clusterFeatures = useMemo(() => {
+    return {
+      type: 'FeatureCollection',
+      features: clusters.map((cluster): Feature<Point> => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: cluster.centroid
+        },
+        properties: {
+          cluster: true,
+          point_count: cluster.points.length,
+          point_count_abbreviated: cluster.points.length
+        }
+      }))
+    } as FeatureCollection<Point>;
+  }, [clusters]);
+
+  // Create unclustered point features
+  const unclusteredFeatures = useMemo(() => {
+    const clusteredPointIds = new Set(
+      clusters.flatMap(cluster => 
+        cluster.points.map(p => (p as CrimeFeature).properties.id)
+      )
+    );
+
+    return {
+      type: 'FeatureCollection',
+      features: filteredData.features.filter(
+        feature => !clusteredPointIds.has((feature as CrimeFeature).properties.id)
+      )
+    } as FeatureCollection<Point>;
+  }, [filteredData, clusters]);
 
   const onSourceLayerPress = (e: { features: Feature[] }) => {
     console.log('Layer pressed:', e.features);
@@ -120,123 +127,142 @@ export const CrimeMap: React.FC<CrimeMapProps> = ({ data, userType, selectedCrim
 
   if (!isMapReady) {
     console.log('Map not ready yet');
-    return <View style={styles.container} />;
+    return <View style={{ flex: 1 }} />;
   }
 
   return (
-    <View style={styles.container}>
-      <Mapbox.MapView 
-        style={styles.map}
-        styleURL="mapbox://styles/mapbox/streets-v11"
-        attributionEnabled={false}
-        logoEnabled={false}
-        onDidFinishLoadingMap={() => {
-          console.log('Map finished loading');
-          setIsMapReady(true);
+    <View style={{ flex: 1 }}>
+      <Mapbox.MapView
+        style={{ flex: 1 }}
+        zoomEnabled
+        rotateEnabled={false}
+        onRegionDidChange={(region) => {
+          setZoomLevel(region.properties.zoomLevel);
         }}
       >
         <Mapbox.Camera
-          zoomLevel={11}
+          zoomLevel={12}
           centerCoordinate={[120.9842, 14.5995]}
           animationMode="flyTo"
           animationDuration={2000}
         />
 
-        {isMapReady && filteredData.features.length > 0 && (
-          <Mapbox.ShapeSource
-            id="crimeSource"
-            shape={filteredData}
-            cluster
-            clusterRadius={75}
-          >
-            <Mapbox.CircleLayer
+        {isMapReady && (
+          <>
+            {/* Render clusters */}
+            <Mapbox.ShapeSource
               id="clusters"
-              filter={['has', 'point_count']}
-              style={{
-                circleColor: [
-                  'step',
-                  ['get', 'point_count'],
-                  '#ff9999', // 1-20 crimes
-                  20,
-                  '#ff6666', // 21-50 crimes
-                  50,
-                  '#ff3333', // 51-100 crimes
-                  100,
-                  '#ff0000'  // 100+ crimes
-                ],
-                circleRadius: [
-                  'step',
-                  ['get', 'point_count'],
-                  20, // Base size
-                  20,
-                  30, // Medium size
-                  50,
-                  40, // Large size
-                  100,
-                  50  // Extra large size
-                ],
-                circleOpacity: 0.85,
-                circleStrokeWidth: 2,
-                circleStrokeColor: '#ffffff',
-                circleStrokeOpacity: 1
-              }}
-            />
+              shape={clusterFeatures}
+            >
+              <Mapbox.CircleLayer
+                id="clustered-points"
+                style={{
+                  circleColor: [
+                    'step',
+                    ['get', 'point_count'],
+                    '#ffeda0',  // 1-10 points
+                    10,
+                    '#feb24c',  // 11-25 points
+                    25,
+                    '#fc4e2a',  // 26-50 points
+                    50,
+                    '#e31a1c',  // 51-100 points
+                    100,
+                    '#800026'   // 100+ points
+                  ],
+                  circleRadius: [
+                    'step',
+                    ['get', 'point_count'],
+                    25,    // 1-10 points
+                    10,
+                    35,    // 11-25 points
+                    25,
+                    45,    // 26-50 points
+                    50,
+                    55,    // 51-100 points
+                    100,
+                    65     // 100+ points
+                  ],
+                  circleOpacity: 0.9,
+                  circleStrokeWidth: 3,
+                  circleStrokeColor: '#ffffff',
+                  circleStrokeOpacity: 0.8
+                }}
+              />
+              <Mapbox.SymbolLayer
+                id="cluster-count"
+                style={{
+                  textField: '{point_count_abbreviated}',
+                  textSize: [
+                    'step',
+                    ['get', 'point_count'],
+                    14,    // Size for 1-10
+                    10,
+                    16,    // Size for 11-25
+                    25,
+                    18,    // Size for 26-50
+                    50,
+                    20,    // Size for 51-100
+                    100,
+                    24     // Size for 100+
+                  ],
+                  textColor: '#ffffff',
+                  textFont: ['DIN Offc Pro Medium', 'Arial Unicode MS Bold']
+                }}
+              />
+            </Mapbox.ShapeSource>
 
-            <Mapbox.SymbolLayer
-              id="cluster-count"
-              filter={['has', 'point_count']}
-              style={{
-                textField: '{point_count}',
-                textSize: 14,
-                textColor: '#ffffff',
-                textIgnorePlacement: true,
-                textAllowOverlap: true,
-                textOffset: [0, 0]
-              }}
-            />
-
-            <Mapbox.CircleLayer
-              id="unclusteredPoints"
-              filter={['!', ['has', 'point_count']]}
-              style={{
-                circleColor: [
-                  'case',
-                  ['get', 'isIndexCrime'], 
-                  '#ff3333',  // Red for index crimes
-                  '#ff9933'   // Orange for non-index crimes
-                ],
-                circleRadius: 8,
-                circleStrokeWidth: 2,
-                circleStrokeColor: '#ffffff',
-                circleOpacity: 0.8,
-                circleStrokeOpacity: 1
-              }}
-            />
-
-            <Mapbox.SymbolLayer
-              id="unclustered-point-labels"
-              filter={['!', ['has', 'point_count']]}
-              style={{
-                textField: '{count}',
-                textSize: 12,
-                textColor: '#ffffff',
-                textIgnorePlacement: true,
-                textAllowOverlap: true,
-                textOffset: [0, 0]
-              }}
-            />
-          </Mapbox.ShapeSource>
+            {/* Render unclustered points */}
+            <Mapbox.ShapeSource
+              id="unclustered-points"
+              shape={unclusteredFeatures}
+            >
+              <Mapbox.CircleLayer
+                id="unclustered-point"
+                style={{
+                  circleColor: [
+                    'case',
+                    ['get', 'isIndexCrime'],
+                    '#e31a1c',  // Bright red for index crimes
+                    '#feb24c'   // Orange for non-index crimes
+                  ],
+                  circleRadius: [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'count'],
+                    1, 12,      // Min size for count of 1
+                    5, 16,      // Medium size for count of 5
+                    10, 20,     // Large size for count of 10
+                    20, 25      // Max size for count of 20+
+                  ],
+                  circleStrokeWidth: 2,
+                  circleStrokeColor: '#ffffff',
+                  circleOpacity: 0.85,
+                  circleStrokeOpacity: 0.8
+                }}
+              />
+              <Mapbox.SymbolLayer
+                id="unclustered-point-count"
+                style={{
+                  textField: '{count}',
+                  textSize: [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'count'],
+                    1, 12,      // Size for count of 1
+                    5, 14,      // Size for count of 5
+                    10, 16,     // Size for count of 10
+                    20, 18      // Size for count of 20+
+                  ],
+                  textColor: '#ffffff',
+                  textHaloColor: 'rgba(0, 0, 0, 0.3)',
+                  textHaloWidth: 2
+                }}
+              />
+            </Mapbox.ShapeSource>
+          </>
         )}
       </Mapbox.MapView>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  }
-});
