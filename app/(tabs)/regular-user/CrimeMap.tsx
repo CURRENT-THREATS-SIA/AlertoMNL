@@ -324,7 +324,8 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#E02323',
     borderRadius: 10,
-    paddingVertical: 6,
+    height: 48,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -335,11 +336,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
+    flexDirection: 'row',
   },
   selectorBtnText: {
     color: '#fff',
     fontSize: 16,
     fontFamily: fonts.poppins.bold,
+    textAlign: 'center',
+    flex: 1,
   },
   statsRow: {
     flexDirection: 'row',
@@ -393,9 +399,8 @@ const styles = StyleSheet.create({
   },
   dropdownIcon: {
     position: 'absolute',
-    right: 12,
-    top: '50%',
-    marginTop: -14,
+    right: 8,
+    alignSelf: 'center',
     zIndex: 1,
   },
   pickerOverlay: {
