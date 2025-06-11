@@ -1,13 +1,11 @@
-import MapboxGL from '@rnmapbox/maps';
+import Mapbox from '@rnmapbox/maps';
 import { Feature, FeatureCollection, Point } from 'geojson';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { MAPBOX_TOKEN } from '../constants/mapData';
 
 // Initialize Mapbox only once at the module level
-if (Platform.OS === 'web') {
-  MapboxGL.setAccessToken(MAPBOX_TOKEN);
-}
+Mapbox.setAccessToken(MAPBOX_TOKEN);
 
 interface CrimeMapProps {
   data: FeatureCollection<Point>;
@@ -30,13 +28,22 @@ export const CrimeMap: React.FC<CrimeMapProps> = ({ data, userType, selectedCrim
   const [filteredData, setFilteredData] = useState<FeatureCollection<Point>>(data);
   const [isMapReady, setIsMapReady] = useState(false);
 
+  // Log props changes
+  useEffect(() => {
+    console.log('CrimeMap Props Updated:', {
+      selectedCrimeType,
+      selectedStation,
+      totalDataPoints: data.features.length,
+      dataExample: data.features[0]?.properties
+    });
+  }, [data, selectedCrimeType, selectedStation]);
+
   useEffect(() => {
     // Initialize map when component mounts
     const initializeMap = async () => {
       try {
-        if (Platform.OS !== 'web') {
-          await MapboxGL.setAccessToken(MAPBOX_TOKEN);
-        }
+        await Mapbox.requestAndroidLocationPermissions();
+        console.log('Map initialization successful');
         setIsMapReady(true);
       } catch (error) {
         console.error('Error initializing Mapbox:', error);
@@ -44,21 +51,29 @@ export const CrimeMap: React.FC<CrimeMapProps> = ({ data, userType, selectedCrim
     };
 
     initializeMap();
-
-    // Cleanup function
-    return () => {
-      if (Platform.OS !== 'web') {
-        MapboxGL.setAccessToken('');
-      }
-    };
   }, []);
 
   useEffect(() => {
+    console.log('Starting data filtering:', {
+      selectedStation,
+      selectedCrimeType,
+      selectedCrimeCategory,
+      totalDataPoints: data.features.length
+    });
+
     // Filter data based on selected filters
     const filtered: FeatureCollection<Point> = {
       type: 'FeatureCollection',
       features: data.features.filter((feature) => {
         const crimeFeature = feature as CrimeFeature;
+        
+        // Log each feature being processed
+        console.log('Processing feature:', {
+          station: crimeFeature.properties.station,
+          crimeType: crimeFeature.properties.crimeType,
+          coordinates: crimeFeature.geometry.coordinates
+        });
+
         const stationMatch = !selectedStation || crimeFeature.properties.station === selectedStation;
         const crimeTypeMatch = !selectedCrimeType || crimeFeature.properties.crimeType === selectedCrimeType;
         const crimeCategoryMatch = 
@@ -66,96 +81,153 @@ export const CrimeMap: React.FC<CrimeMapProps> = ({ data, userType, selectedCrim
           (selectedCrimeCategory === 'index' && crimeFeature.properties.isIndexCrime) ||
           (selectedCrimeCategory === 'non-index' && !crimeFeature.properties.isIndexCrime);
         
+        // Log any mismatches
+        if (!stationMatch) {
+          console.log('Station mismatch:', {
+            expected: selectedStation,
+            got: crimeFeature.properties.station,
+            exact: selectedStation === crimeFeature.properties.station
+          });
+        }
+        if (!crimeTypeMatch) {
+          console.log('Crime type mismatch:', {
+            expected: selectedCrimeType,
+            got: crimeFeature.properties.crimeType,
+            exact: selectedCrimeType === crimeFeature.properties.crimeType
+          });
+        }
+        
         return stationMatch && crimeTypeMatch && crimeCategoryMatch;
       })
     };
+
+    console.log('Filtering complete:', {
+      totalFiltered: filtered.features.length,
+      samplePoint: filtered.features[0]?.properties,
+      selectedFilters: {
+        station: selectedStation,
+        crimeType: selectedCrimeType,
+        category: selectedCrimeCategory
+      }
+    });
+
     setFilteredData(filtered);
   }, [selectedStation, selectedCrimeType, selectedCrimeCategory, data]);
 
+  const onSourceLayerPress = (e: { features: Feature[] }) => {
+    console.log('Layer pressed:', e.features);
+  };
+
   if (!isMapReady) {
+    console.log('Map not ready yet');
     return <View style={styles.container} />;
   }
 
   return (
     <View style={styles.container}>
-      <MapboxGL.MapView 
+      <Mapbox.MapView 
         style={styles.map}
         styleURL="mapbox://styles/mapbox/streets-v11"
         attributionEnabled={false}
         logoEnabled={false}
-        onDidFinishLoadingMap={() => setIsMapReady(true)}
+        onDidFinishLoadingMap={() => {
+          console.log('Map finished loading');
+          setIsMapReady(true);
+        }}
       >
-        <MapboxGL.Camera
+        <Mapbox.Camera
           zoomLevel={11}
           centerCoordinate={[120.9842, 14.5995]}
           animationMode="flyTo"
           animationDuration={2000}
         />
 
-        {isMapReady && (
-          <MapboxGL.ShapeSource
+        {isMapReady && filteredData.features.length > 0 && (
+          <Mapbox.ShapeSource
             id="crimeSource"
-            cluster
-            clusterRadius={50}
             shape={filteredData}
+            cluster
+            clusterRadius={75}
           >
-            <MapboxGL.SymbolLayer
-              id="pointCount"
-              style={{
-                textField: ['get', 'point_count'],
-                textSize: 12,
-                textColor: '#ffffff',
-                textIgnorePlacement: true,
-                textAllowOverlap: true
-              }}
-            />
-
-            <MapboxGL.CircleLayer
+            <Mapbox.CircleLayer
               id="clusters"
               filter={['has', 'point_count']}
               style={{
                 circleColor: [
                   'step',
                   ['get', 'point_count'],
-                  '#51bbd6',
+                  '#ff9999', // 1-20 crimes
+                  20,
+                  '#ff6666', // 21-50 crimes
+                  50,
+                  '#ff3333', // 51-100 crimes
                   100,
-                  '#f1f075',
-                  750,
-                  '#f28cb1'
+                  '#ff0000'  // 100+ crimes
                 ],
                 circleRadius: [
                   'step',
                   ['get', 'point_count'],
+                  20, // Base size
                   20,
+                  30, // Medium size
+                  50,
+                  40, // Large size
                   100,
-                  30,
-                  750,
-                  40
+                  50  // Extra large size
                 ],
-                circleOpacity: 0.84,
+                circleOpacity: 0.85,
                 circleStrokeWidth: 2,
-                circleStrokeColor: '#fff'
+                circleStrokeColor: '#ffffff',
+                circleStrokeOpacity: 1
               }}
             />
 
-            <MapboxGL.CircleLayer
+            <Mapbox.SymbolLayer
+              id="cluster-count"
+              filter={['has', 'point_count']}
+              style={{
+                textField: '{point_count}',
+                textSize: 14,
+                textColor: '#ffffff',
+                textIgnorePlacement: true,
+                textAllowOverlap: true,
+                textOffset: [0, 0]
+              }}
+            />
+
+            <Mapbox.CircleLayer
               id="unclusteredPoints"
               filter={['!', ['has', 'point_count']]}
               style={{
-                circleColor: ['case', 
+                circleColor: [
+                  'case',
                   ['get', 'isIndexCrime'], 
-                  '#ff0000', 
-                  '#ffa500'
+                  '#ff3333',  // Red for index crimes
+                  '#ff9933'   // Orange for non-index crimes
                 ],
                 circleRadius: 8,
                 circleStrokeWidth: 2,
                 circleStrokeColor: '#ffffff',
-                circleOpacity: 0.84
+                circleOpacity: 0.8,
+                circleStrokeOpacity: 1
               }}
             />
-          </MapboxGL.ShapeSource>
+
+            <Mapbox.SymbolLayer
+              id="unclustered-point-labels"
+              filter={['!', ['has', 'point_count']]}
+              style={{
+                textField: '{count}',
+                textSize: 12,
+                textColor: '#ffffff',
+                textIgnorePlacement: true,
+                textAllowOverlap: true,
+                textOffset: [0, 0]
+              }}
+            />
+          </Mapbox.ShapeSource>
         )}
-      </MapboxGL.MapView>
+      </Mapbox.MapView>
     </View>
   );
 };

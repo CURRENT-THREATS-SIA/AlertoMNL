@@ -111,7 +111,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 1 - Raxa Bago',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 35,
         isIndexCrime: true
       }
@@ -241,7 +241,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 2 - Tondo',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 11,
         isIndexCrime: true
       }
@@ -372,7 +372,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 3 - Sta Cruz',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 36,
         isIndexCrime: true
       }
@@ -502,7 +502,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 4 - Sampaloc',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 25,
         isIndexCrime: true
       }
@@ -632,7 +632,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 5 - Ermita',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 82,
         isIndexCrime: true
       }
@@ -762,7 +762,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 6 - Sta Ana',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 24,
         isIndexCrime: true
       }
@@ -892,7 +892,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 7 - J. A. Santos',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 16,
         isIndexCrime: true
       }
@@ -1412,7 +1412,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 11 - Meisic',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 9,
         isIndexCrime: true
       }
@@ -1802,7 +1802,7 @@ export const crimeData: FeatureCollection<Point> = {
       },
       properties: {
         station: 'MPD Station 14 - Barbosa',
-        crimeType: 'Rubbery',
+        crimeType: 'Robbery',
         count: 23,
         isIndexCrime: true
       }

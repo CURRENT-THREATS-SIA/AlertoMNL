@@ -1,14 +1,14 @@
 import { Feature, Point } from 'geojson';
 import React, { useEffect, useState } from 'react';
 import {
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
@@ -177,16 +177,44 @@ const CrimeMap: React.FC = () => {
 
   // Recalculate stats when filters change
   useEffect(() => {
+    console.log('Filter state changed:', {
+      crimeType: selectedCrimeType,
+      station: selectedStation,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Log the filtered data before calculation
+    const filteredFeatures = crimeData.features.filter((feature) => {
+      const crimeFeature = feature as CrimeFeature;
+      const matchesCrimeType = !selectedCrimeType || crimeFeature.properties.crimeType === selectedCrimeType;
+      const matchesStation = !selectedStation || crimeFeature.properties.station === selectedStation;
+      return matchesCrimeType && matchesStation;
+    });
+    
+    console.log('Filtered data stats:', {
+      totalFeatures: filteredFeatures.length,
+      crimeTypeFilter: selectedCrimeType,
+      stationFilter: selectedStation
+    });
+    
     calculateCrimeStats();
   }, [selectedCrimeType, selectedStation]);
 
-  // Function to handle selection
+  // Function to handle selection with logging
   const handleCrimeTypeSelect = (value: string) => {
+    console.log('Crime type selected:', {
+      previous: selectedCrimeType,
+      new: value
+    });
     setSelectedCrimeType(value);
     setShowCrimeTypeModal(false);
   };
 
   const handleStationSelect = (value: string) => {
+    console.log('Station selected:', {
+      previous: selectedStation,
+      new: value
+    });
     setSelectedStation(value as StationName);
     setShowStationModal(false);
   };
@@ -271,7 +299,7 @@ const CrimeMap: React.FC = () => {
                         styles.modalOption,
                         selectedCrimeType === type.value && styles.modalOptionSelected
                       ]}
-                      onPress={() => handleCrimeTypeSelect(type.label)}
+                      onPress={() => handleCrimeTypeSelect(type.value)}
                     >
                       <Text style={[
                         styles.modalOptionText,

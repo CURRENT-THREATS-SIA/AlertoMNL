@@ -145,10 +145,236 @@ map.addControl(new mapboxgl.GeolocateControl({
 window.addEventListener('message', (event) => {
   const data = JSON.parse(event.data);
   if (data.type === 'updateFilters') {
-    // Update map based on filters
     console.log('Filters updated:', data.crimeType, data.station);
-    // Add your filter logic here
+    
+    // Get the current source data
+    const source = map.getSource('crimes');
+    if (!source) return;
+
+    // Filter the original data based on selections
+    const filteredFeatures = originalData.features.filter(feature => {
+      const matchesCrimeType = !data.crimeType || feature.properties.crimeType === data.crimeType;
+      const matchesStation = !data.station || feature.properties.station === data.station;
+      return matchesCrimeType && matchesStation;
+    });
+
+    // Update the source with filtered data
+    source.setData({
+      type: 'FeatureCollection',
+      features: filteredFeatures
+    });
+
+    // Fly to the selected station if one is selected
+    if (data.station) {
+      const stationFeature = originalData.features.find(f => f.properties.station === data.station);
+      if (stationFeature) {
+        map.flyTo({
+          center: stationFeature.geometry.coordinates,
+          zoom: 14,
+          essential: true
+        });
+      }
+    } else {
+      // If no station selected, reset to Manila view
+      map.flyTo({
+        center: [${MANILA_CENTER.lng}, ${MANILA_CENTER.lat}],
+        zoom: ${MANILA_CENTER.zoom},
+        essential: true
+      });
+    }
   }
+});
+
+// Store original data when map loads
+let originalData;
+map.on('load', () => {
+  // Store the original data for filtering
+  originalData = ${JSON.stringify(data)};
+
+  // Add the source for crime data
+  map.addSource('crimes', {
+    type: 'geojson',
+    data: originalData,
+    cluster: true,
+    clusterMaxZoom: 14,
+    clusterRadius: 50
+  });
+
+  // Add a layer for the clusters
+  map.addLayer({
+    id: 'clusters',
+    type: 'circle',
+    source: 'crimes',
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': [
+        'step',
+        ['get', 'point_count'],
+        '#ffeda0',  // 1-10 crimes (light yellow)
+        10,
+        '#feb24c',  // 11-25 crimes (orange)
+        25,
+        '#fc4e2a',  // 26-50 crimes (red-orange)
+        50,
+        '#e31a1c',  // 51-100 crimes (bright red)
+        100,
+        '#800026'   // 100+ crimes (dark red)
+      ],
+      'circle-radius': [
+        'step',
+        ['get', 'point_count'],
+        25,    // 1-10 crimes
+        10,
+        35,    // 11-25 crimes
+        25,
+        45,    // 26-50 crimes
+        50,
+        55,    // 51-100 crimes
+        100,
+        65     // 100+ crimes
+      ],
+      'circle-opacity': 0.9,
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-opacity': 0.8
+    }
+  });
+
+  // Add a layer for cluster counts
+  map.addLayer({
+    id: 'cluster-count',
+    type: 'symbol',
+    source: 'crimes',
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': '{point_count_abbreviated}',
+      'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+      'text-size': [
+        'step',
+        ['get', 'point_count'],
+        14,    // Size for 1-10
+        10,
+        16,    // Size for 11-25
+        25,
+        18,    // Size for 26-50
+        50,
+        20,    // Size for 51-100
+        100,
+        24     // Size for 100+
+      ]
+    },
+    paint: {
+      'text-color': '#ffffff',
+      'text-halo-color': 'rgba(0, 0, 0, 0.3)',
+      'text-halo-width': 2
+    }
+  });
+
+  // Add a layer for individual points
+  map.addLayer({
+    id: 'unclustered-point',
+    type: 'circle',
+    source: 'crimes',
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+      'circle-color': [
+        'case',
+        ['get', 'isIndexCrime'],
+        '#e31a1c',  // Bright red for index crimes
+        '#feb24c'   // Orange for non-index crimes
+      ],
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['get', 'count'],
+        1, 12,      // Min size for count of 1
+        5, 16,      // Medium size for count of 5
+        10, 20,     // Large size for count of 10
+        20, 25      // Max size for count of 20+
+      ],
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff',
+      'circle-opacity': 0.85,
+      'circle-stroke-opacity': 0.8
+    }
+  });
+
+  // Add a layer for point counts with enhanced visibility
+  map.addLayer({
+    id: 'unclustered-point-count',
+    type: 'symbol',
+    source: 'crimes',
+    filter: ['!', ['has', 'point_count']],
+    layout: {
+      'text-field': '{count}',
+      'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+      'text-size': [
+        'interpolate',
+        ['linear'],
+        ['get', 'count'],
+        1, 12,      // Size for count of 1
+        5, 14,      // Size for count of 5
+        10, 16,     // Size for count of 10
+        20, 18      // Size for count of 20+
+      ]
+    },
+    paint: {
+      'text-color': '#ffffff',
+      'text-halo-color': 'rgba(0, 0, 0, 0.3)',
+      'text-halo-width': 2
+    }
+  });
+
+  // Add click event for clusters
+  map.on('click', 'clusters', (e) => {
+    const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+    const clusterId = features[0].properties.cluster_id;
+    map.getSource('crimes').getClusterExpansionZoom(clusterId, (err, zoom) => {
+      if (err) return;
+
+      map.easeTo({
+        center: features[0].geometry.coordinates,
+        zoom: zoom
+      });
+    });
+  });
+
+  // Add hover effect for clusters
+  map.on('mouseenter', 'clusters', () => {
+    map.getCanvas().style.cursor = 'pointer';
+    // Optional: You could add a slight size increase on hover
+    map.setPaintProperty('clusters', 'circle-radius', [
+      'step',
+      ['get', 'point_count'],
+      28,    // 1-10 crimes (slightly bigger on hover)
+      10,
+      38,    // 11-25 crimes
+      25,
+      48,    // 26-50 crimes
+      50,
+      58,    // 51-100 crimes
+      100,
+      68     // 100+ crimes
+    ]);
+  });
+
+  map.on('mouseleave', 'clusters', () => {
+    map.getCanvas().style.cursor = '';
+    // Reset to original size
+    map.setPaintProperty('clusters', 'circle-radius', [
+      'step',
+      ['get', 'point_count'],
+      25,    // 1-10 crimes
+      10,
+      35,    // 11-25 crimes
+      25,
+      45,    // 26-50 crimes
+      50,
+      55,    // 51-100 crimes
+      100,
+      65     // 100+ crimes
+    ]);
+  });
 });
 </script>
 </body>
