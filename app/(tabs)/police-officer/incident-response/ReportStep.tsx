@@ -1,4 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -8,13 +9,31 @@ const incidentTypes = [
 
 export default function ReportStep() {
   const { alert_id } = useLocalSearchParams();
+  const router = useRouter();
   const [incidentType, setIncidentType] = useState('');
   const [severity, setSeverity] = useState('Medium');
   const [description, setDescription] = useState('');
 
-  const handleSubmit = () => {
-    // TODO: Submit the report to the backend
-    alert('Incident report submitted!');
+  const handleSubmit = async () => {
+    const policeId = await AsyncStorage.getItem('police_id');
+    const formData = new FormData();
+    formData.append('alert_id', String(alert_id));
+    formData.append('police_id', policeId ? policeId : '');
+    formData.append('incident_type', incidentType);
+    formData.append('severity', severity);
+    formData.append('description', description);
+
+    const response = await fetch('http://mnl911.atwebpages.com/resolve_sos_alert.php', {
+      method: 'POST',
+      body: formData,
+    });
+    const result = await response.json();
+    if (result.success) {
+      alert('Incident report submitted!');
+      router.replace('/police-officer');
+    } else {
+      alert(result.error || 'Failed to submit report.');
+    }
   };
 
   return (
