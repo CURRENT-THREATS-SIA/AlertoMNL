@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
@@ -67,6 +68,27 @@ const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ ite
 
 const History: React.FC = () => {
   const router = useRouter();
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const policeId = await AsyncStorage.getItem('police_id');
+      if (!policeId) return;
+      const response = await fetch(`http://mnl911.atwebpages.com/get_police_history.php?police_id=${policeId}`);
+      const data = await response.json();
+      if (data.success) {
+        setHistoryItems(data.history.map((item: any) => ({
+          id: item.history_id,
+          date: item.response_time ? item.response_time.split(' ')[0] : '',
+          time: item.response_time ? item.response_time.split(' ')[1] : '',
+          location: item.alert_id ? `Alert #${item.alert_id}` : '',
+          crimeType: item.p_audio ? 'Audio' : '',
+          status: 'resolved', // You can adjust this based on your schema
+        })));
+      }
+    };
+    fetchHistory();
+  }, []);
 
   const handleHistoryItemPress = (id: number) => {
     router.push(`/police-officer/history/${id}`);
@@ -86,7 +108,7 @@ const History: React.FC = () => {
           <Text style={styles.subtitle}>View your past crime reports</Text>
           
           <View style={styles.historyList}>
-            {mockHistoryItems.map((item) => (
+            {historyItems.map((item) => (
               <HistoryCard 
                 key={item.id} 
                 item={item}

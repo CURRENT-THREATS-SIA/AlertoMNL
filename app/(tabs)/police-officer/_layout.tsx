@@ -44,7 +44,12 @@ export default function PoliceOfficerLayout() {
           }}
         />
         <Stack.Screen name="Notifications" />
+        <Stack.Screen name="incident-response/MapStep" />
+        <Stack.Screen name="incident-response/ArrivedStep" />
+        <Stack.Screen name="incident-response/ResolvedStep" />
+        <Stack.Screen name="incident-response/ReportStep" />
+        <Stack.Screen name="incident-response/index" />
       </Stack>
     </View>
   );
-} 
+}
