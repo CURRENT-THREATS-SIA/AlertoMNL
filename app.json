@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "scheme": "alertomnl",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -23,7 +24,6 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "static",
       "build": {
