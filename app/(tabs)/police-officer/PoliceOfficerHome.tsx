@@ -6,10 +6,11 @@ import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
 
-// Placeholder icons
-const SearchIcon = () => <View style={styles.iconPlaceholder} />;
+// NOTE: All code related to expo-notifications, pop-up modals, and listeners
+// has been removed to fix the error in Expo Go.
 
-// Example remote images (replace with local require if you have assets)
+// --- Your existing constants and types ---
+const SearchIcon = () => <View style={styles.iconPlaceholder} />;
 const mapBgUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/frame-3997.png';
 const locationUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location.png';
 const location1Uri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location-1.png';
@@ -47,16 +48,15 @@ const stations = [
   "Malate Police Station", "Sta. Cruz Police Station", "Other"
 ];
 
+
 const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
   const containerPadding = isSmallDevice ? 12 : 1;
   const mapHeight = Math.min(height * 0.35, 400);
+  const statsCardWidth = (width - 40 - 16) / 3;
 
-  // Calculate stats card width based on screen width
-  const statsCardWidth = (width - 40 - 16) / 3; // 40 for container padding, 16 for gaps
-
-  // Dropdown state
+  // Your existing dropdown state
   const [selectedCrimeType, setSelectedCrimeType] = React.useState('');
   const [selectedStation, setSelectedStation] = React.useState('');
 
@@ -183,34 +183,16 @@ const CrimeMap: React.FC = () => {
                     
                     {stat.location ? (
                       <>
-                        <Text 
-                          style={[
-                            styles.statLocation, 
-                            styles.defaultFont,
-                            isSmallDevice && { fontSize: 11 }
-                          ]}
-                        >
+                        <Text style={[styles.statLocation, styles.defaultFont, isSmallDevice && { fontSize: 11 }]}>
                           {stat.location}
                         </Text>
-                        <Text 
-                          style={[
-                            styles.statType, 
-                            styles.defaultFont,
-                            isSmallDevice && { fontSize: 10 }
-                          ]}
-                        >
+                        <Text style={[styles.statType, styles.defaultFont, isSmallDevice && { fontSize: 10 }]}>
                           {stat.type}
                         </Text>
                       </>
                     ) : null}
                     
-                    <Text 
-                      style={[
-                        styles.statValue, 
-                        styles.defaultFont,
-                        isSmallDevice && { fontSize: 16 }
-                      ]}
-                    >
+                    <Text style={[styles.statValue, styles.defaultFont, isSmallDevice && { fontSize: 16 }]}>
                       {stat.value}
                     </Text>
                   </View>
@@ -222,6 +204,7 @@ const CrimeMap: React.FC = () => {
       </ScrollView>
 
       <NavBottomBar activeScreen="Home" />
+
     </SafeAreaView>
   );
 };
@@ -346,14 +329,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    gap: 8, // Add gap between cards
+    gap: 8,
   },
   statCard: {
     backgroundColor: '#FFD8D8',
     borderRadius: 8,
     padding: 12,
     minHeight: 100,
-    width: '31%', // Approximately (100% - 2 gaps) / 3
+    width: '31%',
     justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: {

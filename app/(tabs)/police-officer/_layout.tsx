@@ -47,4 +47,4 @@ export default function PoliceOfficerLayout() {
       </Stack>
     </View>
   );
-} 
+}
