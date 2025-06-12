@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
 
@@ -42,6 +42,7 @@ export default function RegularUserHome() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationAddress, setLocationAddress] = useState<string>("Fetching location...");
   const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [manualRecording, setManualRecording] = useState<Audio.Recording | null>(null);
@@ -50,6 +51,7 @@ export default function RegularUserHome() {
   const [currentAlertId, setCurrentAlertId] = useState<number | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [sosDisabledUntil, setSosDisabledUntil] = useState<number | null>(null);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
 
   // Animated values for rings
   const ring1Anim = useRef(new Animated.Value(1)).current;
@@ -123,10 +125,16 @@ export default function RegularUserHome() {
       }
       await Audio.requestPermissionsAsync();
       await getQuickInitialLocation();
-      startLocationUpdates();
+      if (Platform.OS !== 'web') {
+        startLocationUpdates();
+      }
     };
     initializeLocation();
-    return () => { stopLocationUpdates(); };
+    return () => { 
+      if (Platform.OS !== 'web') {
+        stopLocationUpdates(); 
+      }
+    };
   }, []);
 
   const getQuickInitialLocation = async () => {
@@ -197,7 +205,12 @@ export default function RegularUserHome() {
   };
 
   const stopLocationUpdates = () => {
-    // Implement cleanup for location subscription if needed
+    if (locationSubscriptionRef.current && Platform.OS !== 'web') {
+      locationSubscriptionRef.current.remove();
+      locationSubscriptionRef.current = null;
+    }
+    Location.stopLocationUpdatesAsync('background-location-task')
+      .catch(error => console.log('Error stopping location updates:', error));
   };
 
   const startRecording = async () => {
@@ -208,11 +221,11 @@ export default function RegularUserHome() {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
+      const { recording: newRecording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       
-      setRecording(recording);
+      setRecording(newRecording);
       setIsRecording(true);
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -246,7 +259,20 @@ export default function RegularUserHome() {
   };
 
   const startLocationUpdates = async () => {
-    Location.watchPositionAsync(
+    if (Platform.OS === 'web') {
+      // For web, just get the location once
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setLocation(location);
+      try {
+        const addresses = await Location.reverseGeocodeAsync(location.coords);
+        if (addresses && addresses[0]) {
+          setLocationAddress(formatAddress(addresses[0]));
+        }
+      } catch (error) { /* handle error */ }
+      return;
+    }
+
+    const subscription = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
       async (newLocation) => {
         setLocation(newLocation);
@@ -258,9 +284,8 @@ export default function RegularUserHome() {
         } catch (error) { /* handle error */ }
       }
     );
+    locationSubscriptionRef.current = subscription;
   };
-
-  const stopLocationUpdates = () => { /* Cleanup logic */ };
 
   const formatAddress = (address: Location.LocationGeocodedAddress) => {
     const addressParts = [];

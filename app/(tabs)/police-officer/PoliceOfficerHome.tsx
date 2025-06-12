@@ -62,7 +62,7 @@ const CrimeMap: React.FC = () => {
     // Apply crime type filter if selected
     if (selectedCrimeType) {
       filteredFeatures = filteredFeatures.filter(feature => 
-        feature.properties.crimeType === selectedCrimeType
+        feature.properties?.crimeType === selectedCrimeType
       );
     }
 
@@ -74,9 +74,12 @@ const CrimeMap: React.FC = () => {
       
       // Find highest crime for the selected station
       filteredFeatures
-        .filter(feature => feature.properties.station === selectedStation)
+        .filter(feature => feature.properties?.station === selectedStation)
         .forEach(feature => {
-          const { station, crimeType, count } = feature.properties;
+          const properties = feature.properties;
+          if (!properties) return;
+          
+          const { station, crimeType, count } = properties as { station: string; crimeType: string; count: number };
           if (count > highestCrime.count) {
             highestCrime = {
               count,
@@ -112,7 +115,10 @@ const CrimeMap: React.FC = () => {
 
     // Find highest crime across all stations
     filteredFeatures.forEach(feature => {
-      const { station, crimeType, count } = feature.properties;
+      const properties = feature.properties;
+      if (!properties) return;
+      
+      const { station, crimeType, count } = properties as { station: string; crimeType: string; count: number };
       if (count > highestCrime.count) {
         highestCrime = {
           count,
@@ -179,9 +185,7 @@ const CrimeMap: React.FC = () => {
               styles.defaultFont,
               isSmallDevice && { fontSize: 14 }
             ]}>
-              {selectedCrimeType ? 
-                crimeTypes.find(ct => ct === selectedCrimeType)?.label : 
-                'Select Crime Type'}
+              {selectedCrimeType ? selectedCrimeType : 'Select Crime Type'}
             </Text>
           </TouchableOpacity>
           
@@ -195,9 +199,7 @@ const CrimeMap: React.FC = () => {
               styles.defaultFont,
               isSmallDevice && { fontSize: 14 }
             ]}>
-              {selectedStation ? 
-                stations.find(st => st === selectedStation)?.label : 
-                'Select Station'}
+              {selectedStation ? selectedStation : 'Select Station'}
             </Text>
           </TouchableOpacity>
 
@@ -569,37 +571,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     marginTop: 16,
-  },
-  statCard: {
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statTitle: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  statLocation: {
-    fontSize: 14,
-    color: '#212121',
-    marginBottom: 2,
-  },
-  statType: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 20,
-    color: '#212121',
-    fontFamily: fonts.poppins.semiBold,
-  },
+  }
 });
 
 export default CrimeMap;

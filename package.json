@@ -27,11 +27,8 @@
     "expo-av": "^15.1.6",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.6",
-<<<<<<< HEAD
     "expo-dev-client": "~5.2.0",
-=======
     "expo-device": "~7.1.4",
->>>>>>> origin/master
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.2.1",
