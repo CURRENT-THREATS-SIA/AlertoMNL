@@ -1,15 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
-import React, { useCallback, useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
 import { EmergencyAlertModal } from '../components/EmergencyAlertModal';
 import { AlertProvider, useAlert } from './context/AlertContext';
 import { theme, ThemeProvider, useTheme } from './context/ThemeContext';
 import { VoiceRecordProvider } from "./context/VoiceRecordContext";
 
-// ✅ Move GlobalAlertPoller *inside* RootLayout so it's rendered after ThemeProvider
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
+
 function GlobalAlertPoller() {
   const { showAlert } = useAlert();
   const pathname = usePathname();
@@ -18,19 +21,15 @@ function GlobalAlertPoller() {
   const fetchLatestAlert = useCallback(async () => {
     try {
       const policeId = await AsyncStorage.getItem('police_id');
-      if (!policeId) return; // ✅ Only for police
-
+      if (!policeId) return;
       const response = await fetch('http://mnl911.atwebpages.com/getnotifications1.php');
       const data = await response.json();
-
       if (data.success && data.notifications?.length > 0) {
         const latestAlert = data.notifications[0];
         const alertId = Number(latestAlert.alert_id);
-
         if (alertId === lastAlertIdRef.current) return;
-
         lastAlertIdRef.current = alertId;
-        showAlert(alertId); // ✅ No redirect here
+        showAlert(alertId);
       }
     } catch (error) {
       console.error("Global alert poll failed:", error);
@@ -49,19 +48,35 @@ function GlobalAlertPoller() {
 function RootLayoutContent() {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    async function loadFonts() {
-      await Font.loadAsync({
-        'Poppins-Light': require('../assets/fonts/Poppins-Light.ttf'),
-        'Poppins-Regular': require('../assets/fonts/Poppins-Regular.ttf'),
-        'Poppins-Medium': require('../assets/fonts/Poppins-Medium.ttf'),
-        'Poppins-SemiBold': require('../assets/fonts/Poppins-SemiBold.ttf'),
-        'Poppins-Bold': require('../assets/fonts/Poppins-Bold.ttf'),
-      });
+    async function prepare() {
+      try {
+        await Font.loadAsync({
+          'Poppins-Light': require('../assets/fonts/Poppins-Light.ttf'),
+          'Poppins-Regular': require('../assets/fonts/Poppins-Regular.ttf'),
+          'Poppins-Medium': require('../assets/fonts/Poppins-Medium.ttf'),
+          'Poppins-SemiBold': require('../assets/fonts/Poppins-SemiBold.ttf'),
+          'Poppins-Bold': require('../assets/fonts/Poppins-Bold.ttf'),
+        });
+      } catch (e) {
+        console.warn('Error loading fonts:', e);
+      } finally {
+        setIsReady(true);
+        await SplashScreen.hideAsync();
+      }
     }
-    loadFonts();
+    prepare();
   }, []);
+
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: currentTheme.background }}>
+        <ActivityIndicator size="large" color="#E02323" />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: currentTheme.background }}>
@@ -84,7 +99,7 @@ export default function RootLayout() {
         <AlertProvider>
           <RootLayoutContent />
           <EmergencyAlertModal />
-          <GlobalAlertPoller /> 
+          <GlobalAlertPoller />
         </AlertProvider>
       </VoiceRecordProvider>
     </ThemeProvider>

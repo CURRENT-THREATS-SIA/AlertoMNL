@@ -1,38 +1,46 @@
 {
   "expo": {
-    "name": "ALERTO_MNL_WEB-APP",
-    "slug": "ALERTO_MNL_WEB-APP",
+    "name": "ALERTO MNL",
+    "slug": "alerto_mnl_web-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "alertomnlwebapp",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "light",
+    "scheme": "alertomnl",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.alertomnl.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.ALERTO_MNL_WEBAPP"
+      "package": "com.alertomnl.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "build": {
+        "babel": {
+          "include": ["@rnmapbox/maps"]
+        }
+      },
+      "headers": {
+        "Content-Security-Policy": "default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline' https://*.mapbox.com https://api.mapbox.com https://events.mapbox.com; style-src 'self' 'unsafe-inline' https://*.mapbox.com; img-src 'self' data: blob: https://*.mapbox.com"
+      }
     },
     "plugins": [
-      "expo-router",
       [
-        "expo-splash-screen",
+        "@rnmapbox/maps",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "RNMapboxMapsImpl": "mapbox",
+          "RNMapboxMapsDownloadToken": "pk.eyJ1IjoiZWl2cnlsbGUiLCJhIjoiY21iZW1za2V5MmlmODJqcHRwdW9reDZuYyJ9.0qvHb-7JmG3oTyWMV7BrSg"
         }
       ]
     ],
