@@ -1,6 +1,8 @@
+import NetInfo from '@react-native-community/netinfo';
+import * as Location from 'expo-location';
 import { FeatureCollection, Point } from 'geojson';
-import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
 import WebView from 'react-native-webview';
 
 interface MapComponentProps {
@@ -18,6 +20,177 @@ const MANILA_CENTER = {
 };
 
 const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data }) => {
+  const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
+  const webViewRef = useRef<WebView>(null);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const appStateRef = useRef(AppState.currentState);
+  const [isPatrolMode, setIsPatrolMode] = useState(false);
+  const [patrolPath, setPatrolPath] = useState<Location.LocationObject[]>([]);
+  const [patrolStartTime, setPatrolStartTime] = useState<number | null>(null);
+
+  const startLocationTracking = async () => {
+    try {
+      // Request both foreground and background permissions for better tracking
+      const foregroundPermission = await Location.requestForegroundPermissionsAsync();
+      if (foregroundPermission.status !== 'granted') {
+        console.error('Foreground location permission denied');
+        return;
+      }
+
+      if (Platform.OS !== 'web') {
+        const backgroundPermission = await Location.requestBackgroundPermissionsAsync();
+        if (backgroundPermission.status === 'granted') {
+          console.log('Background location permission granted');
+        }
+      }
+
+      // Configure high accuracy location tracking
+      await Location.enableNetworkProviderAsync();
+      
+      // Start watching position with high accuracy settings
+      locationSubscriptionRef.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000, // Update every second
+          distanceInterval: 1, // or if moved 1 meter
+          mayShowUserSettingsDialog: true // Prompt user to enable high accuracy if needed
+        },
+        (location) => {
+          setDeviceLocation(location);
+          
+          // Check if we have network connectivity
+          NetInfo.fetch().then(state => {
+            if (state.isConnected) {
+              // Inject location into the map with additional data
+              if (Platform.OS !== 'web') {
+                const locationUpdate = {
+                  type: 'updateDeviceLocation',
+                  location: {
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                    accuracy: location.coords.accuracy,
+                    heading: location.coords.heading,
+                    speed: location.coords.speed,
+                    altitude: location.coords.altitude,
+                    timestamp: location.timestamp
+                  }
+                };
+                webViewRef.current?.injectJavaScript(`
+                  window.dispatchEvent(new MessageEvent('message', {
+                    data: '${JSON.stringify(locationUpdate)}'
+                  }));
+                  true;
+                `);
+              }
+            }
+          });
+        }
+      );
+    } catch (error) {
+      console.error('Error starting location tracking:', error);
+    }
+  };
+
+  const stopLocationTracking = () => {
+    if (locationSubscriptionRef.current) {
+      locationSubscriptionRef.current.remove();
+      locationSubscriptionRef.current = null;
+    }
+  };
+
+  // Handle app state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appStateRef.current.match(/inactive|background/) && 
+        nextAppState === 'active'
+      ) {
+        // App has come to foreground
+        startLocationTracking();
+      } else if (nextAppState.match(/inactive|background/)) {
+        // App has gone to background
+        stopLocationTracking();
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Start location tracking when component mounts
+  useEffect(() => {
+    startLocationTracking();
+    return () => {
+      stopLocationTracking();
+    };
+  }, []);
+
+  // Add patrol mode tracking
+  const togglePatrolMode = () => {
+    if (!isPatrolMode) {
+      // Starting patrol mode
+      setIsPatrolMode(true);
+      setPatrolStartTime(Date.now());
+      setPatrolPath([]);
+      if (deviceLocation) {
+        setPatrolPath([deviceLocation]);
+      }
+    } else {
+      // Ending patrol mode
+      setIsPatrolMode(false);
+      setPatrolStartTime(null);
+      // Here you could send the patrol data to your backend
+      if (patrolPath.length > 0) {
+        console.log('Patrol completed:', {
+          duration: Date.now() - (patrolStartTime || 0),
+          distance: calculatePatrolDistance(patrolPath),
+          points: patrolPath.length
+        });
+      }
+    }
+  };
+
+  // Calculate total patrol distance
+  const calculatePatrolDistance = (path: Location.LocationObject[]) => {
+    let totalDistance = 0;
+    for (let i = 1; i < path.length; i++) {
+      const prev = path[i - 1];
+      const curr = path[i];
+      totalDistance += getDistanceFromLatLonInMeters(
+        prev.coords.latitude,
+        prev.coords.longitude,
+        curr.coords.latitude,
+        curr.coords.longitude
+      );
+    }
+    return totalDistance;
+  };
+
+  // Haversine formula for distance calculation
+  const getDistanceFromLatLonInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  };
+
+  // Update patrol path when location changes
+  useEffect(() => {
+    if (isPatrolMode && deviceLocation) {
+      setPatrolPath(prev => [...prev, deviceLocation]);
+    }
+  }, [deviceLocation, isPatrolMode]);
+
   const mapboxHTML = `
 <!DOCTYPE html>
 <html>
@@ -59,7 +232,7 @@ body { margin: 0; padding: 0; }
 .mapboxgl-ctrl-group {
   margin-top: 60px !important;
 }
-.current-location-dot {
+.device-location-dot {
   width: 24px;
   height: 24px;
   background-color: #4285F4;
@@ -68,12 +241,40 @@ body { margin: 0; padding: 0; }
   box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
   cursor: pointer;
 }
-.current-location-accuracy {
+.device-location-accuracy {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   background-color: rgba(66, 133, 244, 0.15);
   animation: pulse 2s ease-out infinite;
+}
+.location-button {
+  position: absolute;
+  right: 10px;
+  bottom: 100px;
+  background: white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  transition: background-color 0.3s;
+}
+.location-button:hover {
+  background: #f8f8f8;
+}
+.location-button:active {
+  background: #eee;
+}
+.location-button svg {
+  width: 24px;
+  height: 24px;
+  fill: #666;
 }
 .location-loading {
   position: absolute;
@@ -106,14 +307,75 @@ body { margin: 0; padding: 0; }
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(4); opacity: 0; }
 }
+${userType === 'police' ? `
+.patrol-button {
+  position: absolute;
+  bottom: 160px;
+  right: 10px;
+  background: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 0;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.patrol-button.active {
+  background: #4285F4;
+}
+.patrol-button svg {
+  width: 29px;
+  height: 29px;
+  fill: #333;
+}
+.patrol-button.active svg {
+  fill: white;
+}
+.patrol-stats {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: white;
+  border-radius: 4px;
+  padding: 10px;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+  display: none;
+}
+.patrol-stats.active {
+  display: block;
+}
+` : ''}
 </style>
 </head>
 <body>
 <div id="map"></div>
+<button class="location-button" id="centerLocationButton" title="Center on my location">
+  <svg viewBox="0 0 24 24">
+    <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+  </svg>
+</button>
+${userType === 'police' ? `
+<button class="patrol-button" id="patrolButton" title="Toggle patrol mode">
+  <svg viewBox="0 0 24 24">
+    <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+  </svg>
+</button>
+<div class="patrol-stats" id="patrolStats">
+  <div>Duration: <span id="patrolDuration">0:00</span></div>
+  <div>Distance: <span id="patrolDistance">0.0</span> km</div>
+</div>
+` : ''}
 <div class="location-loading">Getting your location...</div>
 <div class="location-error">Could not get your location</div>
 <script>
 mapboxgl.accessToken = 'pk.eyJ1IjoiZWl2cnlsbGUiLCJhIjoiY21iZW1za2V5MmlmODJqcHRwdW9reDZuYyJ9.0qvHb-7JmG3oTyWMV7BrSg';
+
+let currentLocation = null;
+let locationUpdateTime = Date.now();
+let isFirstLocation = true;
 
 const map = new mapboxgl.Map({
   container: 'map',
@@ -127,19 +389,132 @@ const geocoder = new MapboxGeocoder({
   accessToken: mapboxgl.accessToken,
   mapboxgl: mapboxgl,
   countries: 'ph',
-  bbox: [120.9745, 14.5907, 120.9942, 14.6019], // Manila bounding box
+  bbox: [120.9745, 14.5907, 120.9942, 14.6019],
   placeholder: 'Search in Manila...'
 });
 
 map.addControl(geocoder);
 map.addControl(new mapboxgl.NavigationControl());
-map.addControl(new mapboxgl.GeolocateControl({
-  positionOptions: {
-    enableHighAccuracy: true
-  },
-  trackUserLocation: true,
-  showUserHeading: true
-}));
+
+// Handle location button click with smooth animation
+document.getElementById('centerLocationButton').addEventListener('click', () => {
+  if (currentLocation) {
+    map.flyTo({
+      center: [currentLocation.longitude, currentLocation.latitude],
+      zoom: 17,
+      duration: 1000,
+      pitch: 60, // Add some tilt for better perspective
+      bearing: currentLocation.heading || 0 // Align map with user's heading
+    });
+  }
+});
+
+// Initialize device location source and layers
+map.on('load', () => {
+  // Add location source
+  map.addSource('device-location', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [${MANILA_CENTER.lng}, ${MANILA_CENTER.lat}]
+      },
+      properties: {
+        accuracy: 0,
+        heading: 0,
+        speed: 0
+      }
+    }
+  });
+
+  // Add accuracy circle
+  map.addLayer({
+    id: 'device-location-accuracy',
+    type: 'circle',
+    source: 'device-location',
+    paint: {
+      'circle-radius': ['/', ['get', 'accuracy'], 1],
+      'circle-color': '#4285F4',
+      'circle-opacity': 0.15,
+      'circle-pitch-alignment': 'map'
+    }
+  });
+
+  // Add direction indicator
+  map.addLayer({
+    id: 'device-location-direction',
+    type: 'symbol',
+    source: 'device-location',
+    layout: {
+      'icon-image': 'triangle-15',
+      'icon-rotate': ['get', 'heading'],
+      'icon-rotation-alignment': 'map',
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true
+    },
+    paint: {
+      'icon-color': '#4285F4',
+      'icon-opacity': ['case', ['==', ['get', 'speed'], 0], 0, 0.8]
+    }
+  });
+
+  // Add location dot
+  map.addLayer({
+    id: 'device-location-dot',
+    type: 'circle',
+    source: 'device-location',
+    paint: {
+      'circle-radius': 8,
+      'circle-color': '#4285F4',
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff',
+      'circle-pitch-alignment': 'map'
+    }
+  });
+});
+
+// Handle device location updates with improved accuracy
+window.addEventListener('message', (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'updateDeviceLocation') {
+    const { latitude, longitude, accuracy, heading, speed, timestamp } = data.location;
+    const timeSinceLastUpdate = timestamp - locationUpdateTime;
+    
+    // Update only if accuracy is good enough or if it's been a while
+    if (accuracy <= 20 || timeSinceLastUpdate > 5000) {
+      currentLocation = data.location;
+      locationUpdateTime = timestamp;
+
+      // Update location source
+      const source = map.getSource('device-location');
+      if (source) {
+        source.setData({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [longitude, latitude]
+          },
+          properties: {
+            accuracy: accuracy,
+            heading: heading || 0,
+            speed: speed || 0
+          }
+        });
+
+        // Center map on first location fix
+        if (isFirstLocation) {
+          map.flyTo({
+            center: [longitude, latitude],
+            zoom: 17,
+            duration: 1000
+          });
+          isFirstLocation = false;
+        }
+      }
+    }
+  }
+});
 
 // Handle messages from React Native
 window.addEventListener('message', (event) => {
@@ -375,7 +750,217 @@ map.on('load', () => {
       65     // 100+ crimes
     ]);
   });
+
+  // Add custom location tracking
+  if ('geolocation' in navigator) {
+    const locationLoadingEl = document.querySelector('.location-loading');
+    const locationErrorEl = document.querySelector('.location-error');
+    
+    // Watch position with high accuracy
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        
+        // Update user location marker
+        if (!map.getSource('user-location')) {
+          map.addSource('user-location', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              geometry: {
+                type: 'Point',
+                coordinates: [longitude, latitude]
+              },
+              properties: {
+                accuracy: accuracy
+              }
+            }
+          });
+
+          // Add accuracy circle
+          map.addLayer({
+            id: 'location-accuracy',
+            type: 'circle',
+            source: 'user-location',
+            paint: {
+              'circle-radius': ['/', ['get', 'accuracy'], 1],
+              'circle-color': '#4285F4',
+              'circle-opacity': 0.15
+            }
+          });
+
+          // Add user location dot
+          map.addLayer({
+            id: 'location-dot',
+            type: 'circle',
+            source: 'user-location',
+            paint: {
+              'circle-radius': 8,
+              'circle-color': '#4285F4',
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff'
+            }
+          });
+        } else {
+          // Update existing location data
+          map.getSource('user-location').setData({
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude]
+            },
+            properties: {
+              accuracy: accuracy
+            }
+          });
+        }
+
+        locationLoadingEl.style.display = 'none';
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        locationErrorEl.textContent = 'Could not get your location: ' + error.message;
+        locationErrorEl.style.display = 'block';
+        setTimeout(() => {
+          locationErrorEl.style.display = 'none';
+        }, 5000);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+
+    // Cleanup watch position when map is removed
+    map.on('remove', () => {
+      navigator.geolocation.clearWatch(watchId);
+    });
+  }
 });
+
+${userType === 'police' ? `
+// Initialize patrol mode variables
+let isPatrolMode = false;
+let patrolPath = [];
+let patrolStartTime = null;
+
+// Add patrol path source and layer
+map.on('load', () => {
+  map.addSource('patrol-path', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: []
+      }
+    }
+  });
+
+  map.addLayer({
+    id: 'patrol-path',
+    type: 'line',
+    source: 'patrol-path',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
+    paint: {
+      'line-color': '#4285F4',
+      'line-width': 4,
+      'line-opacity': 0.8
+    }
+  });
+});
+
+// Handle patrol button click
+document.getElementById('patrolButton').addEventListener('click', () => {
+  isPatrolMode = !isPatrolMode;
+  const button = document.getElementById('patrolButton');
+  const stats = document.getElementById('patrolStats');
+  
+  if (isPatrolMode) {
+    button.classList.add('active');
+    stats.classList.add('active');
+    patrolStartTime = Date.now();
+    patrolPath = currentLocation ? [[currentLocation.longitude, currentLocation.latitude]] : [];
+    updatePatrolStats();
+  } else {
+    button.classList.remove('active');
+    stats.classList.remove('active');
+    patrolStartTime = null;
+    // Send patrol data to React Native
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: 'patrolComplete',
+      data: {
+        path: patrolPath,
+        duration: document.getElementById('patrolDuration').textContent,
+        distance: document.getElementById('patrolDistance').textContent
+      }
+    }));
+  }
+});
+
+// Update patrol path when location changes
+window.addEventListener('message', (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'updateDeviceLocation' && isPatrolMode) {
+    const { latitude, longitude } = data.location;
+    patrolPath.push([longitude, latitude]);
+    
+    // Update path on map
+    const source = map.getSource('patrol-path');
+    if (source) {
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: patrolPath
+        }
+      });
+    }
+    
+    updatePatrolStats();
+  }
+});
+
+// Update patrol statistics
+function updatePatrolStats() {
+  if (!patrolStartTime) return;
+  
+  const duration = Math.floor((Date.now() - patrolStartTime) / 1000);
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+  document.getElementById('patrolDuration').textContent = 
+    minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+  
+  let distance = 0;
+  for (let i = 1; i < patrolPath.length; i++) {
+    const [lon1, lat1] = patrolPath[i - 1];
+    const [lon2, lat2] = patrolPath[i];
+    distance += getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) / 1000; // Convert to km
+  }
+  document.getElementById('patrolDistance').textContent = distance.toFixed(2);
+}
+
+function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+          Math.cos(φ1) * Math.cos(φ2) *
+          Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+` : ''}
 </script>
 </body>
 </html>
@@ -408,8 +993,6 @@ map.on('load', () => {
     sendFiltersToMap();
   }, [selectedCrimeType, selectedStation]);
 
-  const webViewRef = React.useRef<WebView>(null);
-
   if (Platform.OS === 'web') {
     return (
       <View style={styles.container}>
@@ -436,7 +1019,11 @@ map.on('load', () => {
         startInLoadingState={true}
         onMessage={(event) => {
           const data = JSON.parse(event.nativeEvent.data);
-          console.log('Message from WebView:', data);
+          if (data.type === 'patrolComplete' && userType === 'police') {
+            // Handle patrol completion
+            console.log('Patrol completed:', data.data);
+            // Here you could send the data to your backend
+          }
         }}
       />
     </View>

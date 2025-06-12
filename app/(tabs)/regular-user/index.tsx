@@ -2,11 +2,33 @@ import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
+
+// Define the background location task
+TaskManager.defineTask('background-location-task', async ({ data, error }: TaskManager.TaskManagerTaskBody<{ locations: Location.LocationObject[] }>) => {
+  if (error) {
+    console.error('Background location task error:', error);
+    return;
+  }
+  if (data) {
+    const { locations } = data;
+    const location = locations[0];
+    
+    // Handle background location update
+    console.log('Background location update:', {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      accuracy: location.coords.accuracy,
+      timestamp: new Date(location.timestamp).toISOString(),
+    });
+  }
+  return null; // Explicitly return a Promise that resolves to null
+});
 
 export default function RegularUserHome() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -45,33 +67,68 @@ export default function RegularUserHome() {
 
   const startLocationUpdates = async () => {
     try {
-      // Watch position with high accuracy
-      Location.watchPositionAsync(
+      // Request background location permission for better tracking
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus === 'granted') {
+        console.log('Background location permission granted');
+      }
+
+      // Configure location task for background updates
+      await Location.startLocationUpdatesAsync('background-location-task', {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 3000, // Update every 3 seconds
+        distanceInterval: 3, // or if moved 3 meters
+        deferredUpdatesInterval: 3000, // Minimum time between updates
+        deferredUpdatesDistance: 3, // Minimum distance between updates
+        foregroundService: {
+          notificationTitle: 'Location Tracking',
+          notificationBody: 'Tracking your location for emergency services',
+        },
+        pausesUpdatesAutomatically: false,
+      });
+
+      // Watch position with high accuracy for foreground updates
+      const subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          timeInterval: 5000,
-          distanceInterval: 5,
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 3000,
+          distanceInterval: 3,
         },
         async (newLocation) => {
           setLocation(newLocation);
           try {
-            // Reverse geocode to get address
+            // Reverse geocode with more detailed options
             const addresses = await Location.reverseGeocodeAsync({
               latitude: newLocation.coords.latitude,
               longitude: newLocation.coords.longitude,
             });
+            
             if (addresses && addresses[0]) {
               const address = addresses[0];
-              setLocationAddress(`${address.district || address.subregion || ''}, ${address.city || ''}`);
+              const formattedAddress = [
+                address.street,
+                address.district,
+                address.subregion,
+                address.city
+              ].filter(Boolean).join(', ');
+              
+              setLocationAddress(formattedAddress || 'Location found');
             }
           } catch (error) {
             console.error('Error getting address:', error);
+            setLocationAddress('Location found (address unavailable)');
           }
         }
       );
+
+      return () => {
+        // Cleanup location tracking
+        subscription.remove();
+        Location.stopLocationUpdatesAsync('background-location-task');
+      };
     } catch (error) {
       console.error('Error starting location updates:', error);
-      Alert.alert('Error', 'Failed to get location updates.');
+      Alert.alert('Error', 'Failed to start location tracking. Please check your permissions and try again.');
     }
   };
 

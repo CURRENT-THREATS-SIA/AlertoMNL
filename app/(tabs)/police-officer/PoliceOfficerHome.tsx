@@ -75,7 +75,7 @@ const PoliceOfficerHome: React.FC = () => {
     // Apply crime type filter if selected
     if (selectedCrimeType) {
       filteredFeatures = filteredFeatures.filter(feature => 
-        feature.properties.crimeType === selectedCrimeType
+        feature.properties?.crimeType === selectedCrimeType
       );
     }
 
@@ -87,9 +87,11 @@ const PoliceOfficerHome: React.FC = () => {
       
       // Find highest crime for the selected station
       filteredFeatures
-        .filter(feature => feature.properties.station === selectedStation)
+        .filter(feature => feature.properties?.station === selectedStation)
         .forEach(feature => {
-          const { station, crimeType, count } = feature.properties;
+          const properties = feature.properties;
+          if (!properties) return;
+          const { station, crimeType, count } = properties;
           if (count > highestCrime.count) {
             highestCrime = {
               count,
@@ -125,7 +127,9 @@ const PoliceOfficerHome: React.FC = () => {
 
     // Find highest crime across all stations
     filteredFeatures.forEach(feature => {
-      const { station, crimeType, count } = feature.properties;
+      const properties = feature.properties;
+      if (!properties) return;
+      const { station, crimeType, count } = properties;
       if (count > highestCrime.count) {
         highestCrime = {
           count,
