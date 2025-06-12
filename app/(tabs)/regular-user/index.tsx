@@ -14,7 +14,7 @@ const API_UPLOAD_AUDIO_URL = 'http://mnl911.atwebpages.com/upload_audio.php';
 const API_CANCEL_SOS_URL = 'http://mnl911.atwebpages.com/cancel_sos_alert.php';
 const API_CHECK_STATUS_URL = 'http://mnl911.atwebpages.com/check_sos_status.php';
 
-type SOSState = 'idle' | 'countdown' | 'active' | 'received';
+type SOSState = 'idle' | 'countdown' | 'active' | 'received' | 'resolved' | 'arrived';
 
 export default function RegularUserHome() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
@@ -36,7 +36,7 @@ export default function RegularUserHome() {
 
   useEffect(() => {
     let animation: Animated.CompositeAnimation | undefined;
-    if (sosState === 'active' || sosState === 'received') {
+    if (sosState === 'active' || sosState === 'received' || sosState === 'resolved' || sosState === 'arrived') {
       // Looping pulse animation for each ring, staggered
       animation = Animated.loop(
         Animated.stagger(400, [
@@ -229,14 +229,16 @@ export default function RegularUserHome() {
 
   // Poll for police acceptance and resolution
   useEffect(() => {
-    if ((sosState === 'active' || sosState === 'received') && currentAlertId) {
+    if ((sosState === 'active' || sosState === 'received' || sosState === 'resolved' || sosState === 'arrived') && currentAlertId) {
       pollingRef.current = setInterval(async () => {
         try {
           const res = await fetch(`${API_CHECK_STATUS_URL}?alert_id=${currentAlertId}`);
           const json = await res.json();
           if (json.status === 'active') {
-            setSosState('received');
-          } else if (json.status === 'resolved' || json.status === 'cancelled') {
+            setSosState('arrived');
+          } else if (json.status === 'resolved') {
+            setSosState('resolved');
+          } else if (json.status === 'cancelled') {
             setSosState('idle');
             setCurrentAlertId(null);
             if (pollingRef.current) clearInterval(pollingRef.current);
@@ -335,27 +337,31 @@ export default function RegularUserHome() {
             <Animated.View
               style={[
                 styles.sosRing1,
-                sosState === 'received' && styles.greenRing1,
+                (sosState === 'received' || sosState === 'arrived') && styles.blueRing1,
+                sosState === 'resolved' && styles.blueRing1,
                 { transform: [{ scale: ring1Anim }] }
               ]}
             />
             <Animated.View
               style={[
                 styles.sosRing2,
-                sosState === 'received' && styles.greenRing2,
+                (sosState === 'received' || sosState === 'arrived') && styles.blueRing2,
+                sosState === 'resolved' && styles.blueRing2,
                 { transform: [{ scale: ring2Anim }] }
               ]}
             />
             <Animated.View
               style={[
                 styles.sosRing3,
-                sosState === 'received' && styles.greenRing3,
+                (sosState === 'received' || sosState === 'arrived') && styles.blueRing3,
+                sosState === 'resolved' && styles.blueRing3,
                 { transform: [{ scale: ring3Anim }] }
               ]}
             />
             <View style={[
               styles.sosCenter,
-              sosState === 'received' && styles.greenCenter,
+              (sosState === 'received' || sosState === 'arrived') && styles.blueCenter,
+              sosState === 'resolved' && styles.blueCenter,
               (!location && !isSendingSOS) && styles.sosCenterDisabled
             ]}>
               {sosState === 'countdown' ? (
@@ -365,8 +371,12 @@ export default function RegularUserHome() {
                 </View>
               ) : sosState === 'active' ? (
                 <Text style={styles.sosText}>STOP</Text>
+              ) : sosState === 'arrived' ? (
+                <Text style={styles.sosText}>ARRIVED</Text>
               ) : sosState === 'received' ? (
                 <Text style={styles.sosText}>RECEIVED</Text>
+              ) : sosState === 'resolved' ? (
+                <Text style={styles.sosText}>RESOLVED</Text>
               ) : isSendingSOS ? (
                 <ActivityIndicator size="large" color="#ffffff" />
               ) : !location ? (
@@ -560,5 +570,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     opacity: 0.8,
+  },
+  blueRing1: {
+    backgroundColor: '#e6f0fa'
+  }, // lightest blue
+  blueRing2: {
+    backgroundColor: '#c8e0f4'
+  }, // lighter blue
+  blueRing3: {
+    backgroundColor: '#a0c2ee'
+  }, // light blue
+  blueCenter: {
+    backgroundColor: '#2196F3' // main blue
   },
 });

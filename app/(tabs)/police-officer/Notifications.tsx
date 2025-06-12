@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -62,9 +62,9 @@ const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId:
 const Notifications: React.FC = () => {
   const router = useRouter();
   const { showAlert } = useAlert(); 
-  const [notifications, setNotifications] = useState<AlertNotification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [notifications, setNotifications] = React.useState<AlertNotification[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   const playAlertSound = async () => {
     console.log('New alert detected. Playing sound...');
@@ -79,14 +79,14 @@ const Notifications: React.FC = () => {
     }
   };
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = React.useCallback(async () => {
     try {
       const response = await fetch(API_GET_NOTIFICATIONS_URL);
       const data = await response.json();
       
       if (data.success) {
-        setNotifications(prevNotifications => {
-          const prevIds = new Set(prevNotifications.map(n => n.alert_id));
+        setNotifications((prevNotifications: AlertNotification[]) => {
+          const prevIds = new Set(prevNotifications.map((n: AlertNotification) => n.alert_id));
           const hasNewAlert = data.notifications.some((newNotification: AlertNotification) => !prevIds.has(newNotification.alert_id));
           
           if (hasNewAlert && prevNotifications.length > 0) {
@@ -107,12 +107,12 @@ const Notifications: React.FC = () => {
     }
   }, [showAlert]); 
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     fetchNotifications();
   }, [fetchNotifications]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
@@ -124,7 +124,7 @@ const Notifications: React.FC = () => {
       Alert.alert("Authentication Error", "Could not find your Police ID. Please log in again.");
       return;
     }
-    setNotifications(prev => prev.filter(n => n.alert_id !== alertId));
+    setNotifications((prev: AlertNotification[]) => prev.filter((n: AlertNotification) => n.alert_id !== alertId));
     try {
       const formData = new FormData();
       formData.append('alert_id', alertId.toString());
@@ -132,7 +132,12 @@ const Notifications: React.FC = () => {
       const response = await fetch(API_ACCEPT_SOS_URL, { method: 'POST', body: formData });
       const result = await response.json();
       if (result.success) {
-        Alert.alert("Alert Accepted", "You have been assigned to the case.");
+        Alert.alert("Alert Accepted", "You have been assigned to the case.", [
+          {
+            text: "Proceed",
+            onPress: () => router.push(`/police-officer/incident-response?alert_id=${alertId}`)
+          }
+        ]);
       } else {
         throw new Error(result.message || "Failed to accept alert.");
       }
@@ -165,7 +170,7 @@ const Notifications: React.FC = () => {
             <Text style={styles.pullDownText}>Pull down to refresh.</Text>
           </View>
         ) : (
-          notifications.map((notification) => (
+          notifications.map((notification: AlertNotification) => (
             <AlertCard 
               key={notification.alert_id} 
               notification={notification}
