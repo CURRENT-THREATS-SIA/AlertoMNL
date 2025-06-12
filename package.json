@@ -27,7 +27,11 @@
     "expo-av": "^15.1.6",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.6",
+<<<<<<< HEAD
     "expo-dev-client": "~5.2.0",
+=======
+    "expo-device": "~7.1.4",
+>>>>>>> origin/master
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.2.1",
@@ -35,6 +39,7 @@
     "expo-location": "~18.1.5",
     "expo-media-library": "~17.1.7",
     "expo-modules-core": "^2.4.0",
+    "expo-notifications": "~0.31.3",
     "expo-router": "~5.0.6",
     "expo-sms": "~13.1.4",
     "expo-splash-screen": "~0.30.9",
@@ -51,6 +56,7 @@
     "react-native": "0.79.3",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-maps": "^1.20.1",
+    "react-native-onesignal": "^5.2.12",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
@@ -64,7 +70,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
-    "@types/mapbox-gl": "^3.4.1",
+    "@react-native-community/cli": "^18.0.0",
     "@types/react": "~19.0.10",
     "@types/react-native": "^0.72.8",
     "eslint": "^9.25.0",

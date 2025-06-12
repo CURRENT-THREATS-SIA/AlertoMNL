@@ -1,42 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { crimeData, StationName, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
+// NOTE: All code related to expo-notifications, pop-up modals, and listeners
+// has been removed to fix the error in Expo Go.
 
-// Crime types and stations data
-const crimeTypes = [
-  { id: 1, label: 'Murder', value: 'Murder' },
-  { id: 2, label: 'Homicide', value: 'Homicide' },
-  { id: 3, label: 'Physical Injuries', value: 'Physical Injury' },
-  { id: 4, label: 'Rape', value: 'Rape' },
-  { id: 5, label: 'Robbery', value: 'Robbery' },
-  { id: 6, label: 'Theft', value: 'Theft' },
-  { id: 7, label: 'Carnapping MV', value: 'Carnapping MV' },
-  { id: 8, label: 'Carnapping MC', value: 'Carnapping MC' },
-  { id: 9, label: 'Complex Crime', value: 'Complex Crime' },
-  { id: 10, label: 'Non-Index Crime', value: 'Non-Index Crime' },
-];
-
-const policeStations = [
-  { id: 1, label: 'MPD Station 1 - Raxa Bago', value: 'MPD Station 1 - Raxa Bago' },
-  { id: 2, label: 'MPD Station 2 - Tondo', value: 'MPD Station 2 - Tondo' },
-  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'MPD Station 3 - Sta Cruz' },
-  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'MPD Station 4 - Sampaloc' },
-  { id: 5, label: 'MPD Station 5 - Ermita', value: 'MPD Station 5 - Ermita' },
-  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'MPD Station 6 - Sta Ana' },
-  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'MPD Station 7 - J. A. Santos' },
-  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'MPD Station 8 - Sta. Mesa' },
-  { id: 9, label: 'MPD Station 9 - Malate', value: 'MPD Station 9 - Malate' },
-  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'MPD Station 10 - Pandacan' },
-  { id: 11, label: 'MPD Station 11 - Meisic', value: 'MPD Station 11 - Meisic' },
-  { id: 12, label: 'MPD Station 12 - Delpan', value: 'MPD Station 12 - Delpan' },
-  { id: 13, label: 'MPD Station 13 - Baseco', value: 'MPD Station 13 - Baseco' },
-  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'MPD Station 14 - Barbosa' },
-];
+// --- Your existing constants and types ---
+const SearchIcon = () => <View style={styles.iconPlaceholder} />;
+const mapBgUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/frame-3997.png';
+const locationUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location.png';
+const location1Uri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location-1.png';
+const location2Uri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location-2.png';
 
 export type CrimeStat = {
   title: string;
@@ -56,10 +34,19 @@ const severityLevels: SeverityLevel[] = [
   { level: 'High', color: '#ff0000' },
 ];
 
-const PoliceOfficerHome: React.FC = () => {
+const crimeTypes = [
+  "Theft", "Robbery", "Assault", "Homicide", "Vandalism", "Drugs", "Other"
+];
+const stations = [
+  "Ermita Police Station", "Sampaloc Police Station", "Tondo Police Station",
+  "Malate Police Station", "Sta. Cruz Police Station", "Other"
+];
+
+const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
   const mapHeight = Math.min(height * 0.35, 400);
+  const statsCardWidth = (width - 40 - 16) / 3;
 
   // State for dropdowns and stats
   const [selectedCrimeType, setSelectedCrimeType] = useState('');
@@ -75,7 +62,7 @@ const PoliceOfficerHome: React.FC = () => {
     // Apply crime type filter if selected
     if (selectedCrimeType) {
       filteredFeatures = filteredFeatures.filter(feature => 
-        feature.properties?.crimeType === selectedCrimeType
+        feature.properties.crimeType === selectedCrimeType
       );
     }
 
@@ -87,11 +74,9 @@ const PoliceOfficerHome: React.FC = () => {
       
       // Find highest crime for the selected station
       filteredFeatures
-        .filter(feature => feature.properties?.station === selectedStation)
+        .filter(feature => feature.properties.station === selectedStation)
         .forEach(feature => {
-          const properties = feature.properties;
-          if (!properties) return;
-          const { station, crimeType, count } = properties;
+          const { station, crimeType, count } = feature.properties;
           if (count > highestCrime.count) {
             highestCrime = {
               count,
@@ -127,9 +112,7 @@ const PoliceOfficerHome: React.FC = () => {
 
     // Find highest crime across all stations
     filteredFeatures.forEach(feature => {
-      const properties = feature.properties;
-      if (!properties) return;
-      const { station, crimeType, count } = properties;
+      const { station, crimeType, count } = feature.properties;
       if (count > highestCrime.count) {
         highestCrime = {
           count,
@@ -156,7 +139,6 @@ const PoliceOfficerHome: React.FC = () => {
     calculateCrimeStats();
   }, [selectedCrimeType, selectedStation]);
 
-  // Function to handle selection
   const handleCrimeTypeSelect = (value: string) => {
     setSelectedCrimeType(value);
     setShowCrimeTypeModal(false);
@@ -198,7 +180,7 @@ const PoliceOfficerHome: React.FC = () => {
               isSmallDevice && { fontSize: 14 }
             ]}>
               {selectedCrimeType ? 
-                crimeTypes.find(ct => ct.value === selectedCrimeType)?.label : 
+                crimeTypes.find(ct => ct === selectedCrimeType)?.label : 
                 'Select Crime Type'}
             </Text>
           </TouchableOpacity>
@@ -214,7 +196,7 @@ const PoliceOfficerHome: React.FC = () => {
               isSmallDevice && { fontSize: 14 }
             ]}>
               {selectedStation ? 
-                policeStations.find(ps => ps.value === selectedStation)?.label : 
+                stations.find(st => st === selectedStation)?.label : 
                 'Select Station'}
             </Text>
           </TouchableOpacity>
@@ -244,18 +226,18 @@ const PoliceOfficerHome: React.FC = () => {
                 <ScrollView>
                   {crimeTypes.map((type) => (
                     <TouchableOpacity
-                      key={type.id}
+                      key={type}
                       style={[
                         styles.modalOption,
-                        selectedCrimeType === type.value && styles.modalOptionSelected
+                        selectedCrimeType === type && styles.modalOptionSelected
                       ]}
-                      onPress={() => handleCrimeTypeSelect(type.value)}
+                      onPress={() => handleCrimeTypeSelect(type)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        selectedCrimeType === type.value && styles.modalOptionTextSelected
+                        selectedCrimeType === type && styles.modalOptionTextSelected
                       ]}>
-                        {type.label}
+                        {type}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -287,20 +269,20 @@ const PoliceOfficerHome: React.FC = () => {
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
-                  {policeStations.map((station) => (
+                  {stations.map((station) => (
                     <TouchableOpacity
-                      key={station.id}
+                      key={station}
                       style={[
                         styles.modalOption,
-                        selectedStation === station.value && styles.modalOptionSelected
+                        selectedStation === station && styles.modalOptionSelected
                       ]}
-                      onPress={() => handleStationSelect(station.value as StationName)}
+                      onPress={() => handleStationSelect(station as StationName)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        selectedStation === station.value && styles.modalOptionTextSelected
+                        selectedStation === station && styles.modalOptionTextSelected
                       ]}>
-                        {station.label}
+                        {station}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -369,6 +351,7 @@ const PoliceOfficerHome: React.FC = () => {
       </ScrollView>
 
       <NavBottomBar activeScreen="Home" />
+
     </SafeAreaView>
   );
 };
@@ -406,6 +389,133 @@ const styles = StyleSheet.create({
   selectorBtnText: {
     fontSize: 16,
     color: '#212121',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 8,
+  },
+  statCard: {
+    backgroundColor: '#FFD8D8',
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 100,
+    width: '31%',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statTitle: {
+    fontSize: 11,
+    color: '#E02323',
+    fontFamily: fonts.poppins.semiBold,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  statValue: {
+    fontSize: 20,
+    color: '#000',
+    fontFamily: fonts.poppins.bold,
+    marginTop: 'auto',
+    fontWeight: '700',
+  },
+  statLocation: {
+    fontSize: 12,
+    color: '#000',
+    fontFamily: fonts.poppins.medium,
+    marginBottom: 2,
+  },
+  statType: {
+    fontSize: 11,
+    color: '#886A6A',
+    fontFamily: fonts.poppins.regular,
+    marginBottom: 4,
+  },
+  bottomNav: {
+    width: '100%',
+    height: 65,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    ...Platform.select({
+      android: {
+        height: 110,
+      },
+      ios: {
+        height: 75,
+      },
+    }),
+  },
+  bottomNavRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: '100%',
+  },
+  bottomNavItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomNavIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottomNavIconContainerActive: {
+    backgroundColor: '#FFE6E6',
+  },
+  bottomNavIconActive: {
+    color: '#E02323',
+  },
+  bottomNavIconInactive: {
+    color: '#A4A4A4',
+  },
+  bottomNavLabelActive: {
+    color: '#E02323',
+    fontSize: 12,
+    fontFamily: fonts.poppins.medium,
+    textAlign: 'center',
+  },
+  bottomNavLabelInactive: {
+    color: '#A4A4A4',
+    fontSize: 12,
+    fontFamily: fonts.poppins.regular,
+    textAlign: 'center',
+  },
+  homeIndicatorWrap: {
+    width: '100%',
+    height: 24,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  homeIndicator: {
+    width: 136,
+    height: 7,
+    backgroundColor: '#A4A4A4',
+    borderRadius: 100,
+  },
+  iconPlaceholder: {
+    width: 22,
+    height: 22,
+    backgroundColor: '#ccc',
+    borderRadius: 11,
   },
   defaultFont: {
     fontFamily: fonts.poppins.regular,
@@ -492,5 +602,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PoliceOfficerHome;
-  
+export default CrimeMap;

@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CustomTabBar from '../../../app/components/CustomTabBar';
 import { fonts } from '../../config/fonts';
@@ -66,6 +67,27 @@ const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ ite
 
 const History: React.FC = () => {
   const router = useRouter();
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const nuserId = await AsyncStorage.getItem('nuser_id');
+      if (!nuserId) return;
+      const response = await fetch(`http://mnl911.atwebpages.com/get_user_history.php?nuser_id=${nuserId}`);
+      const data = await response.json();
+      if (data.success) {
+        setHistoryItems(data.history.map((item: any) => ({
+          id: item.history_id,
+          date: item.trigger_time ? item.trigger_time.split(' ')[0] : '',
+          time: item.trigger_time ? item.trigger_time.split(' ')[1] : '',
+          location: item.alert_id ? `Alert #${item.alert_id}` : '',
+          crimeType: '', // Adjust if you have this info
+          status: 'resolved', // Adjust if you have this info
+        })));
+      }
+    };
+    fetchHistory();
+  }, []);
 
   const handleHistoryItemPress = (id: number) => {
     router.push(`/regular-user/history/${id}`);
@@ -83,7 +105,7 @@ const History: React.FC = () => {
           <Text style={styles.subtitle}>View your past crime reports</Text>
           
           <View style={styles.historyList}>
-            {mockHistoryItems.map((item) => (
+            {historyItems.map((item) => (
               <HistoryCard 
                 key={item.id} 
                 item={item}

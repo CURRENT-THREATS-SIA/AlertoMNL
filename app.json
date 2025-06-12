@@ -43,6 +43,15 @@
           "RNMapboxMapsDownloadToken": "pk.eyJ1IjoiZWl2cnlsbGUiLCJhIjoiY21iZW1za2V5MmlmODJqcHRwdW9reDZuYyJ9.0qvHb-7JmG3oTyWMV7BrSg"
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3f239e99-aae8-49ad-b003-69e3d44728d0"
+      }
+    }
   }
 }
