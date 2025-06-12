@@ -9,14 +9,22 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const checkLogin = async () => {
-      const policeId = await AsyncStorage.getItem('police_id');
-      const nuserId = await AsyncStorage.getItem('nuser_id');
-      if (policeId) {
-        router.replace('/(tabs)/police-officer/PoliceOfficerHome');
-      } else if (nuserId) {
-        router.replace('/regular-user');
+      try {
+        // Clear stored credentials on startup
+        await AsyncStorage.removeItem('police_id');
+        await AsyncStorage.removeItem('nuser_id');
+        await AsyncStorage.removeItem('firstName');
+        await AsyncStorage.removeItem('lastName');
+        await AsyncStorage.removeItem('email');
+        await AsyncStorage.removeItem('phone');
+        await AsyncStorage.removeItem('badge');
+        await AsyncStorage.removeItem('station');
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking login status:', error);
+        setLoading(false);
       }
-      setLoading(false);
     };
     checkLogin();
   }, []);

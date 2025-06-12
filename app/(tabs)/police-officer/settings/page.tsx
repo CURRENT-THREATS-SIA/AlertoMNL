@@ -1,4 +1,4 @@
-import { Permissions } from './AppPermissions';
+import Permissions from './AppPermissions';
 
 export default function PermissionsPage() {
   return <Permissions />;

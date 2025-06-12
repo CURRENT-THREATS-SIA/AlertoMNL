@@ -8,6 +8,8 @@ interface InputFieldNoIconsProps {
   containerStyle?: ViewStyle;
   inputWrapperStyle?: ViewStyle;
   placeholder?: string;
+  id?: string;
+  name?: string;
 }
 
 export const InputFieldNoIcons: React.FC<InputFieldNoIconsProps> = ({
@@ -17,6 +19,8 @@ export const InputFieldNoIcons: React.FC<InputFieldNoIconsProps> = ({
   containerStyle,
   inputWrapperStyle,
   placeholder,
+  id,
+  name,
 }) => {
   return (
     <View style={[styles.container, containerStyle]}>
@@ -30,6 +34,9 @@ export const InputFieldNoIcons: React.FC<InputFieldNoIconsProps> = ({
           placeholder={placeholder ?? (property1 === "email" ? text : "Enter password")}
           style={styles.input}
           secureTextEntry={property1 === "password"}
+          id={id ?? property1}
+          nativeID={id ?? property1}
+          accessibilityLabel={property1 === "email" ? "Email input" : "Password input"}
         />
       </View>
     </View>
