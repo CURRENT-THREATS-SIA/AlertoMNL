@@ -1,13 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 
@@ -33,11 +27,11 @@ const intervalOptions: IntervalOption[] = [
   { label: "Send SOS every 1 minute", value: 1 },
   { label: "Send SOS every 5 minutes", value: 5 },
   { label: "Send SOS every 10 minutes", value: 10 },
-  { label: "Send SOS every 15 minutes", value: 15 },
 ];
 
 const SetUpSOS: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [hideSOS, setHideSOS] = useState(false);
   const [triggerOnLaunch, setTriggerOnLaunch] = useState(false);
   const [selectedDelay, setSelectedDelay] = useState<number>(3);
@@ -54,14 +48,13 @@ const SetUpSOS: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Set Up SOS</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Setup SOS</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -162,19 +155,21 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    gap: 8,
   },
   backButton: {
     padding: 8,
   },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   headerTitle: {
-    marginLeft: 8,
-    fontSize: 20,
-    fontFamily: fonts.poppins.bold,
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },
   scrollView: {
@@ -218,7 +213,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toggleText: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },

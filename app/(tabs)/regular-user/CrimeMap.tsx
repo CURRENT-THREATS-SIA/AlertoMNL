@@ -1,14 +1,12 @@
 import { Picker } from '@react-native-picker/picker';
 import React from 'react';
 import {
-  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  View,
   useWindowDimensions,
+  View
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';

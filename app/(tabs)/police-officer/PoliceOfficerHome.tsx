@@ -6,6 +6,9 @@ import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
 
+// NOTE: All code related to expo-notifications, pop-up modals, and listeners
+// has been removed to fix the error in Expo Go.
+
 // Placeholder icons
 const SearchIcon = () => <View style={styles.iconPlaceholder} />;
 
@@ -59,6 +62,107 @@ const CrimeMap: React.FC = () => {
   // Dropdown state
   const [selectedCrimeType, setSelectedCrimeType] = React.useState('');
   const [selectedStation, setSelectedStation] = React.useState('');
+
+  const CrimeMap: React.FC = () => {
+    const { width, height } = useWindowDimensions();
+    const isSmallDevice = width < 375;
+    const mapHeight = Math.min(height * 0.35, 400);
+    const statsCardWidth = (width - 40 - 16) / 3;
+
+    // State for dropdowns and stats
+    const [selectedCrimeType, setSelectedCrimeType] = useState('');
+    const [selectedStation, setSelectedStation] = useState<StationName | null>(null);
+    const [showCrimeTypeModal, setShowCrimeTypeModal] = useState(false);
+    const [showStationModal, setShowStationModal] = useState(false);
+    const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
+
+    // Function to calculate crime statistics based on filters
+    const calculateCrimeStats = () => {
+      let filteredFeatures = crimeData.features;
+      
+      // Apply crime type filter if selected
+      if (selectedCrimeType) {
+        filteredFeatures = filteredFeatures.filter(feature => 
+          feature.properties.crimeType === selectedCrimeType
+        );
+      }
+
+      let highestCrime = { count: 0, location: '', type: '' };
+
+      // If a station is selected, show its specific rates
+      if (selectedStation) {
+        const stationRates = totalRates[selectedStation];
+        
+        // Find highest crime for the selected station
+        filteredFeatures
+          .filter(feature => feature.properties.station === selectedStation)
+          .forEach(feature => {
+            const { station, crimeType, count } = feature.properties;
+            if (count > highestCrime.count) {
+              highestCrime = {
+                count,
+                location: station.split(' - ')[1],
+                type: crimeType
+              };
+            }
+          });
+
+        setCrimeStats([
+          { 
+            title: 'Index Total Rate', 
+            value: `${stationRates.indexRate}%`
+          },
+          { 
+            title: 'Non-index Total Rate', 
+            value: `${stationRates.nonIndexRate}%`
+          },
+          { 
+            title: 'Highest Crime', 
+            location: highestCrime.location || 'N/A', 
+            type: highestCrime.type || 'N/A', 
+            value: highestCrime.count.toString() 
+          },
+        ]);
+        return;
+      }
+
+      // If no station is selected, calculate averages of all stations
+      const stations = Object.keys(totalRates) as StationName[];
+      const avgIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].indexRate, 0) / stations.length).toFixed(2);
+      const avgNonIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].nonIndexRate, 0) / stations.length).toFixed(2);
+
+      // Find highest crime across all stations
+      filteredFeatures.forEach(feature => {
+        const { station, crimeType, count } = feature.properties;
+      });
+
+      setCrimeStats([
+        { title: 'Index Total Rate', value: `${avgIndexRate}%` },
+        { title: 'Non-index Total Rate', value: `${avgNonIndexRate}%` },
+        { 
+          title: 'Highest Crime',
+          location: highestCrime.location,
+          type: highestCrime.type,
+          value: highestCrime.count.toString()
+        },
+      ]);
+    };
+
+    // Update stats when filters change
+    useEffect(() => {
+      calculateCrimeStats();
+    }, [selectedCrimeType, selectedStation]);
+
+    // Function to handle selection
+    const handleCrimeTypeSelect = (value: string) => {
+      setSelectedCrimeType(value);
+      setShowCrimeTypeModal(false);
+    };
+
+    const handleStationSelect = (value: StationName) => {
+      setSelectedStation(value);
+      setShowStationModal(false);
+    };
 
   return (
     <SafeAreaView style={styles.rootBg}>
@@ -228,267 +332,223 @@ const CrimeMap: React.FC = () => {
 
 export default CrimeMap;
 
-const styles = StyleSheet.create({
-  rootBg: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  container: {
-    flex: 1,
-  },
-  contentWrapper: {
-    flex: 1,
-  },
-  mapSection: {
-    width: '100%',
-    borderRadius: 25,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  mapBg: {
-    ...StyleSheet.absoluteFillObject,
-    width: undefined,
-    height: undefined,
-  },
-  mapOverlay: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'space-between',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    shadowColor: '#00000',
-    shadowOpacity: 0.15,
-    shadowRadius: 48,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    color: '#000',
-    fontFamily: fonts.poppins.regular,
-  },
-  mapControlsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  locationIcon: { width: 58, height: 56 },
-  locationSmallIcon: { width: 22, height: 22 },
-  legendRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  legendCard: {
-    backgroundColor: '#fff',
-    borderRadius: 5,
-    padding: 10,
-    width: 100,
-    height: 100,
-    justifyContent: 'center',
-  },
-  legendItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  legendDot: {
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    marginRight: 8,
-  },
-  legendLabel: {
-    fontSize: 12,
-    color: '#000',
-    fontFamily: fonts.poppins.regular,
-  },
-  location2Icon: { width: 81, height: 81 },
-  selectorsStatsSection: {
-    width: '100%',
-    marginBottom: 16,
-  },
-  selectorBtn: {
-    width: '100%',
-    backgroundColor: '#E02323',
-    borderRadius: 10,
-    paddingVertical: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+  const styles = StyleSheet.create({
+    rootBg: {
+      flex: 1,
+      backgroundColor: '#F5F5F5',
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  selectorBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: fonts.poppins.bold,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    gap: 8, // Add gap between cards
-  },
-  statCard: {
-    backgroundColor: '#FFD8D8',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 100,
-    width: '31%', // Approximately (100% - 2 gaps) / 3
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+    scrollView: {
+      flex: 1,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  statTitle: {
-    fontSize: 11,
-    color: '#E02323',
-    fontFamily: fonts.poppins.semiBold,
-    marginBottom: 4,
-    fontWeight: '600',
-  },
-  statValue: {
-    fontSize: 20,
-    color: '#000',
-    fontFamily: fonts.poppins.bold,
-    marginTop: 'auto',
-    fontWeight: '700',
-  },
-  statLocation: {
-    fontSize: 12,
-    color: '#000',
-    fontFamily: fonts.poppins.medium,
-    marginBottom: 2,
-  },
-  statType: {
-    fontSize: 11,
-    color: '#886A6A',
-    fontFamily: fonts.poppins.regular,
-    marginBottom: 4,
-  },
-  bottomNav: {
-    width: '100%',
-    height: 65,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    ...Platform.select({
-      android: {
-        height: 110,
+    scrollViewContent: {
+      flexGrow: 1,
+    },
+    contentWrapper: {
+      padding: 16,
+    },
+    mapSection: {
+      width: '100%',
+      borderRadius: 12,
+      overflow: 'hidden',
+      marginBottom: 16,
+    },
+    selectorBtn: {
+      backgroundColor: 'white',
+      padding: 12,
+      borderRadius: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    selectorBtnText: {
+      fontSize: 16,
+      color: '#212121',
+    },
+    statsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      width: '100%',
+      gap: 8,
+    },
+    statCard: {
+      backgroundColor: '#FFD8D8',
+      borderRadius: 8,
+      padding: 12,
+      minHeight: 100,
+      width: '31%',
+      justifyContent: 'space-between',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
       },
-      ios: {
-        height: 75,
-      },
-    }),
-  },
-  bottomNavRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    width: '100%',
-  },
-  bottomNavItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomNavIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bottomNavIconContainerActive: {
-    backgroundColor: '#FFE6E6',
-  },
-  bottomNavIconActive: {
-    color: '#E02323',
-  },
-  bottomNavIconInactive: {
-    color: '#A4A4A4',
-  },
-  bottomNavLabelActive: {
-    color: '#E02323',
-    fontSize: 12,
-    fontFamily: fonts.poppins.medium,
-    textAlign: 'center',
-  },
-  bottomNavLabelInactive: {
-    color: '#A4A4A4',
-    fontSize: 12,
-    fontFamily: fonts.poppins.regular,
-    textAlign: 'center',
-  },
-  homeIndicatorWrap: {
-    width: '100%',
-    height: 24,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  homeIndicator: {
-    width: 136,
-    height: 7,
-    backgroundColor: '#A4A4A4',
-    borderRadius: 100,
-  },
-  iconPlaceholder: {
-    width: 22,
-    height: 22,
-    backgroundColor: '#ccc',
-    borderRadius: 11,
-  },
-  defaultFont: {
-    fontFamily: fonts.poppins.regular,
-  },
-  dropdownIcon: {
-    position: 'absolute',
-    right: 12,
-    top: '50%',
-    marginTop: -14,
-    zIndex: 1,
-  },
-  pickerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    color: 'transparent',
-    backgroundColor: 'transparent',
-    opacity: 0,
-    width: '100%',
-    height: '100%',
-  },
-  pickerItem: {
-    color: '#212121',
-    backgroundColor: '#fff',
-  },
-});
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    statTitle: {
+      fontSize: 11,
+      color: '#E02323',
+      fontFamily: fonts.poppins.semiBold,
+      marginBottom: 4,
+      fontWeight: '600',
+    },
+    statValue: {
+      fontSize: 20,
+      color: '#000',
+      fontFamily: fonts.poppins.bold,
+      marginTop: 'auto',
+      fontWeight: '700',
+    },
+    statLocation: {
+      fontSize: 12,
+      color: '#000',
+      fontFamily: fonts.poppins.medium,
+      marginBottom: 2,
+    },
+    statType: {
+      fontSize: 11,
+      color: '#886A6A',
+      fontFamily: fonts.poppins.regular,
+      marginBottom: 4,
+    },
+    bottomNav: {
+      width: '100%',
+      height: 65,
+      backgroundColor: '#fff',
+      borderTopLeftRadius: 32,
+      borderTopRightRadius: 32,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      ...Platform.select({
+        android: {
+          height: 110,
+        },
+        ios: {
+          height: 75,
+        },
+      }),
+    },
+    bottomNavRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+      width: '100%',
+    },
+    bottomNavItem: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bottomNavIconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bottomNavIconContainerActive: {
+      backgroundColor: '#FFE6E6',
+    },
+    bottomNavIconActive: {
+      color: '#E02323',
+    },
+    bottomNavIconInactive: {
+      color: '#A4A4A4',
+    },
+    bottomNavLabelActive: {
+      color: '#E02323',
+      fontSize: 12,
+      fontFamily: fonts.poppins.medium,
+      textAlign: 'center',
+    },
+    bottomNavLabelInactive: {
+      color: '#A4A4A4',
+      fontSize: 12,
+      fontFamily: fonts.poppins.regular,
+      textAlign: 'center',
+    },
+    homeIndicatorWrap: {
+      width: '100%',
+      height: 24,
+      backgroundColor: '#fff',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 8,
+    },
+    homeIndicator: {
+      width: 136,
+      height: 7,
+      backgroundColor: '#A4A4A4',
+      borderRadius: 100,
+    },
+    iconPlaceholder: {
+      width: 22,
+      height: 22,
+      backgroundColor: '#ccc',
+      borderRadius: 11,
+    },
+    defaultFont: {
+      fontFamily: fonts.poppins.regular,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: 'white',
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E5E5',
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontFamily: fonts.poppins.medium,
+      color: '#212121',
+    },
+    closeButton: {
+      padding: 4,
+    },
+    modalOption: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E5E5',
+    },
+    modalOptionSelected: {
+      backgroundColor: '#F0F0F0',
+    },
+    modalOptionText: {
+      fontSize: 16,
+      color: '#212121',
+      fontFamily: fonts.poppins.regular,
+    },
+    modalOptionTextSelected: {
+      color: '#007AFF',
+      fontFamily: fonts.poppins.medium,
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      marginTop: 16,
+    },
+  });
+
+  return <CrimeMap />;
+};
+
+export default CrimeMap;

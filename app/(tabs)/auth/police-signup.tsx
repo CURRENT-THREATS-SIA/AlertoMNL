@@ -108,15 +108,30 @@ export default function SignUpPolice() {
       {/* Station Dropdown */}
       <View style={{ marginBottom: 18 }}>
         <Text style={styles.label}>Station</Text>
-        <Picker
-          style={styles.input}
-          selectedValue={station}
-          onValueChange={(itemValue: string) => setStation(itemValue)}
-        >
-          <Picker.Item label="Default" value="Default" />
-          <Picker.Item label="Station 1" value="Station 1" />
-          <Picker.Item label="Station 2" value="Station 2" />
-        </Picker>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            style={[styles.picker, { color: station === "Default" ? "#888" : "#000" }]}
+            selectedValue={station}
+            onValueChange={(itemValue: string) => setStation(itemValue)}
+            dropdownIconColor="#e02323"
+          >
+            <Picker.Item label="Default" value="Default" />
+            <Picker.Item label="Station 1" value="Station 1" />
+            <Picker.Item label="Station 2" value="Station 2" />
+            <Picker.Item label="Station 3" value="Station 3" />
+            <Picker.Item label="Station 4" value="Station 4" />
+            <Picker.Item label="Station 5" value="Station 5" />
+            <Picker.Item label="Station 6" value="Station 6" />
+            <Picker.Item label="Station 7" value="Station 7" />
+            <Picker.Item label="Station 8" value="Station 8" />
+            <Picker.Item label="Station 9" value="Station 9" />
+            <Picker.Item label="Station 10" value="Station 10" />
+            <Picker.Item label="Station 11" value="Station 11" />
+            <Picker.Item label="Station 12" value="Station 12" />
+            <Picker.Item label="Station 13" value="Station 13" />
+            <Picker.Item label="Station 14" value="Station 14" />
+          </Picker>
+        </View>
       </View>
 
       {/* Phone Number */}
@@ -164,7 +179,7 @@ export default function SignUpPolice() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingTop: 80,
+    paddingTop: 50,
     height: "100%",
     width: "100%",
     backgroundColor: '#fff',
@@ -177,7 +192,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 60,
     color: '#0000007a',
   },
   label: {
@@ -202,15 +217,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     backgroundColor: "#fff",
   },
-  picker: {
-    padding: 0,
-    fontSize: 16,
-    height: 42,
+  pickerWrapper: {
     borderWidth: 1,
     borderColor: "#15050266",
     borderRadius: 8,
-    paddingHorizontal: 18,
     backgroundColor: "#fff",
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+    color: '#000',
   },
   button: {
     backgroundColor: '#e02323',
@@ -218,6 +234,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 12,
     marginBottom: 8,
+    
   },
   buttonText: {
     color: '#fff',
@@ -230,4 +247,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-}); 
+});

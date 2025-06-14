@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts } from '../config/fonts';
 
 type NavItem = {
@@ -18,10 +19,9 @@ interface CustomTabBarProps {
 const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
 
-  // Determine if we're in the History section (including nested routes)
   const isHistorySection = pathname.includes('/history/') || pathname === '/regular-user/History';
-  // Similarly for other sections
   const isHomeSection = pathname === '/regular-user';
   const isCrimeMapSection = pathname === '/regular-user/CrimeMap';
   const isContactsSection = pathname === '/regular-user/Contacts';
@@ -54,21 +54,12 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
   ];
 
   const handleNavigation = (path: string, isCurrentTab: boolean) => {
-    // If we're already on the History tab and viewing history content,
-    // don't navigate away from the detail view
-    if (isCurrentTab && pathname.includes('/history/')) {
-      return;
-    }
+    if (isCurrentTab && pathname.includes('/history/')) return;
     router.push(path);
   };
 
   return (
-    <View style={[styles.bottomNav, Platform.select({
-      android: {
-        elevation: 8,
-        paddingBottom: 8,
-      },
-    })]}>
+    <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.bottomNavRow}>
         {navItems.map((item, idx) => (
           <TouchableOpacity 
@@ -99,20 +90,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingVertical: 12,
+    paddingTop: 12,
     paddingHorizontal: 16,
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    ...Platform.select({
-      android: {
-        height: 110,
-      },
-      ios: {
-        height: 75,
-      },
-    }),
+    elevation: Platform.OS === 'android' ? 8 : 0,
   },
   bottomNavRow: {
     flexDirection: 'row',
@@ -145,4 +129,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CustomTabBar; 
+export default CustomTabBar;

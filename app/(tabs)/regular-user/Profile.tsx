@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../config/fonts';
 
@@ -13,43 +14,16 @@ interface SettingsMenuItem {
 
 const Profile: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const settingsMenuItems: SettingsMenuItem[] = [
-    {
-      title: "Account Details",
-      icon: "settings",
-      route: "/regular-user/profile/accountDetails/",
-    },
-    {
-      title: "SetUpSOS",
-      icon: "security",
-      route: "/regular-user/profile/setUpSOS",
-    },
-    {
-      title: "Settings",
-      icon: "security",
-      route: "/regular-user/profile/settings",
-    },
-    {
-      title: "Voice Records",
-      icon: "security",
-      route: "/regular-user/profile/voiceRecords",
-    },
-    {
-      title: "App Permissions",
-      icon: "security",
-      route: "/regular-user/profile/appPermission",
-    },
-    {
-      title: "Privacy Policy",
-      icon: "privacy-tip",
-      route: "/regular-user/profile/privacyPolicy",
-    },
-    {
-      title: "About",
-      icon: "info",
-      route: "/regular-user/profile/about",
-    },
+    { title: "Account Details", icon: "settings", route: "/regular-user/profile/accountDetails/" },
+    { title: "SetUpSOS", icon: "security", route: "/regular-user/profile/setUpSOS" },
+    { title: "Settings", icon: "security", route: "/regular-user/profile/settings" },
+    { title: "Voice Records", icon: "security", route: "/regular-user/profile/voiceRecords" },
+    { title: "App Permissions", icon: "security", route: "/regular-user/profile/appPermission" },
+    { title: "Privacy Policy", icon: "privacy-tip", route: "/regular-user/profile/privacyPolicy" },
+    { title: "About", icon: "info", route: "/regular-user/profile/about" },
   ];
 
   const handleMenuPress = (item: SettingsMenuItem) => {
@@ -77,32 +51,28 @@ const Profile: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile Settings</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Profile Settings</Text>
+        </View>
       </View>
-      
+
+      {/* Content */}
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          {/* Settings Menu */}
           <View style={styles.menuCard}>
             {settingsMenuItems.map((item, index) => (
               <TouchableOpacity
                 key={index}
-                style={[
-                  styles.menuItem,
-                  index !== settingsMenuItems.length - 1 && styles.menuItemBorder
-                ]}
+                style={[styles.menuItem, index !== settingsMenuItems.length - 1 && styles.menuItemBorder]}
                 onPress={() => handleMenuPress(item)}
               >
                 <View style={styles.menuItemContent}>
@@ -115,11 +85,7 @@ const Profile: React.FC = () => {
             ))}
           </View>
 
-          {/* Logout Button */}
-          <TouchableOpacity 
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </View>
@@ -142,25 +108,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
-    gap: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: fonts.poppins.bold,
-    color: '#212121',
-    marginBottom: 16,
   },
   menuCard: {
     backgroundColor: '#fff',
     borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   menuItem: {
-    paddingVertical: 30,
+    paddingVertical: 25,
     paddingHorizontal: 20,
   },
   menuItemBorder: {
@@ -198,21 +157,23 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    gap: 8,
   },
   backButton: {
-    marginRight: 16,
+    padding: 8,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },
 });
 
-export default Profile; 
+export default Profile;

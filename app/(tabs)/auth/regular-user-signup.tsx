@@ -139,7 +139,7 @@ export default function SignUpRegular() {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingTop: 80,
+    paddingTop: 50,
     height: "100%",
     width: "100%",
     backgroundColor: '#fff',
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 60,
     color: '#0000007a',
   },
   label: {
@@ -168,16 +168,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   input: {
-    padding: 0,
-    fontSize: 16,
-    height: 42,
-    borderWidth: 1,
-    borderColor: "#15050266",
-    borderRadius: 8,
-    paddingHorizontal: 18,
-    backgroundColor: "#fff",
-  },
-  picker: {
     padding: 0,
     fontSize: 16,
     height: 42,
