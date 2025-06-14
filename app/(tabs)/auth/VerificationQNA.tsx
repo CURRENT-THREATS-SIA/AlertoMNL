@@ -1,15 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 function showAlert(title: string, message?: string) {
@@ -82,7 +82,7 @@ export default function VerificationQNA() {
       >
         <View style={styles.innerWrap}>
           <Text style={styles.title}>Security Question</Text>
-          <Text style={styles.subtitle}>Answer your question with your saved answer.</Text>
+          <Text style={styles.subtitle}>We’ll help you recover it using your security QnA</Text>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Question</Text>

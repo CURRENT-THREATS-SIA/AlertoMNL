@@ -64,7 +64,7 @@ export default function ForgotPassword() {
       >
         <View style={styles.innerWrap}>
           <Text style={styles.title}>FORGOT PASSWORD?</Text>
-          <Text style={styles.subtitle}>We’ll help you recover it using your security question.</Text>
+          <Text style={styles.subtitle}>Please enter your registered email below.</Text>
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Enter your registered email</Text>
