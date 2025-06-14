@@ -583,17 +583,14 @@ map.on('load', () => {
     filter: ['has', 'point_count'],
     paint: {
       'circle-color': [
-        'step',
-        ['get', 'point_count'],
-        '#ffeda0',  // 1-10 crimes (light yellow)
-        10,
-        '#feb24c',  // 11-25 crimes (orange)
-        25,
-        '#fc4e2a',  // 26-50 crimes (red-orange)
-        50,
-        '#e31a1c',  // 51-100 crimes (bright red)
-        100,
-        '#800026'   // 100+ crimes (dark red)
+        'case',
+        ['<=', ['get', 'point_count'], 0],
+        '#65ee15',  // Green for 0 cases
+        ['<=', ['get', 'point_count'], 75],
+        '#feb24c',  // Yellow for 1-75 cases
+        ['<=', ['get', 'point_count'], 150],
+        '#fc4e2a',  // Orange for 76-150 cases
+        '#e31a1c'   // Red for 151+ cases
       ],
       'circle-radius': [
         'step',
@@ -654,18 +651,22 @@ map.on('load', () => {
     paint: {
       'circle-color': [
         'case',
-        ['get', 'isIndexCrime'],
-        '#e31a1c',  // Bright red for index crimes
-        '#feb24c'   // Orange for non-index crimes
+        ['<=', ['get', 'count'], 0],
+        '#65ee15',  // Green for 0 cases
+        ['<=', ['get', 'count'], 75],
+        '#feb24c',  // Yellow for 1-75 cases
+        ['<=', ['get', 'count'], 150],
+        '#fc4e2a',  // Orange for 76-150 cases
+        '#e31a1c'   // Red for 151+ cases
       ],
       'circle-radius': [
         'interpolate',
         ['linear'],
         ['get', 'count'],
-        1, 12,      // Min size for count of 1
-        5, 16,      // Medium size for count of 5
-        10, 20,     // Large size for count of 10
-        20, 25      // Max size for count of 20+
+        0, 12,      // Min size for count of 0
+        75, 16,     // Medium size for count of 75
+        150, 20,    // Large size for count of 150
+        250, 25     // Max size for count of 250+
       ],
       'circle-stroke-width': 2,
       'circle-stroke-color': '#ffffff',

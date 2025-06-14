@@ -1,14 +1,14 @@
 import { Feature, Point } from 'geojson';
 import React, { useEffect, useState } from 'react';
 import {
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
@@ -43,7 +43,7 @@ const crimeTypes = [
 ];
 
 const policeStations = [
-  { id: 1, label: 'MPD Station 1 - Raxa Bago', value: 'MPD Station 1 - Raxa Bago' },
+  { id: 1, label: 'MPD Station 1 - Raxabago', value: 'MPD Station 1 - Raxabago' },
   { id: 2, label: 'MPD Station 2 - Tondo', value: 'MPD Station 2 - Tondo' },
   { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'MPD Station 3 - Sta Cruz' },
   { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'MPD Station 4 - Sampaloc' },
@@ -234,6 +234,25 @@ const CrimeMap: React.FC = () => {
               userType="regular"
               data={crimeData}
             />
+            {/* Severity Legend */}
+            <View style={styles.legendContainer}>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
+                <Text style={styles.legendLabel}>No reported cases</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
+                <Text style={styles.legendLabel}>Low severity</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
+                <Text style={styles.legendLabel}>Medium severity</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
+                <Text style={styles.legendLabel}>High severity</Text>
+              </View>
+            </View>
           </View>
 
           {/* Selectors and stats */}
@@ -444,14 +463,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   selectorBtn: {
-    backgroundColor: '#212121',
+    backgroundColor: '#E02323',
     borderRadius: 8,
     padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectorBtnText: {
     color: '#fff',
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -504,7 +526,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   statCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFD8D8',
     borderRadius: 8,
     padding: 12,
     shadowColor: '#000',
@@ -520,23 +542,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
+    fontFamily: fonts.poppins.semiBold,
   },
   statLocation: {
     fontSize: 14,
     color: '#212121',
     marginBottom: 2,
+    fontFamily: fonts.poppins.regular,
   },
   statType: {
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
+    fontFamily: fonts.poppins.bold,
+
   },
   statValue: {
     fontSize: 20,
     color: '#212121',
-    fontFamily: fonts.poppins.semiBold,
+    fontFamily: fonts.poppins.bold,
   },
   defaultFont: {
+    fontFamily: fonts.poppins.regular,
+  },
+  legendContainer: {
+    position: 'absolute',
+    left: 10,
+    bottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 8,
+    padding: 8,
+    zIndex: 10,
+    minWidth: 120,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  legendLabel: {
+    fontSize: 12,
+    color: '#333',
     fontFamily: fonts.poppins.regular,
   },
 });

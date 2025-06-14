@@ -34,12 +34,34 @@ const severityLevels: SeverityLevel[] = [
   { level: 'High', color: '#ff0000' },
 ];
 
+// Crime types and stations data (match regular user)
 const crimeTypes = [
-  "Theft", "Robbery", "Assault", "Homicide", "Vandalism", "Drugs", "Other"
+  { id: 1, label: 'Murder', value: 'Murder' },
+  { id: 2, label: 'Homicide', value: 'Homicide' },
+  { id: 3, label: 'Physical Injuries', value: 'Physical Injury' },
+  { id: 4, label: 'Rape', value: 'Rape' },
+  { id: 5, label: 'Robbery', value: 'Robbery' },
+  { id: 6, label: 'Theft', value: 'Theft' },
+  { id: 7, label: 'Carnapping MV', value: 'Carnapping MV' },
+  { id: 8, label: 'Carnapping MC', value: 'Carnapping MC' },
+  { id: 9, label: 'Complex Crime', value: 'Complex Crime' },
+  { id: 10, label: 'Non-Index Crime', value: 'Non-Index Crime' },
 ];
-const stations = [
-  "Ermita Police Station", "Sampaloc Police Station", "Tondo Police Station",
-  "Malate Police Station", "Sta. Cruz Police Station", "Other"
+const policeStations = [
+  { id: 1, label: 'MPD Station 1 - Raxabago', value: 'MPD Station 1 - Raxabago' },
+  { id: 2, label: 'MPD Station 2 - Tondo', value: 'MPD Station 2 - Tondo' },
+  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'MPD Station 3 - Sta Cruz' },
+  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'MPD Station 4 - Sampaloc' },
+  { id: 5, label: 'MPD Station 5 - Ermita', value: 'MPD Station 5 - Ermita' },
+  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'MPD Station 6 - Sta Ana' },
+  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'MPD Station 7 - J. A. Santos' },
+  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'MPD Station 8 - Sta. Mesa' },
+  { id: 9, label: 'MPD Station 9 - Malate', value: 'MPD Station 9 - Malate' },
+  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'MPD Station 10 - Pandacan' },
+  { id: 11, label: 'MPD Station 11 - Meisic', value: 'MPD Station 11 - Meisic' },
+  { id: 12, label: 'MPD Station 12 - Delpan', value: 'MPD Station 12 - Delpan' },
+  { id: 13, label: 'MPD Station 13 - Baseco', value: 'MPD Station 13 - Baseco' },
+  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'MPD Station 14 - Barbosa' },
 ];
 
 const CrimeMap: React.FC = () => {
@@ -172,6 +194,25 @@ const CrimeMap: React.FC = () => {
               selectedCrimeType={selectedCrimeType}
               selectedStation={selectedStation}
             />
+            {/* Severity Legend */}
+            <View style={styles.legendContainer}>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
+                <Text style={styles.legendLabel}>No reported cases</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
+                <Text style={styles.legendLabel}>Low severity</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
+                <Text style={styles.legendLabel}>Medium severity</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
+                <Text style={styles.legendLabel}>High severity</Text>
+              </View>
+            </View>
           </View>
 
           {/* Selectors and stats */}
@@ -185,7 +226,9 @@ const CrimeMap: React.FC = () => {
               styles.defaultFont,
               isSmallDevice && { fontSize: 14 }
             ]}>
-              {selectedCrimeType ? selectedCrimeType : 'Select Crime Type'}
+              {selectedCrimeType ? 
+                crimeTypes.find(ct => ct.value === selectedCrimeType)?.label || selectedCrimeType : 
+                'Select Crime Type'}
             </Text>
           </TouchableOpacity>
           
@@ -199,7 +242,9 @@ const CrimeMap: React.FC = () => {
               styles.defaultFont,
               isSmallDevice && { fontSize: 14 }
             ]}>
-              {selectedStation ? selectedStation : 'Select Station'}
+              {selectedStation ? 
+                policeStations.find(ps => ps.value === selectedStation)?.label : 
+                'Select Station'}
             </Text>
           </TouchableOpacity>
 
@@ -228,18 +273,18 @@ const CrimeMap: React.FC = () => {
                 <ScrollView>
                   {crimeTypes.map((type) => (
                     <TouchableOpacity
-                      key={type}
+                      key={type.id}
                       style={[
                         styles.modalOption,
-                        selectedCrimeType === type && styles.modalOptionSelected
+                        selectedCrimeType === type.value && styles.modalOptionSelected
                       ]}
-                      onPress={() => handleCrimeTypeSelect(type)}
+                      onPress={() => handleCrimeTypeSelect(type.value)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        selectedCrimeType === type && styles.modalOptionTextSelected
+                        selectedCrimeType === type.value && styles.modalOptionTextSelected
                       ]}>
-                        {type}
+                        {type.label}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -271,20 +316,20 @@ const CrimeMap: React.FC = () => {
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
-                  {stations.map((station) => (
+                  {policeStations.map((station) => (
                     <TouchableOpacity
-                      key={station}
+                      key={station.id}
                       style={[
                         styles.modalOption,
-                        selectedStation === station && styles.modalOptionSelected
+                        selectedStation === station.value && styles.modalOptionSelected
                       ]}
-                      onPress={() => handleStationSelect(station as StationName)}
+                      onPress={() => handleStationSelect(station.value as StationName)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        selectedStation === station && styles.modalOptionTextSelected
+                        selectedStation === station.value && styles.modalOptionTextSelected
                       ]}>
-                        {station}
+                        {station.label}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -379,18 +424,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   selectorBtn: {
-    backgroundColor: 'white',
-    padding: 12,
+    backgroundColor: '#E02323',
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectorBtnText: {
+    color: '#fff',
     fontSize: 16,
-    color: '#212121',
+    fontFamily: fonts.poppins.regular,
+    textAlign: 'center',
   },
   statsRow: {
     flexDirection: 'row',
@@ -402,9 +446,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFD8D8',
     borderRadius: 8,
     padding: 12,
-    minHeight: 100,
-    width: '31%',
-    justifyContent: 'space-between',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -412,33 +453,35 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
+    alignItems: 'center',
   },
   statTitle: {
-    fontSize: 11,
-    color: '#E02323',
-    fontFamily: fonts.poppins.semiBold,
+    fontSize: 12,
+    color: '#666',
     marginBottom: 4,
-    fontWeight: '600',
+    fontFamily: fonts.poppins.semiBold,
+    textAlign: 'center',
   },
   statValue: {
     fontSize: 20,
-    color: '#000',
+    color: '#212121',
     fontFamily: fonts.poppins.bold,
-    marginTop: 'auto',
-    fontWeight: '700',
+    textAlign: 'center',
   },
   statLocation: {
-    fontSize: 12,
-    color: '#000',
-    fontFamily: fonts.poppins.medium,
+    fontSize: 14,
+    color: '#212121',
     marginBottom: 2,
+    fontFamily: fonts.poppins.regular,
+    textAlign: 'center',
   },
   statType: {
-    fontSize: 11,
-    color: '#886A6A',
-    fontFamily: fonts.poppins.regular,
+    fontSize: 12,
+    color: '#666',
     marginBottom: 4,
+    fontFamily: fonts.poppins.bold,
+    textAlign: 'center',
   },
   bottomNav: {
     width: '100%',
@@ -571,7 +614,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     marginTop: 16,
-  }
+  },
+  legendContainer: {
+    position: 'absolute',
+    left: 10,
+    bottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 8,
+    padding: 8,
+    zIndex: 10,
+    minWidth: 120,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  legendLabel: {
+    fontSize: 12,
+    color: '#333',
+    fontFamily: fonts.poppins.regular,
+  },
 });
 
 export default CrimeMap;
