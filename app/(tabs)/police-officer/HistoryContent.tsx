@@ -1,312 +1,274 @@
-import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Audio } from 'expo-av';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
 
-interface CrimeReport {
+interface HistoryDetails {
   location: string;
-  reporter: string;
-  dateTime: string;
-  responder: string;
-  distance: string;
-  arrivalTime: string;
-  description: string;
-  crimeType: string;
+  triggered_at: string;
+  resolved_at: string;
+  victim_fname: string;
+  victim_lname: string;
+  victim_number: string;
+  victim_email: string;
+  officer_fname: string;
+  officer_lname: string;
+  crime_type: string;
   severity: string;
-  voiceRecord: {
-    title: string;
-    duration: string;
-    date: string;
-  };
-  victimInfo: {
-    phone: string;
-    email: string;
-  };
+  crime_description: string;
+  voice_record_url: string;
 }
 
-const crimeReport: CrimeReport = {
-  location: "Pandacan, Manila",
-  reporter: "Juan Dela Cruz",
-  dateTime: "3 May, 9:35 PM - 11:00 PM",
-  responder: "You",
-  distance: "1.5 km",
-  arrivalTime: "Arrived in 3 minutes",
-  description: "None",
-  crimeType: "Theft",
-  severity: "Medium",
-  voiceRecord: {
-    title: "Voice record 1",
-    duration: "1:10",
-    date: "5/3/2025",
-  },
-  victimInfo: {
-    phone: "0917883247",
-    email: "example@gmail.com",
-  },
-};
+const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
+  const [details, setDetails] = useState<HistoryDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-const HistoryContent: React.FC = () => {
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  async function handlePlaySound() {
+    if (!details?.voice_record_url) return;
+
+    if (sound && isPlaying) {
+      await sound.pauseAsync();
+      setIsPlaying(false);
+      return;
+    }
+
+    if (sound && !isPlaying) {
+      await sound.playAsync();
+      setIsPlaying(true);
+      return;
+    }
+
+    const fullAudioUrl = `http://mnl911.atwebpages.com/${details.voice_record_url}`;
+    try {
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: fullAudioUrl },
+        { shouldPlay: true }
+      );
+      setSound(newSound);
+      setIsPlaying(true);
+
+      newSound.setOnPlaybackStatusUpdate(async (status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlaying(false);
+          await newSound.setPositionAsync(0);
+        }
+      });
+    } catch (e) {
+      console.error('Error loading sound', e);
+      alert('Could not play the audio file.');
+    }
+  }
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  useEffect(() => {
+    if (!historyId) {
+      setError('History ID was not provided.');
+      setIsLoading(false);
+      return;
+    }
+    const fetchDetails = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`http://mnl911.atwebpages.com/get_history_details.php?history_id=${historyId}`);
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setDetails(data.details);
+        } else {
+          setError(data.error || 'Failed to fetch details from the server.');
+        }
+      } catch (err) {
+        setError('An error occurred. Please check your connection and the server script.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDetails();
+  }, [historyId]);
+
+  const formatDateTimeRange = (start?: string, end?: string) => {
+    if (!start || !end) return 'N/A';
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const dateOptions: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
+    const timeOptions: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+    const formattedDate = startDate.toLocaleDateString('en-US', dateOptions);
+    const startTime = startDate.toLocaleTimeString('en-US', timeOptions);
+    const endTime = endDate.toLocaleTimeString('en-US', timeOptions);
+    return `${formattedDate}, ${startTime} - ${endTime}`;
+  };
+
+  const renderLocation = (locationString: string) => {
+    if (!locationString) return <Text style={styles.location}>Unknown Location</Text>;
+    const firstCommaIndex = locationString.indexOf(',');
+    if (firstCommaIndex !== -1) {
+      const street = locationString.substring(0, firstCommaIndex);
+      const area = locationString.substring(firstCommaIndex + 1).trim();
+      return (
+        <View>
+          <Text style={styles.location}>{street}</Text>
+          <Text style={styles.locationArea}>{area}</Text>
+        </View>
+      );
+    }
+    return <Text style={styles.location}>{locationString}</Text>;
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header />
+        <ActivityIndicator style={{ flex: 1 }} size="large" color="#E02323" />
+        <NavBottomBar activeScreen="History" />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !details) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={styles.errorText}>Could Not Load Details</Text>
+          <Text style={styles.errorSubText}>{error}</Text>
+        </View>
+        <NavBottomBar activeScreen="History" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <Header />
-      
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
+        contentContainerStyle={[styles.scrollViewContent, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
           <Text style={styles.title}>Crime Report History</Text>
 
-          {/* Location Card */}
           <View style={styles.card}>
             <View style={styles.locationHeader}>
-              <View>
-                <Text style={styles.location}>{crimeReport.location}</Text>
-                <Text style={styles.reporter}>{crimeReport.reporter}</Text>
-                <Text style={styles.dateTime}>{crimeReport.dateTime}</Text>
+              <View style={styles.locationDetails}>
+                {renderLocation(details.location)}
+                <Text style={styles.dateTime}>{formatDateTimeRange(details.triggered_at, details.resolved_at)}</Text>
               </View>
               <View style={styles.responderInfo}>
                 <Text style={styles.respondedBy}>Responded by</Text>
-                <Text style={styles.responder}>{crimeReport.responder}</Text>
+                <Text style={styles.responder}>You</Text>
               </View>
             </View>
-
-            <View 
-              style={[styles.mapImage, {
-                backgroundColor: '#E5E5E5',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }]}
-            >
-              <Text style={{ color: '#666' }}>Map Preview</Text>
-            </View>
-
-            <View style={styles.distanceInfo}>
-              <Text style={styles.distanceText}>{crimeReport.distance}</Text>
-              <Text style={styles.dot}>●</Text>
-              <Text style={styles.arrivalTime}>{crimeReport.arrivalTime}</Text>
+            <View style={styles.victimInfo}>
+              <Text style={styles.victimInfoTitle}>Victim's Information</Text>
+              <View style={styles.victimDetailRow}>
+                <Text style={styles.victimInfoLabel}>Name:</Text>
+                <Text style={styles.victimInfoText}>{`${details.victim_fname} ${details.victim_lname}`}</Text>
+              </View>
+              <View style={styles.victimDetailRow}>
+                <Text style={styles.victimInfoLabel}>Phone Number:</Text>
+                <Text style={styles.victimInfoText}>{details.victim_number}</Text>
+              </View>
+              <View style={styles.victimDetailRow}>
+                <Text style={styles.victimInfoLabel}>Email:</Text>
+                <Text style={styles.victimInfoText}>{details.victim_email}</Text>
+              </View>
             </View>
           </View>
 
-          {/* Details Card */}
           <View style={styles.card}>
             <View style={styles.detailsRow}>
               <View style={styles.detailColumn}>
                 <Text style={styles.detailLabel}>Description</Text>
-                <Text style={styles.detailValue}>{crimeReport.description}</Text>
+                <Text style={styles.detailValue}>{details.crime_description || 'None'}</Text>
               </View>
               <View style={styles.detailColumn}>
                 <Text style={styles.detailLabel}>Crime Type</Text>
-                <Text style={styles.detailValue}>{crimeReport.crimeType}</Text>
+                <Text style={styles.detailValue}>{details.crime_type}</Text>
               </View>
               <View style={styles.detailColumn}>
                 <Text style={styles.detailLabel}>Severity</Text>
-                <Text style={styles.detailValue}>{crimeReport.severity}</Text>
+                <Text style={styles.detailValue}>{details.severity}</Text>
               </View>
             </View>
 
-            {/* Voice Record Section */}
-            <View style={styles.voiceRecordSection}>
-              <Text style={styles.voiceRecordTitle}>{crimeReport.voiceRecord.title}</Text>
-              <View style={styles.waveformContainer}>
-                {[...Array(40)].map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.waveformBar,
-                      {
-                        height: Math.random() * 15 + 2,
-                        opacity: 0.66
-                      }
-                    ]}
-                  />
-                ))}
-                <TouchableOpacity style={styles.playButton}>
-                  <MaterialIcons name="play-circle-filled" size={28} color="#E02323" />
-                </TouchableOpacity>
+            {details.voice_record_url && (
+              <View style={styles.voiceRecordSection}>
+                <Text style={styles.voiceRecordTitle}>SOS Voice Recording</Text>
+                <View style={styles.waveformContainer}>
+                  <TouchableOpacity style={styles.playButton} onPress={handlePlaySound}>
+                    <MaterialIcons
+                      name={isPlaying ? 'pause-circle-filled' : 'play-circle-filled'}
+                      size={40}
+                      color="#E02323"
+                    />
+                  </TouchableOpacity>
+                  <View style={styles.waveform}>
+                    {[...Array(40)].map((_, index) => (
+                      <View
+                        key={index}
+                        style={[styles.waveformBar, { height: Math.random() * 20 + 4 }]}
+                      />
+                    ))}
+                  </View>
+                </View>
               </View>
-              <View style={styles.voiceRecordInfo}>
-                <Text style={styles.voiceRecordDuration}>{crimeReport.voiceRecord.duration}</Text>
-                <Text style={styles.voiceRecordDate}>{crimeReport.voiceRecord.date}</Text>
-              </View>
-            </View>
-
-            {/* Victim Information */}
-            <View style={styles.victimInfo}>
-              <Text style={styles.victimInfoTitle}>Victim&apos;s Information</Text>
-              <Text style={styles.victimInfoText}>{crimeReport.victimInfo.phone}</Text>
-              <Text style={styles.victimInfoText}>{crimeReport.victimInfo.email}</Text>
-            </View>
+            )}
           </View>
         </View>
       </ScrollView>
-
       <NavBottomBar activeScreen="History" />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f4f4',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    padding: 20,
-  },
-  content: {
-    gap: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
-    marginBottom: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    gap: 11,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  locationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  location: {
-    fontSize: 14,
-    fontFamily: fonts.poppins.medium,
-    color: '#E02323',
-  },
-  reporter: {
-    fontSize: 11,
-    fontFamily: fonts.poppins.medium,
-    color: '#000',
-  },
-  dateTime: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  responderInfo: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  respondedBy: {
-    fontSize: 9,
-    fontFamily: fonts.poppins.medium,
-    color: '#19F315',
-  },
-  responder: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  mapImage: {
-    width: '100%',
-    height: 110,
-    borderRadius: 8,
-  },
-  distanceInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  distanceText: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  dot: {
-    fontSize: 5,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  arrivalTime: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    gap: 18,
-  },
-  detailColumn: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#000',
-  },
-  detailValue: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.regular,
-    color: '#000',
-  },
-  voiceRecordSection: {
-    gap: 6,
-  },
-  voiceRecordTitle: {
-    fontSize: 14,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
-  },
-  waveformContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 28,
-    gap: 1,
-  },
-  waveformBar: {
-    flex: 1,
-    backgroundColor: '#E02323',
-    borderRadius: 1,
-    marginTop: 6,
-  },
-  playButton: {
-    marginLeft: 8,
-    marginBottom: -4,
-  },
-  voiceRecordInfo: {
-    flexDirection: 'row',
-    gap: 20,
-},
-  voiceRecordDuration: {
-    fontSize: 11,
-    fontFamily: fonts.poppins.regular,
-    color: '#8B8B8B',
-  },
-  voiceRecordDate: {
-    fontSize: 11,
-    fontFamily: fonts.poppins.regular,
-    color: '#8B8B8B',
-  },
-  victimInfo: {
-  },
-  victimInfoTitle: {
-    fontSize: 14,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#000',
-  },
-  victimInfoText: {
-    fontSize: 11,
-    fontFamily: 'Roboto',
-    color: '#7E7E7E',
-    lineHeight: 23,
-  },
+  container: { flex: 1, backgroundColor: '#f4f4f4' },
+  errorText: { fontSize: 18, fontWeight: 'bold', fontFamily: fonts.poppins.semiBold, color: '#333', textAlign: 'center' },
+  errorSubText: { fontSize: 14, fontFamily: fonts.poppins.regular, color: '#666', marginTop: 8, textAlign: 'center' },
+  scrollView: { flex: 1 },
+  scrollViewContent: { padding: 20 },
+  content: { gap: 16 },
+  title: { fontSize: 22, fontFamily: fonts.poppins.semiBold, color: '#212121', marginBottom: 16 },
+  card: { backgroundColor: '#fff', borderRadius: 10, padding: 20, gap: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  locationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  locationDetails: { flex: 1, marginRight: 10 },
+  location: { fontSize: 16, fontFamily: fonts.poppins.medium, color: '#E02323', flexWrap: 'wrap' },
+  locationArea: { fontSize: 14, fontFamily: fonts.poppins.regular, color: '#E02323', flexWrap: 'wrap' },
+  dateTime: { fontSize: 12, fontFamily: fonts.poppins.medium, color: 'rgba(0, 0, 0, 0.4)', marginTop: 8 },
+  responderInfo: { alignItems: 'flex-end', gap: 6 },
+  respondedBy: { fontSize: 11, fontFamily: fonts.poppins.medium, color: '#19F315' },
+  responder: { fontSize: 12, fontFamily: fonts.poppins.medium, color: 'rgba(0, 0, 0, 0.4)' },
+  detailsRow: { flexDirection: 'row', gap: 18 },
+  detailColumn: { flex: 1 },
+  detailLabel: { fontSize: 14, fontFamily: fonts.poppins.semiBold, color: '#000', marginBottom: 2 },
+  detailValue: { fontSize: 12, fontFamily: fonts.poppins.regular, color: '#333' },
+  victimInfo: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 16 },
+  victimInfoTitle: { fontSize: 15, fontFamily: fonts.poppins.semiBold, color: '#000', marginBottom: 12 },
+  victimDetailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  victimInfoLabel: { fontSize: 14, fontFamily: fonts.poppins.medium, color: '#333', marginRight: 8 },
+  victimInfoText: { fontSize: 14, fontFamily: 'Roboto', color: '#7E7E7E' },
+  voiceRecordSection: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 16 },
+  voiceRecordTitle: { fontSize: 15, fontFamily: fonts.poppins.semiBold, color: '#212121', marginBottom: 12 },
+  waveformContainer: { flexDirection: 'row', alignItems: 'center', height: 40 },
+  playButton: { marginRight: 12 },
+  waveform: { flex: 1, flexDirection: 'row', alignItems: 'center', height: '100%', gap: 2 },
+  waveformBar: { width: 3, backgroundColor: 'rgba(224, 35, 35, 0.6)', borderRadius: 2 },
 });
 
 export default HistoryContent;
