@@ -5,6 +5,7 @@ import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts } from '../config/fonts';
 
+
 type NavItem = {
   icon: React.ReactNode;
   label: string;
