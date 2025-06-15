@@ -17,6 +17,7 @@ export default function TabLayout() {
         }}
       >
         <Stack.Screen name="index" />
+        <Stack.Screen name="guest" />
         <Stack.Screen name="auth" />
         <Stack.Screen name="police-officer" />
         <Stack.Screen name="regular-user" />

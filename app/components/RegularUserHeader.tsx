@@ -4,13 +4,16 @@ import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+
 interface RegularUserHeaderProps {
   onProfilePress?: () => void;
 }
 
 export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderProps) {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+    const insets = useSafeAreaInsets();
+
+
   const handleProfilePress = () => {
     if (onProfilePress) {
       onProfilePress();
@@ -20,7 +23,7 @@ export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderP
   };
 
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <View style={styles.header}>
       {/* Logo and Title */}
       <View style={styles.logoContainer}>
         <Image
@@ -47,6 +50,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingTop: 48,
     paddingBottom: 16,
     backgroundColor: 'white',
   },
