@@ -1,7 +1,3 @@
-{
-  "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit",
-    "source.organizeImports": "explicit",
-    "source.sortMembers": "explicit"
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:7c6c98b86eacb8a73c856ad322bef03246aa85cb41d75bb03c8380a58859dcd8
+size 159

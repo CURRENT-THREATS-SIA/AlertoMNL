@@ -1,25 +1,3 @@
-{
-  "cli": {
-    "version": ">= 16.9.0",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "gradleCommand": ":app:assembleDebug"
-      },
-      "ios": {
-        "buildConfiguration": "Debug"
-      }
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {}
-  },
-  "submit": {
-    "production": {}
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:237e42d1aa5921af5837d80fea2f4af2eb5fdfef747262fb7936b1f04f7d031f
+size 471
