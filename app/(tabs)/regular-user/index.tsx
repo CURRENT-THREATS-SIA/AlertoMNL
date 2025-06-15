@@ -136,7 +136,9 @@ export default function RegularUserHome() {
     );
   };
 
-  const stopLocationUpdates = () => { /* Cleanup logic */ };
+  const stopLocationUpdates = () => {
+    // TODO: Implement cleanup for location updates if needed
+  };
 
   const formatAddress = (address: Location.LocationGeocodedAddress) => {
     const addressParts = [];
@@ -270,6 +272,7 @@ export default function RegularUserHome() {
       let currentLocation = location;
       if (!currentLocation) currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLocation(currentLocation);
+      console.log('SOS currentLocation:', currentLocation); // Debug: log the coordinates
       const formData = new FormData();
       formData.append('nuser_id', nuserId);
       formData.append('a_latitude', currentLocation.coords.latitude.toString());
@@ -303,7 +306,7 @@ export default function RegularUserHome() {
         Alert.alert('SOS Stopped', 'You fully stopped your SOS initialization. You will be restricted from clicking it for 5 minutes.');
         setSosDisabledUntil(Date.now() + 5 * 60 * 1000); // 5 minutes from now
       }
-    } catch (e) {
+    } catch {
       Alert.alert('Error', 'Failed to cancel SOS alert.');
     }
     setSosState('idle');
@@ -333,6 +336,11 @@ export default function RegularUserHome() {
               handleSOS
             }
             disabled={isSosButtonDisabled}
+            accessibilityLabel={
+              sosState === 'active' ? 'Stop SOS' :
+              sosState === 'countdown' ? 'SOS countdown in progress' :
+              'Trigger SOS'
+            }
           >
             <Animated.View
               style={[
@@ -390,12 +398,12 @@ export default function RegularUserHome() {
           <View style={styles.locationInfo}>
             <Text style={styles.locationText}>{locationAddress}</Text>
             <Text style={styles.coordinatesText}>
-              <Text style={styles.redText}>Latitude: </Text><Text style={styles.boldText}>{location?.coords.latitude.toFixed(4) || '---'}</Text>
-              <Text style={styles.redText}>  Longitude: </Text><Text style={styles.boldText}>{location?.coords.longitude.toFixed(4) || '---'}</Text>
+              <Text style={styles.redText}>Latitude: </Text><Text style={styles.boldText}>{location?.coords.latitude ? location.coords.latitude.toFixed(4) : '---'}</Text>
+              <Text style={styles.redText}>  Longitude: </Text><Text style={styles.boldText}>{location?.coords.longitude ? location.coords.longitude.toFixed(4) : '---'}</Text>
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={[styles.voiceButton, isRecording && styles.voiceButtonRecording]} onPress={manualRecording ? stopManualRecording : startManualRecording} disabled={isSendingSOS || isRecording}>
+        <TouchableOpacity style={[styles.voiceButton, isRecording && styles.voiceButtonRecording]} onPress={manualRecording ? stopManualRecording : startManualRecording} disabled={isSendingSOS || isRecording} accessibilityLabel={isRecording ? 'Stop voice recording' : 'Start voice recording'}>
           <View style={styles.voiceButtonContent}>
             {isRecording ? (
               <>
