@@ -270,7 +270,6 @@ export default function RegularUserHome() {
       let currentLocation = location;
       if (!currentLocation) currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLocation(currentLocation);
-      console.log('SOS currentLocation:', currentLocation); // Debug: log the coordinates
       const formData = new FormData();
       formData.append('nuser_id', nuserId);
       formData.append('a_latitude', currentLocation.coords.latitude.toString());
