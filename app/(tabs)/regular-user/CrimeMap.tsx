@@ -8,8 +8,7 @@ import {
     Text,
     TouchableOpacity,
     useWindowDimensions,
-    View
-} from 'react-native';
+    View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
 import { crimeData, StationName, totalRates } from '../../../constants/mapData';

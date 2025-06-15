@@ -241,6 +241,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 20,
+    gap: 8,
   },
   signupText: {
     color: '#000',

@@ -5,13 +5,13 @@ import {
   KeyboardAvoidingView,
   SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 
@@ -67,6 +67,8 @@ const fetchProfileFromBackend = async (
 
 const AccountDetails: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const [isEditing, setIsEditing] = React.useState(false);
   const [originalData, setOriginalData] = React.useState<UserData[]>([
     { label: "First Name", value: "", key: "firstName" },
@@ -228,14 +230,9 @@ const AccountDetails: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Account Details</Text>
@@ -402,20 +399,19 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
-    marginLeft: 8,
     fontSize: 20,
-    fontFamily: fonts.poppins.bold,
+    fontFamily: fonts.poppins.semiBold,
     color: '#212121',
+    marginLeft: 12,
   },
   scrollView: {
     // other styles

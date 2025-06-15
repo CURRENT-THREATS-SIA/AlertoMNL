@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { ButtonReg } from "../../../components/ButtonReg";
-import { TextButton } from "../../../components/TextButton";
 import { LineArrowLeft } from "../../../icons/LineArrowLeft";
 import { LineArrowRight1 } from "../../../icons/LineArrowRight1";
 import { User } from "../../../icons/User";
@@ -17,7 +16,9 @@ export const SignUp: React.FC = () => {
         {/* Main Content */}
         <View style={styles.frame}>
           <View style={styles.frame2}>
-            <LineArrowLeft style={styles.lineArrowLeft} />
+            <TouchableOpacity onPress={() => router.back()}>
+              <LineArrowLeft style={styles.lineArrowLeft} />
+            </TouchableOpacity>
             <View style={styles.frame3}>
               <View style={styles.frame4}>
                 <View style={styles.frame5}>
@@ -84,13 +85,15 @@ export const SignUp: React.FC = () => {
                       : undefined
                   }
                 />
-                <View style={styles.frame13}>
-                  <Text style={styles.textWrapper5}>Already a member?</Text>
-                  <TextButton text="Log in" textStyle={styles.textButton16px} onPress={() => router.push("auth/Login")} />
-                </View>
               </View>
             </View>
           </View>
+        </View>
+        <View style={styles.signupContainer}>
+          <Text style={styles.signupText}>Already a member?</Text>
+          <TouchableOpacity onPress={() => router.push("/auth/Login")}> 
+            <Text style={styles.signupLink}>Log in</Text>
+          </TouchableOpacity>
         </View>
     </ScrollView>
   );
@@ -111,7 +114,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 29,
     position: "relative",
-    width: 340,
+    width: 330,
   },
   lineArrowLeft: {
     height: 24,
@@ -271,8 +274,9 @@ const styles = StyleSheet.create({
   frame13: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 6,
+    gap: 4,
     position: "relative",
+    
   },
   textWrapper5: {
     color: "#000000",
@@ -283,12 +287,11 @@ const styles = StyleSheet.create({
     position: "relative",
     textAlign: "center",
   },
-  textButtonPx: {
-    flex: 0,
-  },
+
   textButton16px: {
-    color: "#e02323",
-  },
+    color: '#e02323',
+    fontWeight: 'bold',
+    },
   barsHomeIndicatorInstance: {
     backgroundColor: "#a4a4a4",
     left: 136,
@@ -389,6 +392,22 @@ const styles = StyleSheet.create({
     elevation: 4,
     padding: 32,
     alignItems: 'center',
+  },
+  signupContainer: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  signupText: {
+    color: "#000",
+    fontSize: 16,
+    marginRight: 8,
+  },
+  signupLink: {
+    color: "#e02323",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
 
