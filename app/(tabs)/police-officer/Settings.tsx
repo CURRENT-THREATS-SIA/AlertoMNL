@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -47,17 +48,26 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    // Add your logout logic here (e.g., clearing tokens, user state, etc.)
+  const handleLogout = async () => {
+    // Remove all user-related keys
+    await AsyncStorage.removeItem('police_id');
+    await AsyncStorage.removeItem('nuser_id');
+    await AsyncStorage.removeItem('firstName');
+    await AsyncStorage.removeItem('lastName');
+    await AsyncStorage.removeItem('email');
+    await AsyncStorage.removeItem('phone');
+    await AsyncStorage.removeItem('badge');
+    await AsyncStorage.removeItem('station');
+    // Optionally, clear all AsyncStorage (be careful if you store other data)
+    // await AsyncStorage.clear();
+
+    router.replace('/auth/Login'); // Navigate to login
+
+    // Show alert after navigation (optional)
     Alert.alert(
       "Logout Successful",
       "You have been logged out.",
-      [
-        {
-          text: "OK",
-          onPress: () => router.replace('/auth/Login'), // or '/auth/Login' if your routing is case-sensitive
-        }
-      ],
+      [{ text: "OK" }],
       { cancelable: false }
     );
   };

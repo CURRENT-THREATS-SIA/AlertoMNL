@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import * as React from 'react';
 import {
+  KeyboardAvoidingView,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 
+// Email validation function
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 interface UserData {
   label: string;
   value: string;
@@ -21,42 +25,96 @@ interface UserData {
   isPassword?: boolean;
 }
 
+const fetchProfileFromBackend = async (
+  setOriginalData: React.Dispatch<React.SetStateAction<UserData[]>>,
+  setEditableData: React.Dispatch<React.SetStateAction<UserData[]>>,
+  setIsLockedOut: React.Dispatch<React.SetStateAction<boolean>>,
+  setLockoutUntil: React.Dispatch<React.SetStateAction<number | null>>,
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+  const nuser_id = await AsyncStorage.getItem('nuser_id');
+  if (!nuser_id) return;
+  try {
+    const response = await fetch(`http://mnl911.atwebpages.com/get_user_profile.php?nuser_id=${nuser_id}`);
+    const data = await response.json();
+    if (data.success) {
+      setOriginalData([
+        { label: "First Name", value: data.firstName || "", key: "firstName" },
+        { label: "Last Name", value: data.lastName || "", key: "lastName" },
+        { label: "Email Address", value: data.email || "", key: "email" },
+        { label: "Phone Number", value: data.phone || "", key: "phone" },
+      ]);
+      setEditableData([
+        { label: "First Name", value: data.firstName || "", key: "firstName" },
+        { label: "Last Name", value: data.lastName || "", key: "lastName" },
+        { label: "Email Address", value: data.email || "", key: "email" },
+        { label: "Phone Number", value: data.phone || "", key: "phone" },
+      ]);
+      // Set lockout state
+      if (data.profile_lockout_until && Date.now() < data.profile_lockout_until) {
+        setIsLockedOut(true);
+        setLockoutUntil(data.profile_lockout_until);
+        setIsEditing(false);
+      } else {
+        setIsLockedOut(false);
+        setLockoutUntil(null);
+      }
+    }
+  } catch (e) {
+    // Optionally handle error
+  }
+};
+
 const AccountDetails: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
   const [isEditing, setIsEditing] = React.useState(false);
   const [originalData, setOriginalData] = React.useState<UserData[]>([
     { label: "First Name", value: "", key: "firstName" },
     { label: "Last Name", value: "", key: "lastName" },
     { label: "Email Address", value: "", key: "email" },
     { label: "Phone Number", value: "", key: "phone" },
-    { label: "Password", value: "••••••••", key: "password", isPassword: true },
   ]);
-  const [editableData, setEditableData] = useState<UserData[]>([...originalData]);
+  const [editableData, setEditableData] = React.useState<UserData[]>([...originalData]);
+  const [currentPassword, setCurrentPassword] = React.useState("");
+  const [newPassword, setNewPassword] = React.useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  // Backend-driven lockout state
+  const [isLockedOut, setIsLockedOut] = React.useState(false);
+  const [lockoutMessage, setLockoutMessage] = React.useState('');
+  const [lockoutUntil, setLockoutUntil] = React.useState<number | null>(null);
+  const [lockoutCountdown, setLockoutCountdown] = React.useState("");
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      const firstName = await AsyncStorage.getItem('firstName');
-      const lastName = await AsyncStorage.getItem('lastName');
-      const email = await AsyncStorage.getItem('email');
-      const phone = await AsyncStorage.getItem('phone');
-      setOriginalData([
-        { label: "First Name", value: firstName || "", key: "firstName" },
-        { label: "Last Name", value: lastName || "", key: "lastName" },
-        { label: "Email Address", value: email || "", key: "email" },
-        { label: "Phone Number", value: phone || "", key: "phone" },
-        { label: "Password", value: "••••••••", key: "password", isPassword: true },
-      ]);
-      setEditableData([
-        { label: "First Name", value: firstName || "", key: "firstName" },
-        { label: "Last Name", value: lastName || "", key: "lastName" },
-        { label: "Email Address", value: email || "", key: "email" },
-        { label: "Phone Number", value: phone || "", key: "phone" },
-        { label: "Password", value: "••••••••", key: "password", isPassword: true },
-      ]);
-    };
-    loadUserData();
+  React.useEffect(() => {
+    fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing);
   }, []);
+
+  React.useEffect(() => {
+    if (!lockoutUntil) {
+      setLockoutCountdown("");
+      return;
+    }
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remaining = lockoutUntil - now;
+      if (remaining <= 0) {
+        setLockoutUntil(null);
+        setIsLockedOut(false);
+        setLockoutMessage('');
+        setLockoutCountdown("");
+        clearInterval(interval);
+      } else {
+        const min = Math.floor(remaining / 60000);
+        const sec = Math.floor((remaining % 60000) / 1000);
+        setLockoutCountdown(
+          `You've tried to change your password too many times. You cannot update your profile for ${min > 0 ? min + " minute(s) " : ""}${sec} second(s)`
+        );
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
 
   const handleInputChange = (text: string, key: string) => {
     setEditableData(prevData =>
@@ -67,47 +125,107 @@ const AccountDetails: React.FC = () => {
   };
 
   const handleSave = async () => {
-    setOriginalData([...editableData]);
-    setIsEditing(false);
-  
-    // Save updated info to AsyncStorage
+    // Phone number validation (PH: must be 11 digits, start with '09')
+    const phoneField = editableData.find(f => f.key === 'phone');
+    const phone = phoneField ? phoneField.value : '';
+    if (!/^09\d{9}$/.test(phone)) {
+      alert('Philippine mobile number must be exactly 11 digits and must start with 09 (e.g., 09062278962).');
+      return; 
+    }
+    // Email validation
+    const emailField = editableData.find(f => f.key === 'email');
+    const email = emailField ? emailField.value : '';
+    if (!isValidEmail(email)) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+    setOriginalData([...editableData]);   
     let userData: { [key: string]: string } = {};
     for (const field of editableData) {
-      if (field.key !== "password") {
-        await AsyncStorage.setItem(field.key, field.value);
-        userData[field.key] = field.value;
-      }
+      await AsyncStorage.setItem(field.key, field.value);
+      userData[field.key] = field.value;
     }
-  
-    // Get nuser_id from AsyncStorage
     const nuser_id = await AsyncStorage.getItem('nuser_id');
-  
-    // Send update to backend
+    let body = `nuser_id=${encodeURIComponent(nuser_id || "")}` +
+      `&firstName=${encodeURIComponent(userData.firstName || "")}` +
+      `&lastName=${encodeURIComponent(userData.lastName || "")}` +
+      `&email=${encodeURIComponent(userData.email || "")}` +
+      `&phone=${encodeURIComponent(userData.phone || "")}`;
+    if (currentPassword || newPassword) {
+      body += `&currentPassword=${encodeURIComponent(currentPassword)}`;
+      body += `&newPassword=${encodeURIComponent(newPassword)}`;
+    }
     try {
       const response = await fetch('http://mnl911.atwebpages.com/update_profile.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `nuser_id=${encodeURIComponent(nuser_id || "")}&firstName=${encodeURIComponent(userData.firstName || "")}&lastName=${encodeURIComponent(userData.lastName || "")}&email=${encodeURIComponent(userData.email || "")}&phone=${encodeURIComponent(userData.phone || "")}`
+        body
       });
       const data = await response.json();
       if (data.success) {
-        alert("Profile updated successfully!");
+        // Update AsyncStorage with new values
+        await AsyncStorage.setItem('firstName', data.firstName || "");
+        await AsyncStorage.setItem('lastName', data.lastName || "");
+        await AsyncStorage.setItem('email', data.email || "");
+        await AsyncStorage.setItem('phone', data.phone || "");
+
+        // Refresh UI state from backend
+        fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing);
+
+        setCurrentPassword("");
+        setNewPassword("");
+        setIsEditing(false);
+
+        // Show success alert
+        alert(data.message || "Profile updated successfully");
+      } else if (data.lockout) {
+        setIsLockedOut(true);
+        setLockoutMessage(data.message || "You've tried to change your password too many times. You cannot update your profile for");
+        const until = data.profile_lockout_until || data.lockout_until || null;
+        setLockoutUntil(until);
+        setIsEditing(false);
+        // Immediately set the countdown so the timer appears right away
+        if (until) {
+          const now = Date.now();
+          const remaining = until - now;
+          if (remaining > 0) {
+            const min = Math.floor(remaining / 60000);
+            const sec = Math.floor((remaining % 60000) / 1000);
+            setLockoutCountdown(
+              `You've tried to change your password too many times. You cannot update your profile for ${min > 0 ? min + " minute(s) " : ""}${sec} second(s)`
+            );
+          } else {
+            setLockoutCountdown("");
+          }
+        } else {
+          setLockoutCountdown("");
+        }
+        alert((data.message || "You've tried to change your password too many times. You cannot update your profile for") + (lockoutCountdown ? ' ' + lockoutCountdown : ''));
       } else {
-        alert(data.message || "Update failed");
+        setIsLockedOut(false);
+        setLockoutMessage('');
+        setLockoutUntil(null);
+        setIsEditing(true); // stay in edit mode for user to fix
+        alert(data.message || "Something went wrong. Please try again.");
       }
     } catch (error) {
       alert("Network error. Please try again.");
+      // Stay in edit mode
     }
   };
 
   const startEditing = () => {
     setEditableData([...originalData]);
     setIsEditing(true);
+    setCurrentPassword("");
+    setNewPassword("");
   };
 
   const handleCancel = () => {
     setEditableData([...originalData]);
     setIsEditing(false);
+    setCurrentPassword("");
+    setNewPassword("");
   };
 
   return (
@@ -120,70 +238,156 @@ const AccountDetails: React.FC = () => {
         <Text style={styles.headerTitle}>Account Details</Text>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="height"
+        keyboardVerticalOffset={0}
       >
-        {/* Profile Picture */}
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <MaterialIcons name="person" size={40} color="#e02323" />
-          </View>
-          {isEditing && (
-            <TouchableOpacity style={styles.editAvatarButton}>
-              <Text style={styles.editAvatarText}>Change Photo</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Form Fields */}
-        <View style={styles.formContainer}>
-          {editableData.map((field) => (
-            <View key={field.key} style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>{field.label}</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  !isEditing && styles.inputDisabled
-                ]}
-                value={field.value}
-                onChangeText={(text) => handleInputChange(text, field.key)}
-                editable={isEditing && !field.isPassword}
-                secureTextEntry={field.isPassword}
-                placeholderTextColor="#666666"
-              />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Profile Picture */}
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatar}>
+              <MaterialIcons name="person" size={40} color="#e02323" />
             </View>
-          ))}
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.buttonContainer}>
-          {isEditing ? (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={handleCancel}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+            {isEditing && (
+              <TouchableOpacity style={styles.editAvatarButton} onPress={() => {}}>
+                <Text style={styles.editAvatarText}>Change Photo</Text>
               </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Lockout Message */}
+          {isLockedOut && (
+            <View style={{ marginBottom: 16, backgroundColor: '#fff3cd', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#ffeeba' }}>
+              <Text style={{ color: '#856404', fontSize: 15, textAlign: 'center' }}>
+                {lockoutCountdown ? lockoutCountdown : lockoutMessage}
+              </Text>
+            </View>
+          )}
+
+          {/* Form Fields */}
+          <View style={styles.formContainer}>
+            {editableData.map((field) => (
+              <View key={field.key} style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>{field.label}</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    !isEditing && styles.inputDisabled
+                  ]}
+                  value={field.value}
+                  onChangeText={(text) => handleInputChange(text, field.key)}
+                  editable={isEditing && !isLockedOut}
+                  placeholder={undefined}
+                  placeholderTextColor="#666666"
+                  keyboardType={field.key === 'phone' ? 'phone-pad' : 'default'}
+                  maxLength={field.key === 'phone' ? 11 : undefined}
+                />
+              </View>
+            ))}
+            {/* Password display in view mode */}
+            {!isEditing && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <TextInput
+                  style={[styles.input, styles.inputDisabled]}
+                  value={"******"}
+                  editable={false}
+                  secureTextEntry
+                  placeholderTextColor="#666666"
+                />
+              </View>
+            )}
+            {/* Password Change Fields (only in edit mode) */}
+            {isEditing && (
+              <>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Current Password</Text>
+                  <View style={styles.passwordInputWrapper}>
+                    <TextInput
+                      style={[styles.input, styles.passwordInput]}
+                      value={currentPassword}
+                      onChangeText={setCurrentPassword}
+                      secureTextEntry={!showCurrentPassword}
+                      placeholder="Enter current password"
+                      placeholderTextColor="#666666"
+                      editable={!isLockedOut}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowCurrentPassword(v => !v)}
+                      style={styles.eyeIconAbsolute}
+                    >
+                      <MaterialIcons
+                        name={showCurrentPassword ? 'visibility' : 'visibility-off'}
+                        size={24}
+                        color="#888"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>New Password</Text>
+                  <View style={styles.passwordInputWrapper}>
+                    <TextInput
+                      style={[styles.input, styles.passwordInput]}
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      secureTextEntry={!showNewPassword}
+                      placeholder="Enter a new password"
+                      placeholderTextColor="#666666"
+                      editable={!isLockedOut}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowNewPassword(v => !v)}
+                      style={styles.eyeIconAbsolute}
+                    >
+                      <MaterialIcons
+                        name={showNewPassword ? 'visibility' : 'visibility-off'}
+                        size={24}
+                        color="#888"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.buttonContainer}>
+            {isEditing ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.button, styles.cancelButton]}
+                  onPress={handleCancel}
+                  disabled={isLockedOut}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.saveButton]}
+                  onPress={handleSave}
+                  disabled={isLockedOut}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
               <TouchableOpacity
                 style={[styles.button, styles.saveButton]}
-                onPress={handleSave}
+                onPress={startEditing}
+                disabled={isLockedOut}
               >
-                <Text style={styles.saveButtonText}>Save</Text>
+                <Text style={styles.saveButtonText}>Edit Profile</Text>
               </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={[styles.button, styles.saveButton]}
-              onPress={startEditing}
-            >
-              <Text style={styles.saveButtonText}>Edit Profile</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -210,10 +414,11 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   scrollView: {
-    flex: 1,
+    // other styles
   },
   scrollViewContent: {
     padding: 16,
+    
   },
   avatarContainer: {
     alignItems: 'center',
@@ -271,7 +476,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 32,
+    marginTop: 8,
     paddingHorizontal: 4,
   },
   button: {
@@ -298,6 +503,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontFamily: fonts.poppins.semiBold,
     fontSize: 16,
+  },
+  passwordInputWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 44, // space for the eye icon
+  },
+  eyeIconAbsolute: {
+    position: 'absolute',
+    right: 8,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    zIndex: 2,
   },
 });
 

@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useState } from 'react';
@@ -39,16 +40,32 @@ const formFields: FormField[] = [
   },
 ];
 
+const relationshipOptions = [
+  'Parent',
+  'Sibling',
+  'Spouse',
+  'Child',
+  'Relative',
+  'Friend',
+  'Other',
+];
+
 const AddContacts: React.FC = () => {
   const router = useRouter();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [relationship, setRelationship] = useState('');
+  const [customRelationship, setCustomRelationship] = useState('');
 
   const handleSave = async () => {
-    if (!name || !phone || !relationship) {
+    const relValue = relationship === 'Other' ? customRelationship : relationship;
+    if (!name || !phone || !relValue) {
       Alert.alert('Please fill all required fields.');
+      return;
+    }
+    if (!/^09\d{9}$/.test(phone)) {
+      Alert.alert('Philippine mobile number must be exactly 11 digits and must start with 09 (e.g., 09062278962).');
       return;
     }
     const nuser_id = await AsyncStorage.getItem('nuser_id');
@@ -59,7 +76,7 @@ const AddContacts: React.FC = () => {
     const response = await fetch('http://mnl911.atwebpages.com/add_contact1.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `nuser_id=${nuser_id}&contact_name=${encodeURIComponent(name)}&contact_number=${encodeURIComponent(phone)}&relationship=${encodeURIComponent(relationship)}`
+      body: `nuser_id=${nuser_id}&contact_name=${encodeURIComponent(name)}&contact_number=${encodeURIComponent(phone)}&relationship=${encodeURIComponent(relValue)}`
     });
     const data = await response.json();
     if (data.success) {
@@ -117,8 +134,9 @@ const AddContacts: React.FC = () => {
                 placeholder="Enter phone number of contact"
                 placeholderTextColor="#7e7e7e"
                 value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
+                onChangeText={text => setPhone(text.replace(/[^0-9]/g, ''))} // Only numbers
+                keyboardType="number-pad"
+                maxLength={11} // Prevents typing more than 11 digits
               />
             </View>
             <View style={styles.fieldContainer}>
@@ -126,13 +144,31 @@ const AddContacts: React.FC = () => {
                 <Text style={styles.label}>Relationship</Text>
                 <Text style={styles.required}>*</Text>
               </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter relationship to you"
-                placeholderTextColor="#7e7e7e"
-                value={relationship}
-                onChangeText={setRelationship}
-              />
+              <View style={{ backgroundColor: 'white', borderRadius: 10, width: '100%' }}>
+                <Picker
+                  selectedValue={relationship}
+                  onValueChange={(itemValue: string) => {
+                    setRelationship(itemValue);
+                    if (itemValue !== 'Other') setCustomRelationship('');
+                  }}
+                  style={styles.picker}
+                  dropdownIconColor="#e33c3c"
+                >
+                  <Picker.Item label="Select Relationship" value="" />
+                  {relationshipOptions.map(option => (
+                    <Picker.Item key={option} label={option} value={option} />
+                  ))}
+                </Picker>
+              </View>
+              {relationship === 'Other' && (
+                <TextInput
+                  style={[styles.input, { marginTop: 8 }]}
+                  placeholder="Please specify"
+                  placeholderTextColor="#7e7e7e"
+                  value={customRelationship}
+                  onChangeText={setCustomRelationship}
+                />
+              )}
             </View>
           </View>
 
@@ -212,6 +248,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.medium,
     fontSize: 12,
     color: '#000000',
+  },
+  picker: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    color: '#000000',
+    width: '100%',
   },
   buttonsContainer: {
     flexDirection: 'row',

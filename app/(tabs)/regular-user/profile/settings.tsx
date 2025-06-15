@@ -1,9 +1,10 @@
 import { Feather } from '@expo/vector-icons';
+import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { fonts } from '../../../config/fonts';
 import { theme, useTheme } from '../../../context/ThemeContext';
 
@@ -101,10 +102,25 @@ export default function SettingsScreen() {
                 ios_backgroundColor={isDarkMode ? '#404040' : '#D1D1D1'}
                 value={switchStates[index]}
                 onValueChange={(newValue) => {
+                  if (item.label === 'Add Widget') {
+                    Alert.alert('Add Widget', 'This feature is coming soon!');
+                    return;
+                  }
                   const newStates = [...switchStates];
                   newStates[index] = newValue;
                   setSwitchStates(newStates);
                   item.onToggle?.(newValue);
+
+
+                  if (item.label === 'Keep screen on') {
+                    if (newValue) {
+                      activateKeepAwake();
+                      Alert.alert('Keep Screen On', 'Your screen will stay awake while using the app.');
+                    } else {
+                      deactivateKeepAwake();
+                      Alert.alert('Keep Screen On', 'Your screen will now turn off as usual.');
+                    }
+                  }
                 }}
               />
             </View>

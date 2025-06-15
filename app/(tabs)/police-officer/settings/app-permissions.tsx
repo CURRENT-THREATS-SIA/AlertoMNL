@@ -1,5 +1,5 @@
-import { Permissions } from './AppPermissions';
+import AppPermissions from './AppPermissions';
 
 export default function AppPermissionsScreen() {
-  return <Permissions />;
+  return <AppPermissions />;
 }
