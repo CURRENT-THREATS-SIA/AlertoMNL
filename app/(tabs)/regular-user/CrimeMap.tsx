@@ -1,14 +1,14 @@
 import { Feature, Point } from 'geojson';
 import React, { useEffect, useState } from 'react';
 import {
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
@@ -202,19 +202,11 @@ const CrimeMap: React.FC = () => {
 
   // Function to handle selection with logging
   const handleCrimeTypeSelect = (value: string) => {
-    console.log('Crime type selected:', {
-      previous: selectedCrimeType,
-      new: value
-    });
     setSelectedCrimeType(value);
     setShowCrimeTypeModal(false);
   };
 
   const handleStationSelect = (value: string) => {
-    console.log('Station selected:', {
-      previous: selectedStation,
-      new: value
-    });
     setSelectedStation(value as StationName);
     setShowStationModal(false);
   };
@@ -241,6 +233,7 @@ const CrimeMap: React.FC = () => {
             style={[styles.selectorBtn, { marginBottom: 8 }]}
             activeOpacity={0.7}
             onPress={() => setShowCrimeTypeModal(true)}
+            accessibilityLabel="Select crime type"
           >
             <Text style={[
               styles.selectorBtnText, 
@@ -257,6 +250,7 @@ const CrimeMap: React.FC = () => {
             style={[styles.selectorBtn, { marginBottom: 16 }]}
             activeOpacity={0.7}
             onPress={() => setShowStationModal(true)}
+            accessibilityLabel="Select police station"
           >
             <Text style={[
               styles.selectorBtnText, 
