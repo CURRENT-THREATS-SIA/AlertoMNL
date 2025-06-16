@@ -61,7 +61,7 @@ const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
   const mapHeight = Math.min(height * 0.35, 400);
-  
+  const statsCardWidth = (width - 40 - 16) / 3;
   // State for dropdowns and stats
   const [selectedCrimeType, setSelectedCrimeType] = useState('');
   const [selectedStation, setSelectedStation] = useState<StationName | null>(null);
@@ -163,6 +163,7 @@ const CrimeMap: React.FC = () => {
     setSelectedCrimeType(value);
     setShowCrimeTypeModal(false);
   };
+
 
   const handleStationSelect = (value: StationName) => {
     setSelectedStation(value);

@@ -5,7 +5,7 @@ export const MAPBOX_TOKEN = 'pk.eyJ1IjoiZWl2cnlsbGUiLCJhIjoiY21iZW1za2V5MmlmODJq
 
 // Define types for the rates data
 export type StationName = 
-  | 'MPD Station 1 - Raxa Bago'
+  | 'MPD Station 1 - Raxabago'
   | 'MPD Station 2 - Tondo'
   | 'MPD Station 3 - Sta Cruz'
   | 'MPD Station 4 - Sampaloc'
@@ -31,7 +31,7 @@ export type TotalRates = {
 
 // Total crime rates
 export const totalRates: TotalRates = {
-  'MPD Station 1 - Raxa Bago': { indexRate: 10.74, nonIndexRate: 67.95 },
+  'MPD Station 1 - Raxabago': { indexRate: 10.74, nonIndexRate: 67.95 },
   'MPD Station 2 - Tondo': { indexRate: 3.48, nonIndexRate: 50.69 },
   'MPD Station 3 - Sta Cruz': { indexRate: 10.67, nonIndexRate: 50.43 },
   'MPD Station 4 - Sampaloc': { indexRate: 7.00, nonIndexRate: 36.76 },
@@ -58,7 +58,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Murder',
         count: 49,
         isIndexCrime: true
@@ -71,7 +71,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Homicide',
         count: 6,
         isIndexCrime: true
@@ -84,7 +84,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Physical Injury',
         count: 19,
         isIndexCrime: true
@@ -97,7 +97,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Rape',
         count: 60,
         isIndexCrime: true
@@ -110,7 +110,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Robbery',
         count: 35,
         isIndexCrime: true
@@ -123,7 +123,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Theft',
         count: 88,
         isIndexCrime: true
@@ -136,7 +136,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Carnapping MV',
         count: 1,
         isIndexCrime: true
@@ -149,7 +149,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Carnapping MC',
         count: 35,
         isIndexCrime: true
@@ -162,7 +162,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Complex Crime',
         count: 0,
         isIndexCrime: true
@@ -175,7 +175,7 @@ export const crimeData: FeatureCollection<Point> = {
         coordinates: [120.96797525882722, 14.621037543847635]
       },
       properties: {
-        station: 'MPD Station 1 - Raxa Bago',
+        station: 'MPD Station 1 - Raxabago',
         crimeType: 'Non-Index Crime',
         count: 1854,
         isIndexCrime: false
