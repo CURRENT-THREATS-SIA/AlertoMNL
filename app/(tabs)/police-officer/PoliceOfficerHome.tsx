@@ -223,6 +223,11 @@ const CrimeMap: React.FC = () => {
                 crimeTypes.find(ct => ct.value === selectedCrimeType)?.label || selectedCrimeType : 
                 'Select Crime Type'}
             </Text>
+            <MaterialIcons
+              name="arrow-drop-down"    
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -239,6 +244,11 @@ const CrimeMap: React.FC = () => {
                 policeStations.find(ps => ps.value === selectedStation)?.label : 
                 'Select Station'}
             </Text>
+            <MaterialIcons
+              name="arrow-drop-down"    
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
 
           {/* Crime Type Modal */}
@@ -345,7 +355,7 @@ const CrimeMap: React.FC = () => {
                   style={[
                     styles.statTitle, 
                     styles.defaultFont,
-                    isSmallDevice && { fontSize: 9 }
+                    isSmallDevice && { fontSize: 12 }
                   ]}
                   numberOfLines={2}
                 >
@@ -367,7 +377,7 @@ const CrimeMap: React.FC = () => {
                       style={[
                         styles.statType, 
                         styles.defaultFont,
-                        isSmallDevice && { fontSize: 10 }
+                        isSmallDevice && { fontSize: 9 }
                       ]}
                     >
                       {stat.type}
@@ -419,24 +429,23 @@ const styles = StyleSheet.create({
   selectorBtn: {
     backgroundColor: '#E02323',
     borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',       // ← row layout
+    justifyContent: 'space-between',
   },
   selectorBtnText: {
     color: '#fff',
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    textAlign: 'center',
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    gap: 8,
+    marginTop: 16,
   },
   statCard: {
-    backgroundColor: '#FFD8D8',
+    backgroundColor:'#FEF3F2' ,
     borderRadius: 8,
     padding: 12,
     shadowColor: '#000',
@@ -447,34 +456,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    alignItems: 'center',
   },
   statTitle: {
     fontSize: 12,
-    color: '#666',
+    color: '#E02323',
     marginBottom: 4,
     fontFamily: fonts.poppins.semiBold,
-    textAlign: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    color: '#212121',
-    fontFamily: fonts.poppins.bold,
-    textAlign: 'center',
+    fontWeight: '700',
   },
   statLocation: {
     fontSize: 14,
     color: '#212121',
     marginBottom: 2,
     fontFamily: fonts.poppins.regular,
-    textAlign: 'center',
   },
   statType: {
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
     fontFamily: fonts.poppins.bold,
-    textAlign: 'center',
+
+  },
+  statValue: {
+    fontSize: 20,
+    color: '#212121',
+    fontFamily: fonts.poppins.bold,
+    fontWeight: 900,
   },
   bottomNav: {
     width: '100%',
@@ -580,7 +587,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontFamily: fonts.poppins.medium,
-    color: '#212121',
+    color:'#E02323',
   },
   closeButton: {
     padding: 4,
@@ -591,7 +598,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E5E5',
   },
   modalOptionSelected: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#FFE5E5',
   },
   modalOptionText: {
     fontSize: 16,
@@ -599,7 +606,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.regular,
   },
   modalOptionTextSelected: {
-    color: '#007AFF',
+    color: '#E02323',
     fontFamily: fonts.poppins.medium,
   },
   statsContainer: {
