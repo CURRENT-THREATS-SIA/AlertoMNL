@@ -26,6 +26,7 @@
     "expo-av": "^15.1.6",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.6",
+    "expo-dev-client": "~5.2.0",
     "expo-device": "~7.1.4",
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
@@ -42,6 +43,8 @@
     "expo-symbols": "~0.4.5",
     "expo-system-ui": "~5.0.8",
     "expo-web-browser": "~14.1.6",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "lucide-react-native": "^0.511.0",
     "mapbox-gl": "^2.15.0",
     "react": "19.0.0",
@@ -61,7 +64,10 @@
     "react-native-webview": "^13.13.5",
     "supercluster": "^8.0.1",
     "tailwindcss-react-native": "^1.7.10",
-    "expo-dev-client": "~5.2.0"
+    "xlsx": "^0.18.5",
+    "expo-sharing": "~13.1.5",
+    "expo-print": "~14.1.4",
+    "expo-file-system": "~18.1.10"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
