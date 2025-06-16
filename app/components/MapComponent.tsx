@@ -8,7 +8,7 @@ import WebView from 'react-native-webview';
 interface MapComponentProps {
   selectedCrimeType: string;
   selectedStation: string | null;
-  userType: 'regular' | 'police';
+  userType: 'regular' | 'police' | 'guest';
   data: FeatureCollection<Point>;
 }
 

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../app/config/fonts';
 
@@ -16,6 +17,7 @@ interface NavBottomBarProps {
 
 const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const navItems: NavItem[] = [
     { 
@@ -45,18 +47,7 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
   };
 
   return (
-    <View style={[styles.bottomNav, Platform.select({
-      android: {
-        elevation: 8,
-        paddingBottom: 8
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4
-      }
-    })]}>
+    <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.bottomNavRow}>
         {navItems.map((item, idx) => (
           <TouchableOpacity 
@@ -82,7 +73,6 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
           >
             <View style={[
               styles.bottomNavIconContainer,
-              item.active && styles.bottomNavIconContainerActive
             ]}>
               {item.icon}
             </View>
@@ -105,7 +95,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingVertical: 12,
+    paddingTop: 12,
     paddingHorizontal: 16,
     position: 'absolute',
     bottom: 0,
@@ -113,10 +103,13 @@ const styles = StyleSheet.create({
     right: 0,
     ...Platform.select({
       android: {
-        height: 110,
+        elevation: 8,
       },
       ios: {
-        height: 75,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
       },
     }),
   },
@@ -137,9 +130,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bottomNavIconContainerActive: {
-    backgroundColor: '#FFE6E6',
-  },
   bottomNavLabelActive: {
     color: '#E02323',
     fontSize: 12,
@@ -154,4 +144,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default NavBottomBar; 
+export default NavBottomBar;

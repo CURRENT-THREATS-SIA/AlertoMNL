@@ -2,8 +2,10 @@ import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+
 import { useVoiceRecords, VoiceRecord } from '../../../context/VoiceRecordContext';
 
 const VoiceRecordItem: React.FC<{ record: VoiceRecord }> = ({ record }) => {
@@ -71,19 +73,19 @@ const VoiceRecordItem: React.FC<{ record: VoiceRecord }> = ({ record }) => {
 
 const VoiceRecords: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { records } = useVoiceRecords();
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#212121" />
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Voice Records</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Voice Records</Text>
+        </View>
       </View>
       
       <ScrollView 
@@ -115,27 +117,20 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-    elevation: 3,
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    gap: 8,
   },
   backButton: {
-    marginRight: 16,
     padding: 8,
   },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },

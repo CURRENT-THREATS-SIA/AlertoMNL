@@ -5,7 +5,7 @@ import { WebCrimeMap } from '../components/WebCrimeMap';
 import { crimeData } from '../constants/mapData';
 
 interface CrimeMapPageProps {
-  userType: 'regular' | 'police';
+  userType: 'regular' | 'police' | 'guest';
   selectedCrimeType?: string;
   selectedStation?: string;
 }
@@ -23,8 +23,8 @@ export default function CrimeMapPage({ userType, selectedCrimeType, selectedStat
       <MapComponent 
         data={crimeData} 
         userType={userType} 
-        selectedCrimeType={selectedCrimeType}
-        selectedStation={selectedStation}
+        selectedCrimeType={selectedCrimeType ?? null}
+        selectedStation={selectedStation ?? null}
       />
     </View>
   );

@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 interface WebCrimeMapProps {
   data: FeatureCollection<Point>;
-  userType: 'regular' | 'police';
+  userType: 'regular' | 'police' | 'guest';
 }
 
 export function WebCrimeMap({ data, userType }: WebCrimeMapProps) {

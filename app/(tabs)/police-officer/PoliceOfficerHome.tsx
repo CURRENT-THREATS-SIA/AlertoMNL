@@ -9,13 +9,6 @@ import { fonts } from '../../config/fonts';
 // NOTE: All code related to expo-notifications, pop-up modals, and listeners
 // has been removed to fix the error in Expo Go.
 
-// --- Your existing constants and types ---
-const SearchIcon = () => <View style={styles.iconPlaceholder} />;
-const mapBgUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/frame-3997.png';
-const locationUri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location.png';
-const location1Uri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location-1.png';
-const location2Uri = 'https://c.animaapp.com/mb7vub0tMSk30H/img/location-2.png';
-
 export type CrimeStat = {
   title: string;
   value: string;
@@ -69,7 +62,6 @@ const CrimeMap: React.FC = () => {
   const isSmallDevice = width < 375;
   const mapHeight = Math.min(height * 0.35, 400);
   const statsCardWidth = (width - 40 - 16) / 3;
-
   // State for dropdowns and stats
   const [selectedCrimeType, setSelectedCrimeType] = useState('');
   const [selectedStation, setSelectedStation] = useState<StationName | null>(null);
@@ -171,6 +163,7 @@ const CrimeMap: React.FC = () => {
     setSelectedCrimeType(value);
     setShowCrimeTypeModal(false);
   };
+
 
   const handleStationSelect = (value: StationName) => {
     setSelectedStation(value);
