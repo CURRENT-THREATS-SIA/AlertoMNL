@@ -1,15 +1,10 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+
 
 interface PolicySection {
   title: string;
@@ -79,18 +74,18 @@ const policyData: PolicySection[] = [
 
 const PrivacyPolicy: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy Policy</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Privacy Policy</Text>
+        </View>
       </View>
       
       <ScrollView 
@@ -134,21 +129,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    gap: 8,
   },
   backButton: {
     padding: 8,
   },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   headerTitle: {
-    marginLeft: 8,
-    fontSize: 20,
-    fontFamily: fonts.poppins.bold,
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },
   scrollView: {

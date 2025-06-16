@@ -1,12 +1,28 @@
+import React, { useEffect, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 import * as SMS from 'expo-sms';
-import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Linking,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { fonts } from '../../../config/fonts';
+
+
+
 
 // Define TypeScript interfaces
 interface Permission {
@@ -46,6 +62,7 @@ const initialPermissions: Permission[] = [
 
 const AppPermissions: React.FC = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [permissions, setPermissions] = useState<Permission[]>(initialPermissions);
 
   // Function to check and update permissions
@@ -133,7 +150,9 @@ const AppPermissions: React.FC = () => {
         >
           <Feather name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>App Permissions</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Profile Settings</Text>
+        </View>
       </View>
       {/* Description */}
       <View style={styles.descriptionContainer}>
@@ -183,21 +202,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+ 
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    gap: 8,
   },
   backButton: {
     padding: 8,
   },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   headerTitle: {
-    marginLeft: 8,
-    fontSize: 20,
-    fontFamily: fonts.poppins.bold,
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },
   descriptionContainer: {
@@ -264,7 +286,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.regular,
     fontSize: 14,
     color: '#666666',
-    marginLeft: 52,
     lineHeight: 20,
   },
   textDisabled: {

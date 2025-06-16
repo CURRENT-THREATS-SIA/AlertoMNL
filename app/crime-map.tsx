@@ -5,7 +5,7 @@ import { WebCrimeMap } from '../components/WebCrimeMap';
 import { crimeData } from '../constants/mapData';
 
 interface CrimeMapPageProps {
-  userType: 'regular' | 'police';
+  userType: 'regular' | 'police' | 'guest';
   selectedCrimeType?: string;
   selectedStation?: string;
 }
@@ -15,17 +15,17 @@ type MapComponentType = typeof CrimeMap | typeof WebCrimeMap;
 export default function CrimeMapPage({ userType, selectedCrimeType, selectedStation }: CrimeMapPageProps) {
   const MapComponent = Platform.select<MapComponentType>({
     web: WebCrimeMap,
-    default: CrimeMap,
+    native: CrimeMap,
   })!;
-
-  // Only pass props that are accepted by the component
-  const mapProps = Platform.OS === 'web'
-    ? { data: crimeData, userType }
-    : { data: crimeData, userType, selectedCrimeType: selectedCrimeType ?? '', selectedStation: selectedStation ?? null };
 
   return (
     <View style={{ flex: 1 }}>
-      <MapComponent {...mapProps} />
+      <MapComponent 
+        data={crimeData} 
+        userType={userType} 
+        selectedCrimeType={selectedCrimeType ?? null}
+        selectedStation={selectedStation ?? null}
+      />
     </View>
   );
-}
+} 

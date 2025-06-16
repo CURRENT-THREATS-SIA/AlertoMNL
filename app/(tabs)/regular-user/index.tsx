@@ -2,9 +2,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
 
@@ -16,10 +17,32 @@ const API_CHECK_STATUS_URL = 'http://mnl911.atwebpages.com/check_sos_status.php'
 
 type SOSState = 'idle' | 'countdown' | 'active' | 'received' | 'resolved';
 
+// Define the background location task
+TaskManager.defineTask('background-location-task', async ({ data, error }: TaskManager.TaskManagerTaskBody<{ locations: Location.LocationObject[] }>) => {
+  if (error) {
+    console.error('Background location task error:', error);
+    return;
+  }
+  if (data) {
+    const { locations } = data;
+    const location = locations[0];
+    
+    // Handle background location update
+    console.log('Background location update:', {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      accuracy: location.coords.accuracy,
+      timestamp: new Date(location.timestamp).toISOString(),
+    });
+  }
+  return null; // Explicitly return a Promise that resolves to null
+});
+
 export default function RegularUserHome() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationAddress, setLocationAddress] = useState<string>("Fetching location...");
   const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [manualRecording, setManualRecording] = useState<Audio.Recording | null>(null);
@@ -28,6 +51,7 @@ export default function RegularUserHome() {
   const [currentAlertId, setCurrentAlertId] = useState<number | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [sosDisabledUntil, setSosDisabledUntil] = useState<number | null>(null);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
 
   // Animated values for rings
   const ring1Anim = useRef(new Animated.Value(1)).current;
@@ -101,19 +125,132 @@ export default function RegularUserHome() {
       }
       await Audio.requestPermissionsAsync();
       await getQuickInitialLocation();
-      startLocationUpdates();
+      if (Platform.OS !== 'web') {
+        startLocationUpdates();
+      }
     };
     initializeLocation();
-    return () => { stopLocationUpdates(); };
+    return () => { 
+      if (Platform.OS !== 'web') {
+        stopLocationUpdates(); 
+      }
+    };
   }, []);
 
   const getQuickInitialLocation = async () => {
     try {
-      const initialLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      setLocation(initialLocation);
-      const addresses = await Location.reverseGeocodeAsync(initialLocation.coords);
-      if (addresses && addresses[0]) {
-        setLocationAddress(formatAddress(addresses[0]));
+      // Request background location permission for better tracking
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus === 'granted') {
+        console.log('Background location permission granted');
+      }
+
+      // Configure location task for background updates
+      await Location.startLocationUpdatesAsync('background-location-task', {
+        accuracy: Location.Accuracy.BestForNavigation,
+        timeInterval: 3000, // Update every 3 seconds
+        distanceInterval: 3, // or if moved 3 meters
+        deferredUpdatesInterval: 3000, // Minimum time between updates
+        deferredUpdatesDistance: 3, // Minimum distance between updates
+        foregroundService: {
+          notificationTitle: 'Location Tracking',
+          notificationBody: 'Tracking your location for emergency services',
+        },
+        pausesUpdatesAutomatically: false,
+      });
+
+      // Watch position with high accuracy for foreground updates
+      const subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 3000,
+          distanceInterval: 3,
+        },
+        async (newLocation) => {
+          setLocation(newLocation);
+          try {
+            // Reverse geocode with more detailed options
+            const addresses = await Location.reverseGeocodeAsync({
+              latitude: newLocation.coords.latitude,
+              longitude: newLocation.coords.longitude,
+            });
+            
+            if (addresses && addresses[0]) {
+              const address = addresses[0];
+              const formattedAddress = [
+                address.street,
+                address.district,
+                address.subregion,
+                address.city
+              ].filter(Boolean).join(', ');
+              
+              setLocationAddress(formattedAddress || 'Location found');
+            }
+          } catch (error) {
+            console.error('Error getting address:', error);
+            setLocationAddress('Location found (address unavailable)');
+          }
+        }
+      );
+
+      return () => {
+        // Cleanup location tracking
+        subscription.remove();
+        Location.stopLocationUpdatesAsync('background-location-task');
+      };
+    } catch (error) {
+      console.error('Error starting location updates:', error);
+      Alert.alert('Error', 'Failed to start location tracking. Please check your permissions and try again.');
+    }
+  };
+
+  const stopLocationUpdates = () => {
+    if (locationSubscriptionRef.current && Platform.OS !== 'web') {
+      locationSubscriptionRef.current.remove();
+      locationSubscriptionRef.current = null;
+    }
+    Location.stopLocationUpdatesAsync('background-location-task')
+      .catch(error => console.log('Error stopping location updates:', error));
+  };
+
+  const startRecording = async () => {
+    try {
+      // Prepare recording
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      
+      setRecording(newRecording);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      Alert.alert('Error', 'Failed to start recording.');
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      setIsRecording(false);
+
+      if (uri) {
+        // Add the recording to the voice records
+        addRecord({
+          id: Date.now().toString(),
+          title: `Emergency Recording ${new Date().toLocaleDateString()}`,
+          duration: '1:30', // You would need to calculate actual duration
+          date: new Date().toLocaleDateString(),
+          uri: uri,
+        });
       }
     } catch (error) {
       console.error("Could not get initial location:", error);
@@ -122,7 +259,20 @@ export default function RegularUserHome() {
   };
 
   const startLocationUpdates = async () => {
-    Location.watchPositionAsync(
+    if (Platform.OS === 'web') {
+      // For web, just get the location once
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setLocation(location);
+      try {
+        const addresses = await Location.reverseGeocodeAsync(location.coords);
+        if (addresses && addresses[0]) {
+          setLocationAddress(formatAddress(addresses[0]));
+        }
+      } catch (error) { /* handle error */ }
+      return;
+    }
+
+    const subscription = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
       async (newLocation) => {
         setLocation(newLocation);
@@ -134,10 +284,7 @@ export default function RegularUserHome() {
         } catch (error) { /* handle error */ }
       }
     );
-  };
-
-  const stopLocationUpdates = () => {
-    // TODO: Implement cleanup for location updates if needed
+    locationSubscriptionRef.current = subscription;
   };
 
   const formatAddress = (address: Location.LocationGeocodedAddress) => {
@@ -272,7 +419,6 @@ export default function RegularUserHome() {
       let currentLocation = location;
       if (!currentLocation) currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLocation(currentLocation);
-      console.log('SOS currentLocation:', currentLocation); // Debug: log the coordinates
       const formData = new FormData();
       formData.append('nuser_id', nuserId);
       formData.append('a_latitude', currentLocation.coords.latitude.toString());
@@ -306,7 +452,7 @@ export default function RegularUserHome() {
         Alert.alert('SOS Stopped', 'You fully stopped your SOS initialization. You will be restricted from clicking it for 5 minutes.');
         setSosDisabledUntil(Date.now() + 5 * 60 * 1000); // 5 minutes from now
       }
-    } catch {
+    } catch (e) {
       Alert.alert('Error', 'Failed to cancel SOS alert.');
     }
     setSosState('idle');
@@ -336,11 +482,6 @@ export default function RegularUserHome() {
               handleSOS
             }
             disabled={isSosButtonDisabled}
-            accessibilityLabel={
-              sosState === 'active' ? 'Stop SOS' :
-              sosState === 'countdown' ? 'SOS countdown in progress' :
-              'Trigger SOS'
-            }
           >
             <Animated.View
               style={[
@@ -398,12 +539,12 @@ export default function RegularUserHome() {
           <View style={styles.locationInfo}>
             <Text style={styles.locationText}>{locationAddress}</Text>
             <Text style={styles.coordinatesText}>
-              <Text style={styles.redText}>Latitude: </Text><Text style={styles.boldText}>{location?.coords.latitude ? location.coords.latitude.toFixed(4) : '---'}</Text>
-              <Text style={styles.redText}>  Longitude: </Text><Text style={styles.boldText}>{location?.coords.longitude ? location.coords.longitude.toFixed(4) : '---'}</Text>
+              <Text style={styles.redText}>Latitude: </Text><Text style={styles.boldText}>{location?.coords.latitude.toFixed(4) || '---'}</Text>
+              <Text style={styles.redText}>  Longitude: </Text><Text style={styles.boldText}>{location?.coords.longitude.toFixed(4) || '---'}</Text>
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={[styles.voiceButton, isRecording && styles.voiceButtonRecording]} onPress={manualRecording ? stopManualRecording : startManualRecording} disabled={isSendingSOS || isRecording} accessibilityLabel={isRecording ? 'Stop voice recording' : 'Start voice recording'}>
+        <TouchableOpacity style={[styles.voiceButton, isRecording && styles.voiceButtonRecording]} onPress={manualRecording ? stopManualRecording : startManualRecording} disabled={isSendingSOS || isRecording}>
           <View style={styles.voiceButtonContent}>
             {isRecording ? (
               <>
@@ -429,7 +570,7 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     padding: 16,
-    paddingTop: 28,
+    paddingTop: 24,
   },
   sosSection: {
     alignItems: "center",

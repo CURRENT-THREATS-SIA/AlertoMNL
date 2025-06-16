@@ -2,8 +2,12 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../../config/fonts';
 import { theme, useTheme } from '../../../../context/ThemeContext';
+
+
 
 interface PreferenceItem {
   icon: keyof typeof Feather.glyphMap;
@@ -15,6 +19,7 @@ interface PreferenceItem {
 
 export default function PreferencesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [pressedIndex, setPressedIndex] = React.useState<number | null>(null);
 
@@ -53,16 +58,15 @@ export default function PreferencesScreen() {
   const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
+    <View style={[styles.container]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: currentTheme.surface }]}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={24} color={currentTheme.headerText} />
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: currentTheme.headerText }]}>Preferences</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Preferences</Text>
+        </View>
       </View>
 
       {/* Preference Items */}
@@ -115,28 +119,27 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
+ 
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3.84,
-    elevation: 3,
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    gap: 8,
   },
   backButton: {
-    marginRight: 16,
     padding: 8,
   },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: fonts.poppins.bold,
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
+    color: '#212121',
   },
   preferencesContainer: {
     flex: 1,

@@ -2,6 +2,8 @@ import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 
 interface RegularUserHeaderProps {
   onProfilePress?: () => void;
@@ -9,6 +11,8 @@ interface RegularUserHeaderProps {
 
 export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderProps) {
   const router = useRouter();
+    const insets = useSafeAreaInsets();
+
 
   const handleProfilePress = () => {
     if (onProfilePress) {

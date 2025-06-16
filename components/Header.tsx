@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const BellIcon = () => <MaterialIcons name="notifications" size={24} color="#E02323" />;
@@ -11,9 +12,10 @@ interface HeaderProps {
 
 export default function Header({ showNotification = true }: HeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // 👈 add this
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
       {/* Logo and Title */}
       <View style={styles.logoContainer}>
         <Image
@@ -33,8 +35,7 @@ export default function Header({ showNotification = true }: HeaderProps) {
           onPress={() => router.push("/police-officer/Notifications")}
           style={styles.notificationContainer}
         >
-              <BellIcon />
-
+          <BellIcon />
         </TouchableOpacity>
       )}
     </View>
@@ -47,30 +48,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 40,
     paddingBottom: 10,
     backgroundColor: "#fff",
   },
   logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   logo: {
     width: 40,
     height: 40,
-    marginRight: 10,
   },
   titleContainer: {
-    flexDirection: "column",
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#e02323",
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e02323',
+    fontFamily: 'Poppins-Bold',
   },
   subtitle: {
     fontSize: 12,
-    color: "#e02323",
+    color: '#424b5a',
+    fontFamily: 'Poppins-Regular',
+    marginTop: -4,
   },
   notificationContainer: {
     padding: 8,
@@ -79,4 +82,4 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
   },
-}); 
+});
