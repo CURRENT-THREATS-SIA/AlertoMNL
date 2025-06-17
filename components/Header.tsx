@@ -18,7 +18,7 @@ export default function Header({ showNotification = true }: HeaderProps) {
   return (
     <View style={[styles.header, { 
       paddingTop: insets.top + 12,
-      backgroundColor: currentTheme.surface 
+      backgroundColor: '#FFFFFF'
     }]}>
       {/* Logo and Title */}
       <View style={styles.logoContainer}>
@@ -28,7 +28,7 @@ export default function Header({ showNotification = true }: HeaderProps) {
           resizeMode="contain"
         />
         <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: currentTheme.text }]}>ALERTO MNL</Text>
+          <Text style={[styles.title, { color:'#e02323' }]}>ALERTO MNL</Text>
           <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>Response System</Text>
         </View>
       </View>
@@ -53,6 +53,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
   },
   logoContainer: {
     flexDirection: 'row',
@@ -69,6 +71,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontFamily: 'Poppins-Bold',
+    color: '#e02323',
   },
   subtitle: {
     fontSize: 12,

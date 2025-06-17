@@ -4,6 +4,7 @@ import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, Vi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+import { useTheme } from '../../../context/ThemeContext';
 
 interface Feature {
   title: string;
@@ -37,16 +38,17 @@ const keyFeatures: Feature[] = [
 const About: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: theme.surface }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>About</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>About</Text>
         </View>
       </View>
 
@@ -63,16 +65,16 @@ const About: React.FC = () => {
             resizeMode="contain"
           />
           <Text style={styles.appName}>ALERTO MNL</Text>
-          <Text style={styles.version}>Version 1.0.0</Text>
+          <Text style={[styles.version, { color: theme.subtitle }]}>Version 1.0.0</Text>
         </View>
 
         {/* Introduction Card */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
           <View style={styles.cardHeader}>
             <MaterialIcons name="info" size={24} color="#e02323" />
-            <Text style={styles.cardTitle}>Introduction</Text>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>Introduction</Text>
           </View>
-          <Text style={styles.introText}>
+          <Text style={[styles.introText, { color: theme.subtitle }]}>
             The <Text style={styles.highlight}>ALERTO MNL</Text> app bridges Manila 
             citizens, tourists, and law enforcement for faster, safer outcomes. Users 
             can instantly alert nearby officers with precise location and incident 
@@ -83,27 +85,27 @@ const About: React.FC = () => {
 
         {/* Features Section */}
         <View style={styles.featuresContainer}>
-          <Text style={styles.sectionTitle}>Key Features</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Key Features</Text>
           {keyFeatures.map((feature, index) => (
-            <View key={index} style={styles.featureCard}>
+            <View key={index} style={[styles.featureCard, { backgroundColor: theme.cardBackground }]}>
               <View style={styles.featureIcon}>
                 <MaterialIcons name={feature.icon} size={24} color="#e02323" />
               </View>
               <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
+                <Text style={[styles.featureTitle, { color: theme.text }]}>{feature.title}</Text>
+                <Text style={[styles.featureDescription, { color: theme.subtitle }]}>{feature.description}</Text>
               </View>
             </View>
           ))}
         </View>
 
         {/* Mission Section */}
-        <View style={[styles.card, styles.missionCard]}>
+        <View style={[styles.card, styles.missionCard, { backgroundColor: theme.cardBackground, borderColor: '#e0232320' }]}>
           <View style={styles.cardHeader}>
             <MaterialIcons name="flag" size={24} color="#e02323" />
-            <Text style={styles.cardTitle}>Our Mission</Text>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>Our Mission</Text>
           </View>
-          <Text style={styles.missionText}>
+          <Text style={[styles.missionText, { color: theme.subtitle }]}>
             Empower communities and police with technology to protect lives
             and restore peace, one alert at a time.
           </Text>
@@ -116,7 +118,6 @@ const About: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
  
   header: {

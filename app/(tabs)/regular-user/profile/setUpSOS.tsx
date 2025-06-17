@@ -4,6 +4,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+import { useTheme } from '../../../context/ThemeContext';
 
 interface DelayOption {
   label: string;
@@ -32,6 +33,7 @@ const intervalOptions: IntervalOption[] = [
 const SetUpSOS: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme, isDarkMode } = useTheme();
   const [hideSOS, setHideSOS] = useState(false);
   const [triggerOnLaunch, setTriggerOnLaunch] = useState(false);
   const [selectedDelay, setSelectedDelay] = useState<number>(3);
@@ -46,14 +48,14 @@ const SetUpSOS: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: theme.surface }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Setup SOS</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Setup SOS</Text>
         </View>
       </View>
 
@@ -63,17 +65,17 @@ const SetUpSOS: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Toggle Options */}
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
           {/* Hide SOS Toggle */}
           <TouchableOpacity
             style={styles.toggleItem}
             onPress={() => setHideSOS(!hideSOS)}
           >
             <View style={styles.toggleLeft}>
-              <View style={styles.iconContainer}>
+              <View style={[styles.iconContainer, { backgroundColor: '#fff5f5' }]}>
                 <MaterialIcons name="visibility-off" size={24} color="#e02323" />
               </View>
-              <Text style={styles.toggleText}>Hide SOS from button</Text>
+              <Text style={[styles.toggleText, { color: theme.text }]}>Hide SOS from button</Text>
             </View>
             <View style={[styles.toggle, hideSOS && styles.toggleActive]}>
               <View style={[styles.toggleHandle, hideSOS && styles.toggleHandleActive]} />
@@ -86,10 +88,10 @@ const SetUpSOS: React.FC = () => {
             onPress={() => setTriggerOnLaunch(!triggerOnLaunch)}
           >
             <View style={styles.toggleLeft}>
-              <View style={styles.iconContainer}>
+              <View style={[styles.iconContainer, { backgroundColor: '#fff5f5' }]}>
                 <MaterialIcons name="launch" size={24} color="#e02323" />
               </View>
-              <Text style={styles.toggleText}>Trigger SOS on app launch</Text>
+              <Text style={[styles.toggleText, { color: theme.text }]}>Trigger SOS on app launch</Text>
             </View>
             <View style={[styles.toggle, triggerOnLaunch && styles.toggleActive]}>
               <View style={[styles.toggleHandle, triggerOnLaunch && styles.toggleHandleActive]} />
@@ -98,14 +100,18 @@ const SetUpSOS: React.FC = () => {
         </View>
 
         {/* Delay Options */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delay SOS</Text>
+        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Delay SOS</Text>
           <View style={styles.optionsContainer}>
             {delayOptions.map((option, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
                   styles.optionButton,
+                  { 
+                    backgroundColor: theme.cardBackground,
+                    borderColor: theme.border
+                  },
                   selectedDelay === option.value && styles.optionButtonActive,
                 ]}
                 onPress={() => handleDelaySelect(option.value)}
@@ -113,6 +119,7 @@ const SetUpSOS: React.FC = () => {
                 <Text
                   style={[
                     styles.optionText,
+                    { color: theme.subtitle },
                     selectedDelay === option.value && styles.optionTextActive,
                   ]}
                 >
@@ -124,8 +131,8 @@ const SetUpSOS: React.FC = () => {
         </View>
 
         {/* Interval Options */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SOS Interval</Text>
+        <View style={[styles.section, { backgroundColor: theme.cardBackground }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>SOS Interval</Text>
           <View style={styles.radioGroup}>
             {intervalOptions.map((option, index) => (
               <TouchableOpacity
@@ -133,12 +140,12 @@ const SetUpSOS: React.FC = () => {
                 style={styles.radioItem}
                 onPress={() => handleIntervalSelect(option.value)}
               >
-                <View style={styles.radioOuter}>
+                <View style={[styles.radioOuter, { borderColor: '#e02323' }]}>
                   {selectedInterval === option.value && (
-                    <View style={styles.radioInner} />
+                    <View style={[styles.radioInner, { backgroundColor: '#e02323' }]} />
                   )}
                 </View>
-                <Text style={styles.radioLabel}>{option.label}</Text>
+                <Text style={[styles.radioLabel, { color: theme.text }]}>{option.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -151,7 +158,6 @@ const SetUpSOS: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',

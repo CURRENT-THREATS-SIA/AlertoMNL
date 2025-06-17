@@ -7,6 +7,7 @@ import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
+import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
 
 // --- API URLs ---
@@ -39,6 +40,8 @@ TaskManager.defineTask('background-location-task', async ({ data, error }: TaskM
 });
 
 export default function RegularUserHome() {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationAddress, setLocationAddress] = useState<string>("Fetching location...");
   const [isRecording, setIsRecording] = useState(false);
@@ -467,12 +470,12 @@ export default function RegularUserHome() {
 
   // --- JSX / RENDER ---
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <View style={styles.mainContent}>
         <View style={styles.sosSection}>
           <View style={styles.helpText}>
-            <Text style={styles.helpTextPrimary}>Help is just a click away!</Text>
-            <Text style={styles.helpTextSecondary}>Click <Text style={styles.redText}>SOS button</Text> to call for help.</Text>
+            <Text style={[styles.helpTextPrimary, { color: currentTheme.text }]}>Help is just a click away!</Text>
+            <Text style={[styles.helpTextSecondary, { color: currentTheme.text }]}>Click <Text style={styles.redText}>SOS button</Text> to call for help.</Text>
           </View>
           <TouchableOpacity
             style={styles.sosButton}
@@ -537,14 +540,22 @@ export default function RegularUserHome() {
             </View>
           </TouchableOpacity>
           <View style={styles.locationInfo}>
-            <Text style={styles.locationText}>{locationAddress}</Text>
-            <Text style={styles.coordinatesText}>
-              <Text style={styles.redText}>Latitude: </Text><Text style={styles.boldText}>{location?.coords.latitude.toFixed(4) || '---'}</Text>
-              <Text style={styles.redText}>  Longitude: </Text><Text style={styles.boldText}>{location?.coords.longitude.toFixed(4) || '---'}</Text>
+            <Text style={[styles.locationText, { color: currentTheme.text }]}>{locationAddress}</Text>
+            <Text style={[styles.coordinatesText, { color: currentTheme.text }]}>
+              <Text style={styles.redText}>Latitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.latitude.toFixed(4) || '---'}</Text>
+              <Text style={styles.redText}>  Longitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.longitude.toFixed(4) || '---'}</Text>
             </Text>
           </View>
         </View>
-        <TouchableOpacity style={[styles.voiceButton, isRecording && styles.voiceButtonRecording]} onPress={manualRecording ? stopManualRecording : startManualRecording} disabled={isSendingSOS || isRecording}>
+        <TouchableOpacity 
+          style={[
+            styles.voiceButton, 
+            isRecording && styles.voiceButtonRecording,
+            { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8' }
+          ]} 
+          onPress={manualRecording ? stopManualRecording : startManualRecording} 
+          disabled={isSendingSOS || isRecording}
+        >
           <View style={styles.voiceButtonContent}>
             {isRecording ? (
               <>
@@ -552,7 +563,10 @@ export default function RegularUserHome() {
                 <View style={styles.waveformContainer}><WaveformVisualizer isRecording={isRecording} /></View>
               </>
             ) : (
-              <View style={styles.voiceButtonInner}><Mic size={24} color="#e02323" /><Text style={styles.voiceButtonText}>Voice Recording</Text></View>
+              <View style={styles.voiceButtonInner}>
+                <Mic size={24} color="#e02323" />
+                <Text style={[styles.voiceButtonText, { color: isDarkMode ? '#fff' : '#e02323' }]}>Voice Recording</Text>
+              </View>
             )}
           </View>
         </TouchableOpacity>
@@ -565,7 +579,6 @@ export default function RegularUserHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4f4f4",
   },
   mainContent: {
     flex: 1,
@@ -581,11 +594,9 @@ const styles = StyleSheet.create({
   },
   helpTextPrimary: {
     fontSize: 14,
-    color: "#424b5a",
   },
   helpTextSecondary: {
     fontSize: 14,
-    color: "#424b5a",
   },
   redText: {
     color: "#e02323",
@@ -666,7 +677,6 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
-    color: "#424b5a",
   },
   coordinatesText: {
     fontSize: 14,

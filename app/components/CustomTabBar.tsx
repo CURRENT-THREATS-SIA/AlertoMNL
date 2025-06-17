@@ -4,6 +4,7 @@ import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts } from '../config/fonts';
+import { theme, useTheme } from '../context/ThemeContext';
 
 
 type NavItem = {
@@ -21,6 +22,8 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const isHistorySection = pathname.includes('/history/') || pathname === '/regular-user/History';
   const isHomeSection = pathname === '/regular-user';
@@ -29,25 +32,25 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
 
   const navItems: NavItem[] = [
     { 
-      icon: <MaterialIcons name="home" size={24} color={isHomeSection ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="home" size={24} color={isHomeSection ? "#E02323" : currentTheme.subtitle} />, 
       label: 'Home', 
       active: isHomeSection,
       path: '/regular-user'
     },
     { 
-      icon: <MaterialIcons name="map" size={24} color={isCrimeMapSection ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="map" size={24} color={isCrimeMapSection ? "#E02323" : currentTheme.subtitle} />, 
       label: 'Crime Map', 
       active: isCrimeMapSection,
       path: '/regular-user/CrimeMap'
     },
     { 
-      icon: <MaterialIcons name="history" size={24} color={isHistorySection ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="history" size={24} color={isHistorySection ? "#E02323" : currentTheme.subtitle} />, 
       label: 'History', 
       active: isHistorySection,
       path: '/regular-user/History'
     },
     { 
-      icon: <MaterialIcons name="people" size={24} color={isContactsSection ? "#E02323" : "#A4A4A4"} />, 
+      icon: <MaterialIcons name="people" size={24} color={isContactsSection ? "#E02323" : currentTheme.subtitle} />, 
       label: 'Contacts', 
       active: isContactsSection,
       path: '/regular-user/Contacts'
@@ -60,7 +63,14 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
   };
 
   return (
-    <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
+    <View style={[
+      styles.bottomNav, 
+      { 
+        paddingBottom: insets.bottom + 8,
+        backgroundColor: currentTheme.cardBackground,
+        borderTopColor: currentTheme.border
+      }
+    ]}>
       <View style={styles.bottomNavRow}>
         {navItems.map((item, idx) => (
           <TouchableOpacity 
@@ -69,11 +79,17 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
             activeOpacity={0.7}
             onPress={() => handleNavigation(item.path, item.active)}
           >
-            <View style={styles.bottomNavIconContainer}>
+            <View style={[
+              styles.bottomNavIconContainer,
+              { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'transparent' }
+            ]}>
               {item.icon}
             </View>
             <Text 
-              style={item.active ? styles.bottomNavLabelActive : styles.bottomNavLabelInactive}
+              style={[
+                item.active ? styles.bottomNavLabelActive : styles.bottomNavLabelInactive,
+                { color: item.active ? '#E02323' : currentTheme.subtitle }
+              ]}
               numberOfLines={1}
             >
               {item.label}
@@ -88,7 +104,6 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
 const styles = StyleSheet.create({
   bottomNav: {
     width: '100%',
-    backgroundColor: '#fff',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingTop: 12,
@@ -98,6 +113,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     elevation: Platform.OS === 'android' ? 8 : 0,
+    borderTopWidth: 1,
   },
   bottomNavRow: {
     flexDirection: 'row',
