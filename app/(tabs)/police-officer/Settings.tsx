@@ -2,10 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface SettingsMenuItem {
   title: string;
@@ -16,6 +18,9 @@ interface SettingsMenuItem {
 
 const Settings: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const settingsMenuItems: SettingsMenuItem[] = [
     {
@@ -73,7 +78,7 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <Header />
       
       <ScrollView 
@@ -81,25 +86,26 @@ const Settings: React.FC = () => {
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
-          <Text style={styles.title}>Settings</Text>
+        <View style={[styles.content, { paddingTop: insets.top }]}>
+          <Text style={[styles.title, { color: currentTheme.text }]}>Settings</Text>
 
           {/* Settings Menu */}
-          <View style={styles.menuCard}>
+          <View style={[styles.menuCard, { backgroundColor: currentTheme.surface }]}>
             {settingsMenuItems.map((item, index) => (
               <TouchableOpacity
                 key={index}
                 style={[
                   styles.menuItem,
-                  index !== settingsMenuItems.length - 1 && styles.menuItemBorder
+                  index !== settingsMenuItems.length - 1 && [styles.menuItemBorder, { borderBottomColor: currentTheme.cardBorder }]
                 ]}
                 onPress={() => handleMenuPress(item)}
               >
                 <View style={styles.menuItemContent}>
                   <View style={styles.menuItemLeft}>
-                    <Text style={styles.menuItemText}>{item.title}</Text>
+                    <MaterialIcons name={item.icon} size={24} color={currentTheme.iconColor} style={styles.menuIcon} />
+                    <Text style={[styles.menuItemText, { color: currentTheme.text }]}>{item.title}</Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={24} color="#000712" />
+                  <MaterialIcons name="chevron-right" size={24} color={currentTheme.iconColor} />
                 </View>
               </TouchableOpacity>
             ))}
@@ -107,10 +113,10 @@ const Settings: React.FC = () => {
 
           {/* Logout Button */}
           <TouchableOpacity 
-            style={styles.logoutButton}
+            style={[styles.logoutButton, { borderColor: currentTheme.iconColor }]}
             onPress={handleLogout}
           >
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={[styles.logoutText, { color: currentTheme.iconColor }]}>Logout</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -123,7 +129,6 @@ const Settings: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
@@ -139,11 +144,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontFamily: fonts.poppins.bold,
-    color: '#212121',
     marginBottom: 16,
   },
   menuCard: {
-    backgroundColor: '#fff',
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2},
@@ -157,7 +160,6 @@ const styles = StyleSheet.create({
   },
   menuItemBorder: {
     borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   menuItemContent: {
     flexDirection: 'row',
@@ -168,14 +170,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  menuIcon: {
+    marginRight: 12,
+  },
   menuItemText: {
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    color: '#000',
   },
   logoutButton: {
     borderWidth: 1,
-    borderColor: '#FF0000',
     borderRadius: 25,
     paddingVertical: 12,
     width: '100%',
@@ -186,7 +189,6 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 16,
     fontFamily: fonts.poppins.medium,
-    color: '#FF0000',
   },
 });
 

@@ -5,6 +5,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface ActivityData {
   title: string;
@@ -27,7 +28,9 @@ const activityData: ActivityData[] = [
 ];
 
 const Profile: React.FC = () => {
-  const [isOnShift, setIsOnShift] = useState(true);
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+  const [isOnShift, setIsOnShift] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -36,17 +39,27 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     const loadUserInfo = async () => {
-      setFirstName(await AsyncStorage.getItem('firstName') || '');
-      setLastName(await AsyncStorage.getItem('lastName') || '');
-      setPhone(await AsyncStorage.getItem('phone') || '');
-      setStation(await AsyncStorage.getItem('station') || '');
-      setBadge(await AsyncStorage.getItem('badge') || '');
+      try {
+        const storedFirstName = await AsyncStorage.getItem('firstName');
+        const storedLastName = await AsyncStorage.getItem('lastName');
+        const storedPhone = await AsyncStorage.getItem('phone');
+        const storedStation = await AsyncStorage.getItem('station');
+        const storedBadge = await AsyncStorage.getItem('badge');
+
+        setFirstName(storedFirstName || 'Not Set');
+        setLastName(storedLastName || 'Not Set');
+        setPhone(storedPhone || 'Not Set');
+        setStation(storedStation || 'Not Set');
+        setBadge(storedBadge || 'Not Set');
+      } catch (error) {
+        console.error('Error loading user info:', error);
+      }
     };
     loadUserInfo();
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <Header />
       
       <ScrollView 
@@ -56,31 +69,31 @@ const Profile: React.FC = () => {
       >
         <View style={styles.content}>
           {/* Profile Card */}
-          <View style={styles.profileCard}>
+          <View style={[styles.profileCard, { backgroundColor: currentTheme.cardBackground }]}>
             <View style={styles.profileInfo}>
-              <View style={styles.avatarContainer}>
-                <MaterialIcons name="person" size={40} color="#666" />
+              <View style={[styles.avatarContainer, { backgroundColor: currentTheme.iconBackground }]}>
+                <MaterialIcons name="person" size={40} color={currentTheme.iconColor} />
               </View>
               
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>
-                  {firstName && lastName ? `PO1 ${firstName} ${lastName}` : 'PO1'}
+                <Text style={[styles.userName, { color: currentTheme.text }]}>
+                  {firstName && lastName ? `PO1 ${firstName} ${lastName}` : 'PO1 Not Set'}
                 </Text>
-                <Text style={styles.userPhone}>
-                  {phone ? `Mobile Number: ${phone}` : ''}
+                <Text style={[styles.userPhone, { color: currentTheme.subtitle }]}>
+                  Mobile Number: {phone}
                 </Text>
-                <Text style={styles.userStation}>
-                  {station ? station : ''}
+                <Text style={[styles.userStation, { color: currentTheme.subtitle }]}>
+                  Station: {station}
                 </Text>
-                <Text style={styles.userBadge}>
-                  {badge ? `Badge #${badge}` : ''}
+                <Text style={[styles.userBadge, { color: currentTheme.subtitle }]}>
+                  Badge #{badge}
                 </Text>
               </View>
             </View>
           </View>
 
           {/* Badge Display */}
-          <View style={styles.badgeCard}>
+          <View style={[styles.badgeCard, { backgroundColor: currentTheme.cardBackground }]}>
             <View style={styles.badgeContainer}>
               <Image 
                 source={require('../../../assets/images/badge.png')}
@@ -91,25 +104,25 @@ const Profile: React.FC = () => {
           </View>
 
           {/* On Shift Toggle */}
-          <View style={styles.shiftCard}>
-            <Text style={styles.shiftText}>On shift</Text>
+          <View style={[styles.shiftCard, { backgroundColor: currentTheme.cardBackground }]}>
+            <Text style={[styles.shiftText, { color: currentTheme.text }]}>On shift</Text>
             <Switch
               value={isOnShift}
               onValueChange={setIsOnShift}
-              trackColor={{ false: '#767577', true: '#FFD8D8' }}
-              thumbColor={isOnShift ? '#E02323' : '#f4f3f4'}
+              trackColor={{ false: currentTheme.switchTrack, true: currentTheme.switchActive }}
+              thumbColor={currentTheme.switchThumb}
             />
           </View>
 
           {/* Activity Dashboard */}
           <View style={styles.dashboardSection}>
-            <Text style={styles.dashboardTitle}>Activity Dashboard</Text>
+            <Text style={[styles.dashboardTitle, { color: currentTheme.text }]}>Activity Dashboard</Text>
             
             <View style={styles.activityCards}>
               {activityData.map((item, index) => (
-                <View key={index} style={styles.activityCard}>
-                  <Text style={styles.activityTitle}>{item.title}</Text>
-                  <Text style={styles.activityValue}>{item.value}</Text>
+                <View key={index} style={[styles.activityCard, { backgroundColor: currentTheme.cardBackground }]}>
+                  <Text style={[styles.activityTitle, { color: '#E02323' }]}>{item.title}</Text>
+                  <Text style={[styles.activityValue, { color: currentTheme.text }]}>{item.value}</Text>
                 </View>
               ))}
             </View>
@@ -125,7 +138,6 @@ const Profile: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
@@ -134,69 +146,62 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   content: {
-    flex: 1,
-    padding: 20,
+    padding: 16,
     gap: 16,
   },
   profileCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   profileInfo: {
     flexDirection: 'row',
-    gap: 16,
     alignItems: 'center',
+    gap: 16,
   },
   avatarContainer: {
-    width: 75,
-    height: 75,
-    borderRadius: 37.5,
-    backgroundColor: '#d9d9d9',
-    justifyContent: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
-  },
-  avatar: {
-    width: 50,
-    height: 50,
+    justifyContent: 'center',
   },
   userInfo: {
     flex: 1,
     gap: 4,
   },
   userName: {
-    fontSize: 14,
-    fontFamily: fonts.poppins.medium,
-    color: '#000',
+    fontSize: 20,
+    fontFamily: fonts.poppins.semiBold,
   },
   userPhone: {
-    fontSize: 11,
-    fontFamily: fonts.poppins.medium,
-    color: '#000',
+    fontSize: 14,
+    fontFamily: fonts.poppins.regular,
   },
   userStation: {
-    fontSize: 10,
+    fontSize: 14,
     fontFamily: fonts.poppins.regular,
-    color: 'rgba(21, 5, 2, 0.75)',
   },
   userBadge: {
-    fontSize: 10,
+    fontSize: 14,
     fontFamily: fonts.poppins.regular,
-    color: 'rgba(0, 0, 0, 0.24)',
   },
   badgeCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    height: 150,
-    justifyContent: 'center',
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -204,33 +209,29 @@ const styles = StyleSheet.create({
   badgeContainer: {
     width: 100,
     height: 100,
-    borderRadius: 50,
-    borderWidth: 1,
-    borderColor: '#a4a4a4',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   badgeImage: {
-    width: 43,
-    height: 60,
+    width: '100%',
+    height: '100%',
   },
   shiftCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 1,
-    elevation: 2,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   shiftText: {
-    fontSize: 15,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#111619',
+    fontSize: 16,
+    fontFamily: fonts.poppins.medium,
   },
   dashboardSection: {
     gap: 12,
@@ -238,7 +239,6 @@ const styles = StyleSheet.create({
   dashboardTitle: {
     fontSize: 16,
     fontFamily: fonts.poppins.bold,
-    color: '#000',
   },
   activityCards: {
     flexDirection: 'row',
@@ -246,21 +246,26 @@ const styles = StyleSheet.create({
   },
   activityCard: {
     flex: 1,
-    backgroundColor: '#FFD8D8',
     borderRadius: 8,
     padding: 9,
     height: 81,
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   activityTitle: {
     fontSize: 9,
     fontFamily: fonts.poppins.semiBold,
-    color: '#E02323',
   },
   activityValue: {
     fontSize: 20,
     fontFamily: fonts.poppins.bold,
-    color: '#000',
   },
 });
 

@@ -5,6 +5,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface HistoryItem {
   id: number;
@@ -43,24 +44,36 @@ const mockHistoryItems: HistoryItem[] = [
 ];
 
 const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ item, onPress }) => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+
   const statusColors = {
-    pending: '#FFA500',
-    resolved: '#4CAF50',
-    'in-progress': '#2196F3'
+    pending: currentTheme.statusPending,
+    resolved: currentTheme.statusResolved,
+    'in-progress': currentTheme.statusInProgress
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity 
+      style={[
+        styles.card, 
+        { 
+          backgroundColor: currentTheme.cardBackground,
+          borderColor: currentTheme.cardBorder 
+        }
+      ]} 
+      onPress={onPress}
+    >
       <View style={styles.cardHeader}>
-        <Text style={styles.dateTime}>{item.date} at {item.time}</Text>
+        <Text style={[styles.dateTime, { color: currentTheme.text }]}>{item.date} at {item.time}</Text>
         <View style={[styles.statusBadge, { backgroundColor: statusColors[item.status] }]}>
           <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
         </View>
       </View>
       
       <View style={styles.cardContent}>
-        <Text style={styles.location}>{item.location}</Text>
-        <Text style={styles.crimeType}>{item.crimeType}</Text>
+        <Text style={[styles.location, { color: currentTheme.text }]}>{item.location}</Text>
+        <Text style={[styles.crimeType, { color: currentTheme.subtitle }]}>{item.crimeType}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -69,6 +82,8 @@ const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ ite
 const History: React.FC = () => {
   const router = useRouter();
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -95,17 +110,16 @@ const History: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <Header />
       
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Crime Report History</Text>
-          <Text style={styles.subtitle}>View your past crime reports</Text>
+          <Text style={[styles.title, { color: currentTheme.text }]}>Crime Report History</Text>
+          <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>View your past crime reports</Text>
           
           <View style={styles.historyList}>
             {historyItems.map((item) => (
@@ -127,37 +141,38 @@ const History: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
   },
   scrollViewContent: {
-    padding: 20,
+    flexGrow: 1,
   },
   content: {
-    gap: 16,
+    padding: 16,
   },
   title: {
     fontSize: 24,
-    fontFamily: fonts.poppins.bold,
-    color: '#212121',
+    fontFamily: fonts.poppins.semiBold,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    color: '#666',
-    marginBottom: 8,
+    marginBottom: 24,
   },
   historyList: {
     gap: 12,
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
+    borderWidth: 1,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -169,19 +184,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dateTime: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: fonts.poppins.medium,
-    color: '#666',
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 4,
   },
   statusText: {
-    color: '#fff',
-    fontSize: 10,
-    fontFamily: fonts.poppins.semiBold,
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: fonts.poppins.medium,
   },
   cardContent: {
     gap: 4,
@@ -189,12 +203,10 @@ const styles = StyleSheet.create({
   location: {
     fontSize: 16,
     fontFamily: fonts.poppins.semiBold,
-    color: '#E02323',
   },
   crimeType: {
     fontSize: 14,
     fontFamily: fonts.poppins.regular,
-    color: '#666',
   },
 });
 
