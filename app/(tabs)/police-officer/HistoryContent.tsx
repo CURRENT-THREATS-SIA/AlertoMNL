@@ -6,7 +6,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
-import { useTheme } from '../../context/ThemeContext';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface HistoryDetails {
   location: string;
@@ -24,187 +24,12 @@ interface HistoryDetails {
   voice_record_url: string;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    padding: 20,
-  },
-  content: {
-    gap: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
-    marginBottom: 16,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    gap: 11,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  locationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  location: {
-    fontSize: 14,
-    fontFamily: fonts.poppins.medium,
-    color: '#E02323',
-  },
-  reporter: {
-    fontSize: 11,
-    fontFamily: fonts.poppins.medium,
-    color: '#000',
-  },
-  dateTime: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  responderInfo: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-  respondedBy: {
-    fontSize: 9,
-    fontFamily: fonts.poppins.medium,
-    color: '#19F315',
-  },
-  responder: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  mapImage: {
-    width: '100%',
-    height: 110,
-    borderRadius: 8,
-  },
-  distanceInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  distanceText: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  dot: {
-    fontSize: 5,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  arrivalTime: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    gap: 18,
-  },
-  detailColumn: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: '#000',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 12,
-    fontFamily: fonts.poppins.regular,
-    color: '#000',
-  },
-  voiceRecordSection: {
-    marginTop: 16,
-  },
-  voiceRecordTitle: {
-    fontSize: 12,
-    fontFamily: fonts.poppins.medium,
-    color: '#000',
-    marginBottom: 8,
-  },
-  waveformContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    height: 40,
-  },
-  waveformBar: {
-    width: 2,
-    backgroundColor: '#E02323',
-    borderRadius: 1,
-  },
-  playButton: {
-    marginLeft: 8,
-  },
-  voiceRecordInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  voiceRecordDuration: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  voiceRecordDate: {
-    fontSize: 10,
-    fontFamily: fonts.poppins.medium,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  victimInfo: {
-    marginTop: 16,
-    gap: 8,
-  },
-  victimInfoTitle: {
-    fontSize: 12,
-    fontFamily: fonts.poppins.medium,
-    color: '#000',
-  },
-  victimInfoText: {
-    fontSize: 12,
-    fontFamily: fonts.poppins.regular,
-    color: 'rgba(0, 0, 0, 0.24)',
-  },
-  locationArea: {
-    marginBottom: 8,
-  },
-  errorSubText: {
-    fontSize: 12,
-    fontFamily: fonts.poppins.regular,
-    color: 'rgba(0, 0, 0, 0.24)',
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 16,
-    fontFamily: fonts.poppins.semiBold,
-    color: '#000',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-});
-
 const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
   const [details, setDetails] = useState<HistoryDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -309,7 +134,7 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
         <Header />
         <ActivityIndicator style={{ flex: 1 }} size="large" color="#E02323" />
         <NavBottomBar activeScreen="History" />
@@ -319,21 +144,19 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
 
   if (error || !details) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
         <Header />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={styles.errorText}>Could Not Load Details</Text>
-          <Text style={styles.errorSubText}>{error}</Text>
+          <Text style={[styles.errorText, { color: currentTheme.text }]}>Could Not Load Details</Text>
+          <Text style={[styles.errorSubText, { color: currentTheme.subtitle }]}>{error}</Text>
         </View>
         <NavBottomBar activeScreen="History" />
       </SafeAreaView>
     );
   }
 
-  const { theme } = useTheme();
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <Header />
       <ScrollView
         style={styles.scrollView}
@@ -341,88 +164,74 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={[styles.title, { color: theme.text }]}>Crime Report History</Text>
+          <Text style={[styles.title, { color: currentTheme.text }]}>Crime Report History</Text>
 
-          {/* Location Card */}
-          <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
+          <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
             <View style={styles.locationHeader}>
-              <View>
-                <Text style={[styles.location, { color: '#E02323' }]}>{details?.location}</Text>
-                <Text style={[styles.reporter, { color: theme.text }]}>{details?.officer_fname} {details?.officer_lname}</Text>
-                <Text style={[styles.dateTime, { color: theme.subtitle }]}>{formatDateTimeRange(details?.triggered_at, details?.resolved_at)}</Text>
+              <View style={styles.locationDetails}>
+                {renderLocation(details.location)}
+                <Text style={[styles.dateTime, { color: currentTheme.subtitle }]}>{formatDateTimeRange(details.triggered_at, details.resolved_at)}</Text>
               </View>
               <View style={styles.responderInfo}>
-                <Text style={[styles.respondedBy, { color: '#19F315' }]}>Responded by</Text>
-                <Text style={[styles.responder, { color: theme.subtitle }]}>{details?.officer_fname} {details?.officer_lname}</Text>
+                <Text style={[styles.respondedBy, { color: currentTheme.text }]}>Responded by</Text>
+                <Text style={[styles.responder, { color: currentTheme.subtitle }]}>You</Text>
               </View>
             </View>
-
-            <View 
-              style={[styles.mapImage, {
-                backgroundColor: theme.surface,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }]}
-            >
-              <Text style={{ color: theme.subtitle }}>Map Preview</Text>
-            </View>
-
-            <View style={styles.distanceInfo}>
-              <Text style={[styles.distanceText, { color: theme.subtitle }]}>{details?.crime_description}</Text>
-              <Text style={[styles.dot, { color: theme.subtitle }]}>●</Text>
-              <Text style={[styles.arrivalTime, { color: theme.subtitle }]}>{details?.crime_type}</Text>
+            <View style={styles.victimInfo}>
+              <Text style={[styles.victimInfoTitle, { color: currentTheme.text }]}>Victim's Information</Text>
+              <View style={styles.victimDetailRow}>
+                <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Name:</Text>
+                <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{`${details.victim_fname} ${details.victim_lname}`}</Text>
+              </View>
+              <View style={styles.victimDetailRow}>
+                <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Phone Number:</Text>
+                <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.victim_number}</Text>
+              </View>
+              <View style={styles.victimDetailRow}>
+                <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Email:</Text>
+                <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.victim_email}</Text>
+              </View>
             </View>
           </View>
 
-          {/* Details Card */}
-          <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
+          <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
             <View style={styles.detailsRow}>
               <View style={styles.detailColumn}>
-                <Text style={[styles.detailLabel, { color: theme.text }]}>Description</Text>
-                <Text style={[styles.detailValue, { color: theme.text }]}>{details?.crime_description}</Text>
+                <Text style={[styles.detailLabel, { color: currentTheme.text }]}>Description</Text>
+                <Text style={[styles.detailValue, { color: currentTheme.subtitle }]}>{details.crime_description || 'None'}</Text>
               </View>
               <View style={styles.detailColumn}>
-                <Text style={[styles.detailLabel, { color: theme.text }]}>Crime Type</Text>
-                <Text style={[styles.detailValue, { color: theme.text }]}>{details?.crime_type}</Text>
+                <Text style={[styles.detailLabel, { color: currentTheme.text }]}>Crime Type</Text>
+                <Text style={[styles.detailValue, { color: currentTheme.subtitle }]}>{details.crime_type || 'None'}</Text>
               </View>
               <View style={styles.detailColumn}>
-                <Text style={[styles.detailLabel, { color: theme.text }]}>Severity</Text>
-                <Text style={[styles.detailValue, { color: theme.text }]}>{details?.severity}</Text>
+                <Text style={[styles.detailLabel, { color: currentTheme.text }]}>Severity</Text>
+                <Text style={[styles.detailValue, { color: currentTheme.subtitle }]}>{details.severity || 'None'}</Text>
               </View>
             </View>
 
-            {/* Voice Record Section */}
-            <View style={styles.voiceRecordSection}>
-              <Text style={[styles.voiceRecordTitle, { color: theme.text }]}>{details?.crime_description}</Text>
-              <View style={styles.waveformContainer}>
-                {[...Array(40)].map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.waveformBar,
-                      {
-                        height: Math.random() * 15 + 2,
-                        opacity: 0.66
-                      }
-                    ]}
-                  />
-                ))}
-                <TouchableOpacity style={styles.playButton} onPress={handlePlaySound}>
-                  <MaterialIcons name={isPlaying ? "pause-circle-filled" : "play-circle-filled"} size={28} color="#E02323" />
-                </TouchableOpacity>
+            {details.voice_record_url && (
+              <View style={styles.voiceRecordSection}>
+                <Text style={styles.voiceRecordTitle}>SOS Voice Recording</Text>
+                <View style={styles.waveformContainer}>
+                  <TouchableOpacity style={styles.playButton} onPress={handlePlaySound}>
+                    <MaterialIcons
+                      name={isPlaying ? 'pause-circle-filled' : 'play-circle-filled'}
+                      size={40}
+                      color="#E02323"
+                    />
+                  </TouchableOpacity>
+                  <View style={styles.waveform}>
+                    {[...Array(40)].map((_, index) => (
+                      <View
+                        key={index}
+                        style={[styles.waveformBar, { height: Math.random() * 20 + 4 }]}
+                      />
+                    ))}
+                  </View>
+                </View>
               </View>
-              <View style={styles.voiceRecordInfo}>
-                <Text style={[styles.voiceRecordDuration, { color: theme.subtitle }]}>{details?.crime_description}</Text>
-                <Text style={[styles.voiceRecordDate, { color: theme.subtitle }]}>{details?.crime_type}</Text>
-              </View>
-            </View>
-
-            {/* Victim Information */}
-            <View style={styles.victimInfo}>
-              <Text style={[styles.victimInfoTitle, { color: theme.text }]}>Victim&apos;s Information</Text>
-              <Text style={[styles.victimInfoText, { color: theme.subtitle }]}>{details?.victim_number}</Text>
-              <Text style={[styles.victimInfoText, { color: theme.subtitle }]}>{details?.victim_email}</Text>
-            </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -430,5 +239,39 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  errorText: { fontSize: 18, fontWeight: 'bold', fontFamily: fonts.poppins.semiBold, color: '#333', textAlign: 'center' },
+  errorSubText: { fontSize: 14, fontFamily: fonts.poppins.regular, color: '#666', marginTop: 8, textAlign: 'center' },
+  scrollView: { flex: 1 },
+  scrollViewContent: { padding: 20 },
+  content: { gap: 16 },
+  title: { fontSize: 22, fontFamily: fonts.poppins.semiBold, color: '#212121', marginBottom: 16 },
+  card: { backgroundColor: '#fff', borderRadius: 10, padding: 20, gap: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  locationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  locationDetails: { flex: 1, marginRight: 10 },
+  location: { fontSize: 16, fontFamily: fonts.poppins.medium, color: '#E02323', flexWrap: 'wrap' },
+  locationArea: { fontSize: 14, fontFamily: fonts.poppins.regular, color: '#E02323', flexWrap: 'wrap' },
+  dateTime: { fontSize: 12, fontFamily: fonts.poppins.medium, color: 'rgba(0, 0, 0, 0.4)', marginTop: 8 },
+  responderInfo: { alignItems: 'flex-end', gap: 6 },
+  respondedBy: { fontSize: 11, fontFamily: fonts.poppins.medium, color: '#19F315' },
+  responder: { fontSize: 12, fontFamily: fonts.poppins.medium, color: 'rgba(0, 0, 0, 0.4)' },
+  detailsRow: { flexDirection: 'row', gap: 18 },
+  detailColumn: { flex: 1 },
+  detailLabel: { fontSize: 14, fontFamily: fonts.poppins.semiBold, color: '#000', marginBottom: 2 },
+  detailValue: { fontSize: 12, fontFamily: fonts.poppins.regular, color: '#333' },
+  victimInfo: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 16 },
+  victimInfoTitle: { fontSize: 15, fontFamily: fonts.poppins.semiBold, color: '#000', marginBottom: 12 },
+  victimDetailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  victimInfoLabel: { fontSize: 14, fontFamily: fonts.poppins.medium, color: '#333', marginRight: 8 },
+  victimInfoText: { fontSize: 14, fontFamily: 'Roboto', color: '#7E7E7E' },
+  voiceRecordSection: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 16 },
+  voiceRecordTitle: { fontSize: 15, fontFamily: fonts.poppins.semiBold, color: '#212121', marginBottom: 12 },
+  waveformContainer: { flexDirection: 'row', alignItems: 'center', height: 40 },
+  playButton: { marginRight: 12 },
+  waveform: { flex: 1, flexDirection: 'row', alignItems: 'center', height: '100%', gap: 2 },
+  waveformBar: { width: 3, backgroundColor: 'rgba(224, 35, 35, 0.6)', borderRadius: 2 },
+});
 
 export default HistoryContent;
