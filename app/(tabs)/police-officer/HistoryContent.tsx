@@ -4,6 +4,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
+import { useTheme } from '../../context/ThemeContext';
 
 interface CrimeReport {
   location: string;
@@ -48,8 +49,10 @@ const crimeReport: CrimeReport = {
 };
 
 const HistoryContent: React.FC = () => {
+  const { theme } = useTheme();
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <Header />
       
       <ScrollView 
@@ -58,59 +61,59 @@ const HistoryContent: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Crime Report History</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Crime Report History</Text>
 
           {/* Location Card */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.locationHeader}>
               <View>
-                <Text style={styles.location}>{crimeReport.location}</Text>
-                <Text style={styles.reporter}>{crimeReport.reporter}</Text>
-                <Text style={styles.dateTime}>{crimeReport.dateTime}</Text>
+                <Text style={[styles.location, { color: '#E02323' }]}>{crimeReport.location}</Text>
+                <Text style={[styles.reporter, { color: theme.text }]}>{crimeReport.reporter}</Text>
+                <Text style={[styles.dateTime, { color: theme.subtitle }]}>{crimeReport.dateTime}</Text>
               </View>
               <View style={styles.responderInfo}>
-                <Text style={styles.respondedBy}>Responded by</Text>
-                <Text style={styles.responder}>{crimeReport.responder}</Text>
+                <Text style={[styles.respondedBy, { color: '#19F315' }]}>Responded by</Text>
+                <Text style={[styles.responder, { color: theme.subtitle }]}>{crimeReport.responder}</Text>
               </View>
             </View>
 
             <View 
               style={[styles.mapImage, {
-                backgroundColor: '#E5E5E5',
+                backgroundColor: theme.surface,
                 justifyContent: 'center',
                 alignItems: 'center',
               }]}
             >
-              <Text style={{ color: '#666' }}>Map Preview</Text>
+              <Text style={{ color: theme.subtitle }}>Map Preview</Text>
             </View>
 
             <View style={styles.distanceInfo}>
-              <Text style={styles.distanceText}>{crimeReport.distance}</Text>
-              <Text style={styles.dot}>●</Text>
-              <Text style={styles.arrivalTime}>{crimeReport.arrivalTime}</Text>
+              <Text style={[styles.distanceText, { color: theme.subtitle }]}>{crimeReport.distance}</Text>
+              <Text style={[styles.dot, { color: theme.subtitle }]}>●</Text>
+              <Text style={[styles.arrivalTime, { color: theme.subtitle }]}>{crimeReport.arrivalTime}</Text>
             </View>
           </View>
 
           {/* Details Card */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.detailsRow}>
               <View style={styles.detailColumn}>
-                <Text style={styles.detailLabel}>Description</Text>
-                <Text style={styles.detailValue}>{crimeReport.description}</Text>
+                <Text style={[styles.detailLabel, { color: theme.text }]}>Description</Text>
+                <Text style={[styles.detailValue, { color: theme.text }]}>{crimeReport.description}</Text>
               </View>
               <View style={styles.detailColumn}>
-                <Text style={styles.detailLabel}>Crime Type</Text>
-                <Text style={styles.detailValue}>{crimeReport.crimeType}</Text>
+                <Text style={[styles.detailLabel, { color: theme.text }]}>Crime Type</Text>
+                <Text style={[styles.detailValue, { color: theme.text }]}>{crimeReport.crimeType}</Text>
               </View>
               <View style={styles.detailColumn}>
-                <Text style={styles.detailLabel}>Severity</Text>
-                <Text style={styles.detailValue}>{crimeReport.severity}</Text>
+                <Text style={[styles.detailLabel, { color: theme.text }]}>Severity</Text>
+                <Text style={[styles.detailValue, { color: theme.text }]}>{crimeReport.severity}</Text>
               </View>
             </View>
 
             {/* Voice Record Section */}
             <View style={styles.voiceRecordSection}>
-              <Text style={styles.voiceRecordTitle}>{crimeReport.voiceRecord.title}</Text>
+              <Text style={[styles.voiceRecordTitle, { color: theme.text }]}>{crimeReport.voiceRecord.title}</Text>
               <View style={styles.waveformContainer}>
                 {[...Array(40)].map((_, index) => (
                   <View
@@ -129,16 +132,16 @@ const HistoryContent: React.FC = () => {
                 </TouchableOpacity>
               </View>
               <View style={styles.voiceRecordInfo}>
-                <Text style={styles.voiceRecordDuration}>{crimeReport.voiceRecord.duration}</Text>
-                <Text style={styles.voiceRecordDate}>{crimeReport.voiceRecord.date}</Text>
+                <Text style={[styles.voiceRecordDuration, { color: theme.subtitle }]}>{crimeReport.voiceRecord.duration}</Text>
+                <Text style={[styles.voiceRecordDate, { color: theme.subtitle }]}>{crimeReport.voiceRecord.date}</Text>
               </View>
             </View>
 
             {/* Victim Information */}
             <View style={styles.victimInfo}>
-              <Text style={styles.victimInfoTitle}>Victim&apos;s Information</Text>
-              <Text style={styles.victimInfoText}>{crimeReport.victimInfo.phone}</Text>
-              <Text style={styles.victimInfoText}>{crimeReport.victimInfo.email}</Text>
+              <Text style={[styles.victimInfoTitle, { color: theme.text }]}>Victim&apos;s Information</Text>
+              <Text style={[styles.victimInfoText, { color: theme.subtitle }]}>{crimeReport.victimInfo.phone}</Text>
+              <Text style={[styles.victimInfoText, { color: theme.subtitle }]}>{crimeReport.victimInfo.email}</Text>
             </View>
           </View>
         </View>
@@ -152,7 +155,6 @@ const HistoryContent: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
