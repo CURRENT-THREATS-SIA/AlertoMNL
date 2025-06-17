@@ -1,17 +1,18 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../../app/config/fonts';
+import { theme, useTheme } from '../../../context/ThemeContext';
 
 interface Feature {
   title: string;
@@ -45,16 +46,18 @@ const keyFeatures: Feature[] = [
 const About: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: currentTheme.surface }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>About</Text>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>About</Text>
         </View>
       </View>
       <ScrollView 
@@ -69,18 +72,18 @@ const About: React.FC = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.appName}>ALERTO MNL</Text>
-          <Text style={styles.version}>Version 1.0.0</Text>
+          <Text style={[styles.appName, { color: '#E02323' }]}>ALERTO MNL</Text>
+          <Text style={[styles.version, { color: currentTheme.subtitle }]}>Version 1.0.0</Text>
         </View>
 
         {/* Introduction Card */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
           <View style={styles.cardHeader}>
-            <MaterialIcons name="info" size={24} color="#e02323" />
-            <Text style={styles.cardTitle}>Introduction</Text>
+            <MaterialIcons name="info" size={24} color="#E02323" />
+            <Text style={[styles.cardTitle, { color: currentTheme.text }]}>Introduction</Text>
           </View>
-          <Text style={styles.introText}>
-            The <Text style={styles.highlight}>ALERTO MNL</Text> app bridges Manila 
+          <Text style={[styles.introText, { color: currentTheme.text }]}>
+            The <Text style={[styles.highlight, { color: '#E02323' }]}>ALERTO MNL</Text> app bridges Manila 
             citizens, tourists, and law enforcement for faster, safer outcomes. Users 
             can instantly alert nearby officers with precise location and incident 
             details. Officers receive clear, actionable requests and real-time updates, 
@@ -90,27 +93,27 @@ const About: React.FC = () => {
 
         {/* Features Section */}
         <View style={styles.featuresContainer}>
-          <Text style={styles.sectionTitle}>Key Features</Text>
+          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>Key Features</Text>
           {keyFeatures.map((feature, index) => (
-            <View key={index} style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <MaterialIcons name={feature.icon} size={24} color="#e02323" />
+            <View key={index} style={[styles.featureCard, { backgroundColor: currentTheme.cardBackground }]}>
+              <View style={[styles.featureIcon, { backgroundColor: '#fff5f5' }]}>
+                <MaterialIcons name={feature.icon} size={24} color="#E02323" />
               </View>
               <View style={styles.featureContent}>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
+                <Text style={[styles.featureTitle, { color: currentTheme.text }]}>{feature.title}</Text>
+                <Text style={[styles.featureDescription, { color: currentTheme.subtitle }]}>{feature.description}</Text>
               </View>
             </View>
           ))}
         </View>
 
         {/* Mission Section */}
-        <View style={[styles.card, styles.missionCard]}>
+        <View style={[styles.card, styles.missionCard, { backgroundColor: currentTheme.cardBackground, borderColor: '#E0232320' }]}>
           <View style={styles.cardHeader}>
-            <MaterialIcons name="flag" size={24} color="#e02323" />
-            <Text style={styles.cardTitle}>Our Mission</Text>
+            <MaterialIcons name="flag" size={24} color="#E02323" />
+            <Text style={[styles.cardTitle, { color: currentTheme.text }]}>Our Mission</Text>
           </View>
-          <Text style={styles.missionText}>
+          <Text style={[styles.missionText, { color: currentTheme.text }]}>
             Empower communities and police with technology to protect lives
             and restore peace, one alert at a time.
           </Text>
@@ -123,13 +126,10 @@ const About: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
- 
   header: {
     flexDirection: 'row',
     paddingBottom: 12,
-    backgroundColor: 'white',
     paddingHorizontal: 16,
     gap: 8,
   },
@@ -143,7 +143,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
   },
   scrollView: {
     flex: 1,
@@ -164,16 +163,13 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 24,
     fontFamily: fonts.poppins.bold,
-    color: '#e02323',
     marginBottom: 4,
   },
   version: {
     fontSize: 12,
     fontFamily: fonts.poppins.regular,
-    color: '#666',
   },
   card: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     shadowColor: '#000',
@@ -194,16 +190,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
   },
   introText: {
     fontSize: 14,
     lineHeight: 24,
-    color: '#424b5a',
     fontFamily: fonts.poppins.regular,
   },
   highlight: {
-    color: '#e02323',
     fontFamily: fonts.poppins.semiBold,
   },
   featuresContainer: {
@@ -212,11 +205,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
     marginBottom: 4,
   },
   featureCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -234,7 +225,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff5f5',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -245,22 +235,18 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 14,
     fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
   },
   featureDescription: {
     fontSize: 12,
     fontFamily: fonts.poppins.regular,
-    color: '#666666',
     lineHeight: 18,
   },
   missionCard: {
     borderWidth: 1,
-    borderColor: '#e0232320',
   },
   missionText: {
     fontSize: 14,
     lineHeight: 24,
-    color: '#424b5a',
     fontFamily: fonts.poppins.regular,
     textAlign: 'center',
   },

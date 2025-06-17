@@ -1,8 +1,8 @@
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 import { FeatureCollection, Point } from 'geojson';
-import React, { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus, Platform, StyleSheet, View } from 'react-native';
 import WebView from 'react-native-webview';
 
 interface MapComponentProps {
@@ -98,26 +98,24 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
     }
   };
 
-  // Handle app state changes
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (
-        appStateRef.current.match(/inactive|background/) && 
-        nextAppState === 'active'
-      ) {
-        // App has come to foreground
-        startLocationTracking();
-      } else if (nextAppState.match(/inactive|background/)) {
-        // App has gone to background
-        stopLocationTracking();
-      }
-      appStateRef.current = nextAppState;
-    });
+  const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {
+    if (nextAppState === 'active') {
+      startLocationTracking();
+    } else {
+      stopLocationTracking();
+    }
+  }, []);
 
+  useEffect(() => {
+    startLocationTracking();
+    
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
     return () => {
       subscription.remove();
+      stopLocationTracking();
     };
-  }, []);
+  }, [handleAppStateChange]);
 
   // Start location tracking when component mounts
   useEffect(() => {
