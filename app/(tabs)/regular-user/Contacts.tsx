@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PersonAlertIcon from '../../components/icons/PersonAlertIcon';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface Contact {
   contact_id: number;
@@ -14,19 +15,22 @@ interface Contact {
 }
 
 const ContactCard: React.FC<{ contact: Contact; onMorePress: (contact: Contact) => void }> = ({ contact, onMorePress }) => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
       <View style={styles.cardContent}>
-        <View style={styles.alertButtonContainer}>
+        <View style={[styles.alertButtonContainer, { backgroundColor: isDarkMode ? '#2a2a2a' : '#FFF1F1' }]}>
           <PersonAlertIcon size={28} />
         </View>
         <View style={styles.contactInfo}>
-          <Text style={styles.contactName}>{contact.contact_name}</Text>
-          <Text style={styles.contactPhone}>{contact.contact_number}</Text>
-          <Text style={styles.contactPhone}>{contact.relationship}</Text>
+          <Text style={[styles.contactName, { color: currentTheme.text }]}>{contact.contact_name}</Text>
+          <Text style={[styles.contactPhone, { color: currentTheme.subtitle }]}>{contact.contact_number}</Text>
+          <Text style={[styles.contactPhone, { color: currentTheme.subtitle }]}>{contact.relationship}</Text>
         </View>
         <TouchableOpacity style={styles.moreButton} onPress={() => onMorePress(contact)}>
-          <MoreVertical size={24} color="#7e7e7e" />
+          <MoreVertical size={24} color={currentTheme.subtitle} />
         </TouchableOpacity>
       </View>
     </View>
@@ -34,6 +38,8 @@ const ContactCard: React.FC<{ contact: Contact; onMorePress: (contact: Contact) 
 };
 
 const Contacts: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [showMenu, setShowMenu] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -86,7 +92,7 @@ const Contacts: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       
       <ScrollView 
         style={styles.scrollView}
@@ -96,9 +102,9 @@ const Contacts: React.FC = () => {
         <View style={styles.content}>
           {/* Header with Refresh */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Contacts</Text>
+            <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>My Contacts</Text>
             <TouchableOpacity onPress={fetchContacts}>
-              <RefreshCw size={24} color="#7d7d7d" />
+              <RefreshCw size={24} color={currentTheme.subtitle} />
             </TouchableOpacity>
           </View>
 
@@ -118,15 +124,15 @@ const Contacts: React.FC = () => {
       </ScrollView>
        {/* Bottom Sheet Menu */}
        {showMenu && (
-        <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20, zIndex: 10,
-          shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 10,
-        }}>
-          <TouchableOpacity onPress={handleDelete} style={{ padding: 16 }}>
-            <Text style={{ color: '#e33c3c', fontSize: 18 }}>Delete</Text>
+        <View style={[styles.menuContainer, { 
+          backgroundColor: currentTheme.cardBackground,
+          borderTopColor: currentTheme.border
+        }]}>
+          <TouchableOpacity onPress={handleDelete} style={styles.menuItem}>
+            <Text style={[styles.menuText, { color: '#e33c3c' }]}>Delete</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowMenu(false)} style={{ padding: 16 }}>
-            <Text style={{ color: '#888', fontSize: 18 }}>Cancel</Text>
+          <TouchableOpacity onPress={() => setShowMenu(false)} style={styles.menuItem}>
+            <Text style={[styles.menuText, { color: currentTheme.subtitle }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -137,7 +143,6 @@ const Contacts: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
@@ -224,6 +229,27 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     fontSize: 14,
     fontFamily: fonts.poppins.bold,
+  },
+  menuContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+    borderTopWidth: 1,
+  },
+  menuItem: {
+    padding: 16,
+  },
+  menuText: {
+    fontSize: 18,
   },
 });
 

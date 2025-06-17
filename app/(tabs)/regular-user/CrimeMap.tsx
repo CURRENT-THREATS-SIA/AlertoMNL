@@ -16,6 +16,7 @@ import CustomTabBar from '../../../app/components/CustomTabBar';
 import { crimeData, StationName, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface CrimeFeature extends Feature<Point> {
   properties: {
@@ -79,6 +80,8 @@ const severityLevels: SeverityLevel[] = [
 ];
 
 const CrimeMap: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
   const containerPadding = isSmallDevice ? 12 : 1;
@@ -222,7 +225,7 @@ const CrimeMap: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.rootBg}>
+    <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
@@ -236,23 +239,22 @@ const CrimeMap: React.FC = () => {
               userType="regular"
               data={crimeData}
             />
-            {/* Severity Legend */}
-            <View style={styles.legendContainer}>
+            <View style={[styles.legendContainer, { backgroundColor: currentTheme.cardBackground }]}>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-                <Text style={styles.legendLabel}>No reported cases</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>No reported cases</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-                <Text style={styles.legendLabel}>Low severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low severity</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
-                <Text style={styles.legendLabel}>Medium severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium severity</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-                <Text style={styles.legendLabel}>High severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High severity</Text>
               </View>
             </View>
           </View>
@@ -396,7 +398,10 @@ const CrimeMap: React.FC = () => {
                 key={index} 
                 style={[
                   styles.statCard,
-                  { width: width / 3 - 16 }
+                  { 
+                    width: width / 3 - 16,
+                    backgroundColor: currentTheme.cardBackground 
+                  }
                 ]}
               >
                 <Text 
@@ -416,7 +421,8 @@ const CrimeMap: React.FC = () => {
                       style={[
                         styles.statLocation, 
                         styles.defaultFont,
-                        isSmallDevice && { fontSize: 11 }
+                        isSmallDevice && { fontSize: 11 },
+                        { color: currentTheme.text }
                       ]}
                     >
                       {stat.location}
@@ -425,7 +431,8 @@ const CrimeMap: React.FC = () => {
                       style={[
                         styles.statType, 
                         styles.defaultFont,
-                        isSmallDevice && { fontSize: 9 }
+                        isSmallDevice && { fontSize: 9 },
+                        { color: currentTheme.subtitle }
                       ]}
                     >
                       {stat.type}
@@ -437,7 +444,8 @@ const CrimeMap: React.FC = () => {
                   style={[
                     styles.statValue, 
                     styles.defaultFont,
-                    isSmallDevice && { fontSize: 16 }
+                    isSmallDevice && { fontSize: 16 },
+                    { color: currentTheme.text }
                   ]}
                 >
                   {stat.value}
@@ -456,7 +464,6 @@ const CrimeMap: React.FC = () => {
 const styles = StyleSheet.create({
   rootBg: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollView: {
     flex: 1,

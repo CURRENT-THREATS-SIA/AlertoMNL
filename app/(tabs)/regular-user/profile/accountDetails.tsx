@@ -12,8 +12,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+import { useTheme } from '../../../context/ThemeContext';
+
 
 
 // Email validation function
@@ -68,6 +71,9 @@ const fetchProfileFromBackend = async (
 
 const AccountDetails: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const { theme, isDarkMode } = useTheme();
   const [isEditing, setIsEditing] = React.useState(false);
   const [originalData, setOriginalData] = React.useState<UserData[]>([
     { label: "First Name", value: "", key: "firstName" },
@@ -228,20 +234,18 @@ const AccountDetails: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
+      
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account Details</Text>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>Account Details</Text>
+        </View>
       </View>
-
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior="height"
@@ -254,7 +258,7 @@ const AccountDetails: React.FC = () => {
         >
           {/* Profile Picture */}
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: theme.cardBackground }]}>
               <MaterialIcons name="person" size={40} color="#e02323" />
             </View>
             {isEditing && (
@@ -266,7 +270,7 @@ const AccountDetails: React.FC = () => {
 
           {/* Lockout Message */}
           {isLockedOut && (
-            <View style={{ marginBottom: 16, backgroundColor: '#fff3cd', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#ffeeba' }}>
+            <View style={[styles.lockoutMessage, { backgroundColor: '#fff3cd', borderColor: '#ffeeba' }]}>
               <Text style={{ color: '#856404', fontSize: 15, textAlign: 'center' }}>
                 {lockoutCountdown ? lockoutCountdown : lockoutMessage}
               </Text>
@@ -277,17 +281,22 @@ const AccountDetails: React.FC = () => {
           <View style={styles.formContainer}>
             {editableData.map((field) => (
               <View key={field.key} style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>{field.label}</Text>
+                <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>{field.label}</Text>
                 <TextInput
                   style={[
                     styles.input,
+                    { 
+                      backgroundColor: theme.cardBackground,
+                      color: theme.text,
+                      borderColor: theme.border
+                    },
                     !isEditing && styles.inputDisabled
                   ]}
                   value={field.value}
                   onChangeText={(text) => handleInputChange(text, field.key)}
                   editable={isEditing && !isLockedOut}
                   placeholder={undefined}
-                  placeholderTextColor="#666666"
+                  placeholderTextColor={theme.subtitle}
                   keyboardType={field.key === 'phone' ? 'phone-pad' : 'default'}
                   maxLength={field.key === 'phone' ? 11 : undefined}
                 />
@@ -296,13 +305,21 @@ const AccountDetails: React.FC = () => {
             {/* Password display in view mode */}
             {!isEditing && (
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Password</Text>
+                <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>Password</Text>
                 <TextInput
-                  style={[styles.input, styles.inputDisabled]}
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: theme.cardBackground,
+                      color: theme.text,
+                      borderColor: theme.border
+                    },
+                    styles.inputDisabled
+                  ]}
                   value={"******"}
                   editable={false}
                   secureTextEntry
-                  placeholderTextColor="#666666"
+                  placeholderTextColor={theme.subtitle}
                 />
               </View>
             )}
@@ -310,15 +327,23 @@ const AccountDetails: React.FC = () => {
             {isEditing && (
               <>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>Current Password</Text>
+                  <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>Current Password</Text>
                   <View style={styles.passwordInputWrapper}>
                     <TextInput
-                      style={[styles.input, styles.passwordInput]}
+                      style={[
+                        styles.input,
+                        styles.passwordInput,
+                        { 
+                          backgroundColor: theme.cardBackground,
+                          color: theme.text,
+                          borderColor: theme.border
+                        }
+                      ]}
                       value={currentPassword}
                       onChangeText={setCurrentPassword}
                       secureTextEntry={!showCurrentPassword}
                       placeholder="Enter current password"
-                      placeholderTextColor="#666666"
+                      placeholderTextColor={theme.subtitle}
                       editable={!isLockedOut}
                     />
                     <TouchableOpacity
@@ -328,21 +353,29 @@ const AccountDetails: React.FC = () => {
                       <MaterialIcons
                         name={showCurrentPassword ? 'visibility' : 'visibility-off'}
                         size={24}
-                        color="#888"
+                        color={theme.subtitle}
                       />
                     </TouchableOpacity>
                   </View>
                 </View>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputLabel}>New Password</Text>
+                  <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>New Password</Text>
                   <View style={styles.passwordInputWrapper}>
                     <TextInput
-                      style={[styles.input, styles.passwordInput]}
+                      style={[
+                        styles.input,
+                        styles.passwordInput,
+                        { 
+                          backgroundColor: theme.cardBackground,
+                          color: theme.text,
+                          borderColor: theme.border
+                        }
+                      ]}
                       value={newPassword}
                       onChangeText={setNewPassword}
                       secureTextEntry={!showNewPassword}
                       placeholder="Enter a new password"
-                      placeholderTextColor="#666666"
+                      placeholderTextColor={theme.subtitle}
                       editable={!isLockedOut}
                     />
                     <TouchableOpacity
@@ -352,7 +385,7 @@ const AccountDetails: React.FC = () => {
                       <MaterialIcons
                         name={showNewPassword ? 'visibility' : 'visibility-off'}
                         size={24}
-                        color="#888"
+                        color={theme.subtitle}
                       />
                     </TouchableOpacity>
                   </View>
@@ -366,11 +399,18 @@ const AccountDetails: React.FC = () => {
             {isEditing ? (
               <>
                 <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
+                  style={[
+                    styles.button,
+                    styles.cancelButton,
+                    { 
+                      backgroundColor: theme.cardBackground,
+                      borderColor: theme.border
+                    }
+                  ]}
                   onPress={handleCancel}
                   disabled={isLockedOut}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={[styles.cancelButtonText, { color: theme.text }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.saveButton]}
@@ -399,23 +439,25 @@ const AccountDetails: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
+ 
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    paddingBottom: 12,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    gap: 8,
   },
   backButton: {
     padding: 8,
   },
+  headerTitleContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   headerTitle: {
-    marginLeft: 8,
-    fontSize: 20,
-    fontFamily: fonts.poppins.bold,
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },
   scrollView: {
@@ -524,6 +566,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 8,
     zIndex: 2,
+  },
+  lockoutMessage: {
+    marginBottom: 16,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
   },
 });
 

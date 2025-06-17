@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import CustomTabBar from '../../../app/components/CustomTabBar';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface HistoryItem {
   id: number;
@@ -42,6 +43,9 @@ const mockHistoryItems: HistoryItem[] = [
 ];
 
 const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ item, onPress }) => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+  
   const statusColors = {
     pending: '#FFA500',
     resolved: '#4CAF50',
@@ -49,23 +53,28 @@ const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ ite
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
+    <TouchableOpacity 
+      style={[styles.card, { backgroundColor: currentTheme.cardBackground }]} 
+      onPress={onPress}
+    >
       <View style={styles.cardHeader}>
-        <Text style={styles.dateTime}>{item.date} at {item.time}</Text>
+        <Text style={[styles.dateTime, { color: currentTheme.subtitle }]}>{item.date} at {item.time}</Text>
         <View style={[styles.statusBadge, { backgroundColor: statusColors[item.status] }]}>
           <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
         </View>
       </View>
       
       <View style={styles.cardContent}>
-        <Text style={styles.location}>{item.location}</Text>
-        <Text style={styles.crimeType}>{item.crimeType}</Text>
+        <Text style={[styles.location, { color: currentTheme.text }]}>{item.location}</Text>
+        <Text style={[styles.crimeType, { color: currentTheme.subtitle }]}>{item.crimeType}</Text>
       </View>
     </TouchableOpacity>
   );
 };
 
 const History: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const router = useRouter();
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
 
@@ -94,15 +103,15 @@ const History: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Crime Report History</Text>
-          <Text style={styles.subtitle}>View your past crime reports</Text>
+          <Text style={[styles.title, { color: currentTheme.text }]}>Crime Report History</Text>
+          <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>View your past crime reports</Text>
           
           <View style={styles.historyList}>
             {historyItems.map((item) => (
@@ -124,7 +133,6 @@ const History: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
