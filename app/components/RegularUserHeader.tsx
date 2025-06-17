@@ -3,7 +3,7 @@ import { User } from 'lucide-react-native';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { theme, useTheme } from '../context/ThemeContext';
 
 interface RegularUserHeaderProps {
   onProfilePress?: () => void;
@@ -11,8 +11,9 @@ interface RegularUserHeaderProps {
 
 export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderProps) {
   const router = useRouter();
-    const insets = useSafeAreaInsets();
-
+  const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const handleProfilePress = () => {
     if (onProfilePress) {
@@ -23,7 +24,7 @@ export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderP
   };
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: currentTheme.background }]}>
       {/* Logo and Title */}
       <View style={styles.logoContainer}>
         <Image
@@ -33,12 +34,15 @@ export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderP
         />
         <View style={styles.titleContainer}>
           <Text style={styles.title}>ALERTO MNL</Text>
-          <Text style={styles.subtitle}>Response System</Text>
+          <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>Response System</Text>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.profileButton} onPress={handleProfilePress}>
-        <User size={24} color="#000000" />
+      <TouchableOpacity 
+        style={[styles.profileButton, { backgroundColor: currentTheme.cardBackground }]} 
+        onPress={handleProfilePress}
+      >
+        <User size={24} color={currentTheme.text} />
       </TouchableOpacity>
     </View>
   );
@@ -52,7 +56,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 48,
     paddingBottom: 16,
-    backgroundColor: 'white',
   },
   logoContainer: {
     flexDirection: 'row',

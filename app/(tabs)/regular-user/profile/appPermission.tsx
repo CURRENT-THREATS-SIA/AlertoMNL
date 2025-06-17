@@ -3,12 +3,13 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+import { useTheme } from '../../../context/ThemeContext';
 
 
 interface Permission {
@@ -49,6 +50,7 @@ const initialPermissions: Permission[] = [
 const AppPermission: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme, isDarkMode } = useTheme();
   const [permissions, setPermissions] = useState<Permission[]>(initialPermissions);
 
   // Function to check and update permissions
@@ -126,23 +128,23 @@ const AppPermission: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
       
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: theme.surface }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>App Permissions</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>App Permissions</Text>
         </View>
       </View>
 
       {/* Description */}
-      <View style={styles.descriptionContainer}>
-        <MaterialIcons name="security" size={24} color="#666" />
-        <Text style={styles.descriptionText}>
+      <View style={[styles.descriptionContainer, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <MaterialIcons name="security" size={24} color={theme.subtitle} />
+        <Text style={[styles.descriptionText, { color: theme.subtitle }]}>
           These permissions are required for ALERTO MNL to function properly and provide emergency assistance when needed.
         </Text>
       </View>
@@ -150,30 +152,40 @@ const AppPermission: React.FC = () => {
       {/* Permissions List */}
       <ScrollView contentContainerStyle={styles.permissionsList} showsVerticalScrollIndicator={false}>
         {permissions.map((permission, index) => (
-          <View key={index} style={styles.permissionCard}>
+          <View key={index} style={[styles.permissionCard, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.permissionHeader}>
               <View style={styles.permissionInfo}>
-                <View style={[styles.iconContainer, !permission.enabled && styles.iconContainerDisabled]}>
+                <View style={[
+                  styles.iconContainer,
+                  !permission.enabled && styles.iconContainerDisabled,
+                  { backgroundColor: permission.enabled ? '#fff5f5' : theme.background }
+                ]}>
                   <MaterialIcons 
                     name={permission.iconName} 
                     size={24} 
-                    color={permission.enabled ? "#e02323" : "#999"} 
+                    color={permission.enabled ? "#e02323" : theme.subtitle} 
                   />
                 </View>
-                <Text style={[styles.permissionName, !permission.enabled && styles.textDisabled]}>
+                <Text style={[
+                  styles.permissionName,
+                  { color: permission.enabled ? theme.text : theme.subtitle }
+                ]}>
                   {permission.name}
                 </Text>
               </View>
               <Switch
                 value={permission.enabled}
                 onValueChange={() => togglePermission(index)}
-                trackColor={{ false: '#dddddd', true: '#ffd1d1' }}
-                thumbColor={permission.enabled ? '#e02323' : '#999999'}
-                ios_backgroundColor="#dddddd"
+                trackColor={{ false: theme.border, true: '#ffd1d1' }}
+                thumbColor={permission.enabled ? '#e02323' : theme.subtitle}
+                ios_backgroundColor={theme.border}
                 style={styles.switch}
               />
             </View>
-            <Text style={[styles.permissionDescription, !permission.enabled && styles.textDisabled]}>
+            <Text style={[
+              styles.permissionDescription,
+              { color: permission.enabled ? theme.subtitle : theme.subtitle }
+            ]}>
               {permission.description}
             </Text>
           </View>
@@ -186,7 +198,6 @@ const AppPermission: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',

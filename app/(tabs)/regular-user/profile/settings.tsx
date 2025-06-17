@@ -2,9 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import { useRouter } from 'expo-router';
 import React from 'react';
+import { Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { Alert, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { fonts } from '../../../config/fonts';
 import { theme, useTheme } from '../../../context/ThemeContext';
 
@@ -23,6 +23,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [pressedIndex, setPressedIndex] = React.useState<number | null>(null);
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const settingItems: SettingItem[] = [
     {
@@ -56,22 +57,25 @@ export default function SettingsScreen() {
     settingItems.map(item => item.defaultValue || false)
   );
 
-  const currentTheme = isDarkMode ? theme.dark : theme.light;
-
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { 
+        paddingTop: insets.top + 12,
+        backgroundColor: currentTheme.cardBackground,
+        borderBottomColor: currentTheme.border,
+        borderBottomWidth: 1
+      }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Settings</Text>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Settings</Text>
         </View>
       </View>
 
       {/* Settings Items */}
-      <View style={[styles.settingsContainer, { backgroundColor: currentTheme.surface }]}>
+      <View style={[styles.settingsContainer, { backgroundColor: currentTheme.background }]}>
         {settingItems.map((item, index) => (
           <TouchableOpacity
             key={index}
@@ -81,7 +85,7 @@ export default function SettingsScreen() {
             style={[
               styles.settingCard,
               pressedIndex === index && styles.settingCardPressed,
-              { backgroundColor: currentTheme.surface }
+              { backgroundColor: currentTheme.cardBackground }
             ]}
           >
             <View style={styles.settingContent}>
@@ -92,14 +96,14 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.textContainer}>
                 <Text style={[styles.settingLabel, { color: currentTheme.text }]}>{item.label}</Text>
-                <Text style={[styles.settingDescription, { color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#666' }]}>
+                <Text style={[styles.settingDescription, { color: currentTheme.subtitle }]}>
                   {item.description}
                 </Text>
               </View>
               <Switch
-                trackColor={{ false: isDarkMode ? '#404040' : '#D1D1D1', true: '#E02323' }}
+                trackColor={{ false: currentTheme.switchTrack, true: '#E02323' }}
                 thumbColor="#FFFFFF"
-                ios_backgroundColor={isDarkMode ? '#404040' : '#D1D1D1'}
+                ios_backgroundColor={currentTheme.switchTrack}
                 value={switchStates[index]}
                 onValueChange={(newValue) => {
                   if (item.label === 'Add Widget') {
@@ -110,7 +114,6 @@ export default function SettingsScreen() {
                   newStates[index] = newValue;
                   setSwitchStates(newStates);
                   item.onToggle?.(newValue);
-
 
                   if (item.label === 'Keep screen on') {
                     if (newValue) {
@@ -134,12 +137,10 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   header: {
     flexDirection: 'row',
     paddingBottom: 12,
-    backgroundColor: 'white',
     paddingHorizontal: 16,
     gap: 8,
   },
@@ -153,7 +154,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
   },
   settingsContainer: {
     flex: 1,

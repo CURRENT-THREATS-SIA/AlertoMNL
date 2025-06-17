@@ -5,6 +5,7 @@ import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, Vi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../config/fonts';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SettingsMenuItem {
   title: string;
@@ -16,6 +17,7 @@ interface SettingsMenuItem {
 const Profile: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
 
   const settingsMenuItems: SettingsMenuItem[] = [
     { title: "Account Details", icon: "settings", route: "/regular-user/profile/accountDetails/" },
@@ -60,14 +62,19 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { 
+        paddingTop: insets.top + 12,
+        backgroundColor: theme.surface,
+        borderBottomColor: theme.border,
+        borderBottomWidth: 1
+      }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Profile Settings</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Profile Settings</Text>
         </View>
       </View>
 
@@ -78,18 +85,22 @@ const Profile: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <View style={styles.menuCard}>
+          <View style={[styles.menuCard, { backgroundColor: theme.cardBackground }]}>
             {settingsMenuItems.map((item, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.menuItem, index !== settingsMenuItems.length - 1 && styles.menuItemBorder]}
+                style={[
+                  styles.menuItem, 
+                  index !== settingsMenuItems.length - 1 && styles.menuItemBorder,
+                  { borderBottomColor: theme.border }
+                ]}
                 onPress={() => handleMenuPress(item)}
               >
                 <View style={styles.menuItemContent}>
                   <View style={styles.menuItemLeft}>
-                    <Text style={styles.menuItemText}>{item.title}</Text>
+                    <Text style={[styles.menuItemText, { color: theme.text }]}>{item.title}</Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={24} color="#000712" />
+                  <MaterialIcons name="chevron-right" size={24} color={theme.text} />
                 </View>
               </TouchableOpacity>
             ))}
@@ -107,7 +118,6 @@ const Profile: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,

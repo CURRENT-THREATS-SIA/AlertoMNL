@@ -1,7 +1,14 @@
 import { Audio } from 'expo-av';
 import React, { createContext, useCallback, useContext, useState } from 'react';
 
-const AlertContext = createContext(null);
+interface AlertContextType {
+  isAlertVisible: boolean;
+  showAlert: (alertId: number) => Promise<void>;
+  hideAlert: () => Promise<void>;
+  currentAlertId: number | null;
+}
+
+const AlertContext = createContext<AlertContextType | null>(null);
 
 export const AlertProvider = ({ children }: any) => {
   const [isAlertVisible, setIsAlertVisible] = useState(false);

@@ -5,12 +5,14 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+import { useTheme } from '../../../context/ThemeContext';
 
 import { useVoiceRecords, VoiceRecord } from '../../../context/VoiceRecordContext';
 
 const VoiceRecordItem: React.FC<{ record: VoiceRecord }> = ({ record }) => {
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const { theme } = useTheme();
 
   const playSound = async () => {
     try {
@@ -46,15 +48,15 @@ const VoiceRecordItem: React.FC<{ record: VoiceRecord }> = ({ record }) => {
   }, [sound]);
 
   return (
-    <View style={styles.recordItemContainer}>
-      <View style={styles.recordItem}>
+    <View style={[styles.recordItemContainer, { backgroundColor: theme.cardBackground }]}>
+      <View style={[styles.recordItem, { backgroundColor: theme.cardBackground }]}>
         <View style={styles.recordInfo}>
-          <Text style={styles.recordTitle}>{record.title}</Text>
+          <Text style={[styles.recordTitle, { color: theme.text }]}>{record.title}</Text>
           <View style={styles.recordMeta}>
-            <MaterialIcons name="access-time" size={12} color="#666" style={styles.metaIcon} />
-            <Text style={styles.recordDuration}>{record.duration}</Text>
-            <MaterialIcons name="calendar-today" size={12} color="#666" style={styles.metaIcon} />
-            <Text style={styles.recordDate}>{record.date}</Text>
+            <MaterialIcons name="access-time" size={12} color={theme.subtitle} style={styles.metaIcon} />
+            <Text style={[styles.recordDuration, { color: theme.subtitle }]}>{record.duration}</Text>
+            <MaterialIcons name="calendar-today" size={12} color={theme.subtitle} style={styles.metaIcon} />
+            <Text style={[styles.recordDate, { color: theme.subtitle }]}>{record.date}</Text>
           </View>
         </View>
         <TouchableOpacity style={styles.playButton} onPress={playSound}>
@@ -75,16 +77,17 @@ const VoiceRecords: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { records } = useVoiceRecords();
+  const { theme, isDarkMode } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: theme.surface }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Voice Records</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Voice Records</Text>
         </View>
       </View>
       
@@ -96,8 +99,8 @@ const VoiceRecords: React.FC = () => {
         <View style={styles.content}>
           {records.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialIcons name="mic-none" size={48} color="#666" />
-              <Text style={styles.emptyStateText}>No recordings yet</Text>
+              <MaterialIcons name="mic-none" size={48} color={theme.subtitle} />
+              <Text style={[styles.emptyStateText, { color: theme.subtitle }]}>No recordings yet</Text>
             </View>
           ) : (
             records.map((record) => (
@@ -113,7 +116,6 @@ const VoiceRecords: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',

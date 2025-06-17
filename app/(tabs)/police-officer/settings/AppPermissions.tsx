@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as MediaLibrary from 'expo-media-library';
 import * as SMS from 'expo-sms';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { fonts } from '../../../config/fonts';
+import { theme, useTheme } from '../../../context/ThemeContext';
 
 
 
@@ -63,6 +64,8 @@ const initialPermissions: Permission[] = [
 const AppPermissions: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const [permissions, setPermissions] = useState<Permission[]>(initialPermissions);
 
   // Function to check and update permissions
@@ -140,41 +143,49 @@ const AppPermissions: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={currentTheme.background} />
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: currentTheme.surface }]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Feather name="arrow-left" size={24} color="#000" />
+          <Feather name="arrow-left" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Profile Settings</Text>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>App Permissions</Text>
         </View>
       </View>
       {/* Description */}
-      <View style={styles.descriptionContainer}>
-        <Feather name="shield" size={24} color="#666" />
-        <Text style={styles.descriptionText}>
+      <View style={[styles.descriptionContainer, { backgroundColor: currentTheme.surface, borderBottomColor: currentTheme.cardBorder }]}>
+        <Feather name="shield" size={24} color={currentTheme.subtitle} />
+        <Text style={[styles.descriptionText, { color: currentTheme.subtitle }]}>
           These permissions are required for ALERTO MNL to function properly and enable effective emergency response operations.
         </Text>
       </View>
       {/* Permissions List */}
       <ScrollView contentContainerStyle={styles.permissionsList} showsVerticalScrollIndicator={false}>
         {permissions.map((permission, index) => (
-          <View key={index} style={styles.permissionCard}>
+          <View key={index} style={[styles.permissionCard, { backgroundColor: currentTheme.cardBackground }]}>
             <View style={styles.permissionHeader}>
               <View style={styles.permissionInfo}>
-                <View style={[styles.iconContainer, !permission.enabled && styles.iconContainerDisabled]}>
+                <View style={[
+                  styles.iconContainer, 
+                  !permission.enabled && styles.iconContainerDisabled,
+                  { backgroundColor: permission.enabled ? '#fff5f5' : '#f5f5f5' }
+                ]}>
                   <Feather 
                     name={permission.iconName} 
                     size={24} 
-                    color={permission.enabled ? "#e02323" : "#999"} 
+                    color={permission.enabled ? '#E02323' : '#999'} 
                   />
                 </View>
-                <Text style={[styles.permissionName, !permission.enabled && styles.textDisabled]}>
+                <Text style={[
+                  styles.permissionName, 
+                  { color: currentTheme.text },
+                  !permission.enabled && styles.textDisabled
+                ]}>
                   {permission.name}
                 </Text>
               </View>
@@ -182,12 +193,16 @@ const AppPermissions: React.FC = () => {
                 value={permission.enabled}
                 onValueChange={() => togglePermission(index)}
                 trackColor={{ false: '#dddddd', true: '#ffd1d1' }}
-                thumbColor={permission.enabled ? '#e02323' : '#999999'}
+                thumbColor={permission.enabled ? '#E02323' : '#999999'}
                 ios_backgroundColor="#dddddd"
                 style={styles.switch}
               />
             </View>
-            <Text style={[styles.permissionDescription, !permission.enabled && styles.textDisabled]}>
+            <Text style={[
+              styles.permissionDescription, 
+              { color: currentTheme.subtitle },
+              !permission.enabled && styles.textDisabled
+            ]}>
               {permission.description}
             </Text>
           </View>
@@ -200,13 +215,10 @@ const AppPermissions: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
- 
   header: {
     flexDirection: 'row',
     paddingBottom: 12,
-    backgroundColor: 'white',
     paddingHorizontal: 16,
     gap: 8,
   },
@@ -220,22 +232,18 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
   },
   descriptionContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 16,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
   },
   descriptionText: {
     flex: 1,
     fontFamily: fonts.poppins.regular,
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
   },
   permissionsList: {
@@ -243,7 +251,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   permissionCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     gap: 8,
@@ -270,26 +277,23 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff5f5',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconContainerDisabled: {
-    backgroundColor: '#f5f5f5',
+    opacity: 0.5,
   },
   permissionName: {
     fontFamily: fonts.poppins.semiBold,
     fontSize: 16,
-    color: '#212121',
   },
   permissionDescription: {
     fontFamily: fonts.poppins.regular,
     fontSize: 14,
-    color: '#666666',
     lineHeight: 20,
   },
   textDisabled: {
-    color: '#999999',
+    opacity: 0.5,
   },
   switch: {
     transform: [{ scale: 0.9 }],

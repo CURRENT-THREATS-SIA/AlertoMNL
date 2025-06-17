@@ -4,16 +4,17 @@ import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface FormField {
   id: string;
@@ -52,6 +53,8 @@ const relationshipOptions = [
 
 const AddContacts: React.FC = () => {
   const router = useRouter();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -92,7 +95,7 @@ const AddContacts: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
@@ -100,11 +103,11 @@ const AddContacts: React.FC = () => {
       >
         <View style={styles.content}>
           {/* Form Title */}
-          <Text style={styles.title}>Add Number</Text>
+          <Text style={[styles.title, { color: currentTheme.subtitle }]}>Add Number</Text>
 
           {/* User Avatar */}
           <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
+            <View style={[styles.avatar, { backgroundColor: isDarkMode ? 'rgba(230,60,60,0.3)' : '#f66e6e9c' }]}>
               <User size={41} color="#e33c3c" />
             </View>
           </View>
@@ -113,58 +116,68 @@ const AddContacts: React.FC = () => {
           <View style={styles.form}>
             <View style={styles.fieldContainer}>
               <View style={styles.labelContainer}>
-                <Text style={styles.label}>Name</Text>
+                <Text style={[styles.label, { color: currentTheme.text }]}>Name</Text>
                 <Text style={styles.required}>*</Text>
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: currentTheme.cardBackground,
+                  color: currentTheme.text
+                }]}
                 placeholder="Enter full name of contact"
-                placeholderTextColor="#7e7e7e"
+                placeholderTextColor={currentTheme.subtitle}
                 value={name}
                 onChangeText={setName}
               />
             </View>
             <View style={styles.fieldContainer}>
               <View style={styles.labelContainer}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={[styles.label, { color: currentTheme.text }]}>Phone Number</Text>
                 <Text style={styles.required}>*</Text>
               </View>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { 
+                  backgroundColor: currentTheme.cardBackground,
+                  color: currentTheme.text
+                }]}
                 placeholder="Enter phone number of contact"
-                placeholderTextColor="#7e7e7e"
+                placeholderTextColor={currentTheme.subtitle}
                 value={phone}
-                onChangeText={text => setPhone(text.replace(/[^0-9]/g, ''))} // Only numbers
+                onChangeText={text => setPhone(text.replace(/[^0-9]/g, ''))}
                 keyboardType="number-pad"
-                maxLength={11} // Prevents typing more than 11 digits
+                maxLength={11}
               />
             </View>
             <View style={styles.fieldContainer}>
               <View style={styles.labelContainer}>
-                <Text style={styles.label}>Relationship</Text>
+                <Text style={[styles.label, { color: currentTheme.text }]}>Relationship</Text>
                 <Text style={styles.required}>*</Text>
               </View>
-              <View style={{ backgroundColor: 'white', borderRadius: 10, width: '100%' }}>
+              <View style={[styles.pickerContainer, { backgroundColor: currentTheme.cardBackground }]}>
                 <Picker
                   selectedValue={relationship}
                   onValueChange={(itemValue: string) => {
                     setRelationship(itemValue);
                     if (itemValue !== 'Other') setCustomRelationship('');
                   }}
-                  style={styles.picker}
+                  style={[styles.picker, { color: currentTheme.text }]}
                   dropdownIconColor="#e33c3c"
                 >
-                  <Picker.Item label="Select Relationship" value="" />
+                  <Picker.Item label="Select Relationship" value="" color={currentTheme.text} />
                   {relationshipOptions.map(option => (
-                    <Picker.Item key={option} label={option} value={option} />
+                    <Picker.Item key={option} label={option} value={option} color={currentTheme.text} />
                   ))}
                 </Picker>
               </View>
               {relationship === 'Other' && (
                 <TextInput
-                  style={[styles.input, { marginTop: 8 }]}
+                  style={[styles.input, { 
+                    marginTop: 8,
+                    backgroundColor: currentTheme.cardBackground,
+                    color: currentTheme.text
+                  }]}
                   placeholder="Please specify"
-                  placeholderTextColor="#7e7e7e"
+                  placeholderTextColor={currentTheme.subtitle}
                   value={customRelationship}
                   onChangeText={setCustomRelationship}
                 />
@@ -193,7 +206,6 @@ const AddContacts: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
@@ -208,7 +220,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontFamily: fonts.poppins.semiBold,
-    color: '#7d7d7d',
   },
   avatarContainer: {
     alignItems: 'center',
@@ -233,7 +244,6 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fonts.poppins.semiBold,
     fontSize: 12,
-    color: '#000712',
   },
   required: {
     fontFamily: fonts.poppins.semiBold,
@@ -249,11 +259,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#000000',
   },
-  picker: {
-    backgroundColor: 'white',
+  pickerContainer: {
     borderRadius: 10,
-    paddingHorizontal: 12,
-    color: '#000000',
+    overflow: 'hidden',
+  },
+  picker: {
     width: '100%',
   },
   buttonsContainer: {

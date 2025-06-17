@@ -4,6 +4,7 @@ import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../app/config/fonts';
+import { theme, useTheme } from '../app/context/ThemeContext';
 
 type NavItem = {
   icon: React.ReactNode;
@@ -18,6 +19,8 @@ interface NavBottomBarProps {
 const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const navItems: NavItem[] = [
     { 
@@ -47,7 +50,14 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
   };
 
   return (
-    <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
+    <View style={[
+      styles.bottomNav, 
+      { 
+        paddingBottom: insets.bottom + 8,
+        backgroundColor: currentTheme.surface,
+        borderTopColor: currentTheme.cardBorder
+      }
+    ]}>
       <View style={styles.bottomNavRow}>
         {navItems.map((item, idx) => (
           <TouchableOpacity 
@@ -73,11 +83,15 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
           >
             <View style={[
               styles.bottomNavIconContainer,
+              { backgroundColor: item.active ? 'rgba(224, 35, 35, 0.1)' : 'transparent' }
             ]}>
               {item.icon}
             </View>
             <Text 
-              style={item.active ? styles.bottomNavLabelActive : styles.bottomNavLabelInactive}
+              style={[
+                item.active ? styles.bottomNavLabelActive : styles.bottomNavLabelInactive,
+                { color: item.active ? "#E02323" : "#A4A4A4" }
+              ]}
               numberOfLines={1}
             >
               {item.label}
@@ -92,7 +106,6 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
 const styles = StyleSheet.create({
   bottomNav: {
     width: '100%',
-    backgroundColor: '#fff',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingTop: 12,
@@ -101,6 +114,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    borderTopWidth: 1,
     ...Platform.select({
       android: {
         elevation: 8,
@@ -131,13 +145,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bottomNavLabelActive: {
-    color: '#E02323',
     fontSize: 12,
     fontFamily: fonts.poppins.medium,
     textAlign: 'center',
   },
   bottomNavLabelInactive: {
-    color: '#A4A4A4',
     fontSize: 12,
     fontFamily: fonts.poppins.regular,
     textAlign: 'center',
@@ -145,3 +157,4 @@ const styles = StyleSheet.create({
 });
 
 export default NavBottomBar;
+

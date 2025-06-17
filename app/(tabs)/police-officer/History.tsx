@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface HistoryItem {
   history_id: number;
@@ -15,6 +16,10 @@ interface HistoryItem {
   f_name: string;
   l_name: string;
   resolved_at: string;
+  date: string;
+  time: string;
+  status: 'pending' | 'resolved' | 'in-progress';
+  crimeType: string;
 }
 
 const ChevronRightIcon = () => (
@@ -24,28 +29,36 @@ const ChevronRightIcon = () => (
 );
 
 const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ item, onPress }) => {
-  const formatDateTime = (dateTimeString: string) => {
-    if (!dateTimeString) return 'Invalid Date';
-    const date = new Date(dateTimeString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
-    const day = date.getDate();
-    const month = date.toLocaleString('en-US', { month: 'long' });
-    const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-    return `${month} ${day}, ${time}`;
+  const statusColors = {
+    pending: currentTheme.statusPending,
+    resolved: currentTheme.statusResolved,
+    'in-progress': currentTheme.statusInProgress
   };
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <View style={styles.cardContent}>
-        <Text style={styles.location}>{item.location || 'Unknown Location'}</Text>
-        <Text style={styles.userName}>{`${item.f_name || 'User'} ${item.l_name || ''}`.trim()}</Text>
-        <Text style={styles.dateTime}>{formatDateTime(item.resolved_at)}</Text>
+    <TouchableOpacity 
+      style={[
+        styles.card, 
+        { 
+          backgroundColor: currentTheme.cardBackground,
+          borderColor: currentTheme.cardBorder 
+        }
+      ]} 
+      onPress={onPress}
+    >
+      <View style={styles.cardHeader}>
+        <Text style={[styles.dateTime, { color: currentTheme.text }]}>{item.date} at {item.time}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusColors[item.status] }]}>
+          <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+        </View>
       </View>
-      <View style={styles.rightContainer}>
-        <Text style={styles.alertIdText}>ALERT #{item.alert_id}</Text>
-        <ChevronRightIcon />
+      
+      <View style={styles.cardContent}>
+        <Text style={[styles.location, { color: currentTheme.text }]}>{item.location}</Text>
+        <Text style={[styles.crimeType, { color: currentTheme.subtitle }]}>{item.crimeType}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -54,7 +67,9 @@ const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ ite
 const History: React.FC = () => {
   const router = useRouter();
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -88,35 +103,26 @@ const History: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <Header />
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollViewContent, { paddingBottom: 120 }]}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollViewContent}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>Crime Report History</Text>
-          <Text style={styles.subtitle}>Tap to view more details</Text>
-
-          {isLoading ? (
-            <ActivityIndicator style={{ marginTop: 30 }} size="large" color="#E02323" />
-          ) : (
-            <View style={styles.historyList}>
-              {historyItems.length > 0 ? (
-                historyItems.map((item) => (
-                  <HistoryCard
-                    key={item.history_id}
-                    item={item}
-                    onPress={() => handleHistoryItemPress(item.history_id)}
-                  />
-                ))
-              ) : (
-                <Text style={styles.noHistoryText}>No history records found.</Text>
-              )}
-            </View>
-          )}
+          <Text style={[styles.title, { color: currentTheme.text }]}>Crime Report History</Text>
+          <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>View your past crime reports</Text>
+          
+          <View style={styles.historyList}>
+            {historyItems.map((item) => (
+              <HistoryCard 
+                key={item.history_id} 
+                item={item}
+                onPress={() => handleHistoryItemPress(item.history_id)}
+              />
+            ))}
+          </View>
         </View>
       </ScrollView>
 
@@ -128,41 +134,61 @@ const History: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f4',
   },
   scrollView: {
     flex: 1,
   },
   scrollViewContent: {
-    padding: 20,
+    flexGrow: 1,
   },
-  content: {},
+  content: {
+    padding: 16,
+  },
   title: {
     fontSize: 24,
-    fontFamily: fonts.poppins.bold,
-    color: '#212121',
+    fontFamily: fonts.poppins.semiBold,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    color: '#666',
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  historyList: {},
+  historyList: {
+    gap: 12,
+  },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+  },
+  dateTime: {
+    fontSize: 14,
+    fontFamily: fonts.poppins.medium,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: fonts.poppins.medium,
   },
   cardContent: {
     gap: 2,
@@ -182,26 +208,14 @@ const styles = StyleSheet.create({
   location: {
     fontSize: 16,
     fontFamily: fonts.poppins.semiBold,
-    color: '#E02323',
-    marginBottom: 2,
   },
   userName: {
     fontSize: 14,
     fontFamily: fonts.poppins.regular,
-    color: '#666',
-    marginBottom: 4,
   },
-  dateTime: {
-    fontSize: 12,
+  crimeType: {
+    fontSize: 14,
     fontFamily: fonts.poppins.regular,
-    color: '#999',
-  },
-  noHistoryText: {
-    textAlign: 'center',
-    marginTop: 40,
-    fontSize: 16,
-    fontFamily: fonts.poppins.regular,
-    color: '#666',
   },
 });
 

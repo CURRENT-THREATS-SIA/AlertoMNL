@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
 import { crimeData, StationName, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 // NOTE: All code related to expo-notifications, pop-up modals, and listeners
 // has been removed to fix the error in Expo Go.
 
@@ -59,6 +61,9 @@ const policeStations = [
 
 const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const isSmallDevice = width < 375;
   const mapHeight = Math.min(height * 0.35, 400);
   const statsCardWidth = (width - 40 - 16) / 3;
@@ -171,7 +176,7 @@ const CrimeMap: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.rootBg}>
+    <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <Header />
       
       <ScrollView 
@@ -188,22 +193,22 @@ const CrimeMap: React.FC = () => {
               selectedStation={selectedStation}
             />
             {/* Severity Legend */}
-            <View style={styles.legendContainer}>
+            <View style={[styles.legendContainer, { backgroundColor: currentTheme.surface }]}>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-                <Text style={styles.legendLabel}>No reported cases</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>No reported cases</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-                <Text style={styles.legendLabel}>Low severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low severity</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
-                <Text style={styles.legendLabel}>Medium severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium severity</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-                <Text style={styles.legendLabel}>High severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High severity</Text>
               </View>
             </View>
           </View>
@@ -223,6 +228,11 @@ const CrimeMap: React.FC = () => {
                 crimeTypes.find(ct => ct.value === selectedCrimeType)?.label || selectedCrimeType : 
                 'Select Crime Type'}
             </Text>
+            <MaterialIcons
+              name="arrow-drop-down"    
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -239,6 +249,11 @@ const CrimeMap: React.FC = () => {
                 policeStations.find(ps => ps.value === selectedStation)?.label : 
                 'Select Station'}
             </Text>
+            <MaterialIcons
+              name="arrow-drop-down"    
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
 
           {/* Crime Type Modal */}
@@ -249,18 +264,18 @@ const CrimeMap: React.FC = () => {
             onRequestClose={() => setShowCrimeTypeModal(false)}
           >
             <TouchableOpacity 
-              style={styles.modalOverlay} 
+              style={[styles.modalOverlay, { backgroundColor: currentTheme.modalOverlay }]} 
               activeOpacity={1} 
               onPress={() => setShowCrimeTypeModal(false)}
             >
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Crime Type</Text>
+              <View style={[styles.modalContent, { backgroundColor: currentTheme.modalBackground }]}>
+                <View style={[styles.modalHeader, { borderBottomColor: currentTheme.cardBorder }]}>
+                  <Text style={[styles.modalTitle, { color: currentTheme.text }]}>Select Crime Type</Text>
                   <TouchableOpacity 
                     onPress={() => setShowCrimeTypeModal(false)}
                     style={styles.closeButton}
                   >
-                    <MaterialIcons name="close" size={24} color="#000" />
+                    <MaterialIcons name="close" size={24} color={currentTheme.text} />
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
@@ -269,12 +284,14 @@ const CrimeMap: React.FC = () => {
                       key={type.id}
                       style={[
                         styles.modalOption,
+                        { borderBottomColor: currentTheme.cardBorder },
                         selectedCrimeType === type.value && styles.modalOptionSelected
                       ]}
                       onPress={() => handleCrimeTypeSelect(type.value)}
                     >
                       <Text style={[
                         styles.modalOptionText,
+                        { color: currentTheme.text },
                         selectedCrimeType === type.value && styles.modalOptionTextSelected
                       ]}>
                         {type.label}
@@ -294,18 +311,18 @@ const CrimeMap: React.FC = () => {
             onRequestClose={() => setShowStationModal(false)}
           >
             <TouchableOpacity 
-              style={styles.modalOverlay} 
+              style={[styles.modalOverlay, { backgroundColor: currentTheme.modalOverlay }]} 
               activeOpacity={1} 
               onPress={() => setShowStationModal(false)}
             >
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Police Station</Text>
+              <View style={[styles.modalContent, { backgroundColor: currentTheme.modalBackground }]}>
+                <View style={[styles.modalHeader, { borderBottomColor: currentTheme.cardBorder }]}>
+                  <Text style={[styles.modalTitle, { color: currentTheme.text }]}>Select Police Station</Text>
                   <TouchableOpacity 
                     onPress={() => setShowStationModal(false)}
                     style={styles.closeButton}
                   >
-                    <MaterialIcons name="close" size={24} color="#000" />
+                    <MaterialIcons name="close" size={24} color={currentTheme.text} />
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
@@ -314,12 +331,14 @@ const CrimeMap: React.FC = () => {
                       key={station.id}
                       style={[
                         styles.modalOption,
+                        { borderBottomColor: currentTheme.cardBorder },
                         selectedStation === station.value && styles.modalOptionSelected
                       ]}
                       onPress={() => handleStationSelect(station.value as StationName)}
                     >
                       <Text style={[
                         styles.modalOptionText,
+                        { color: currentTheme.text },
                         selectedStation === station.value && styles.modalOptionTextSelected
                       ]}>
                         {station.label}
@@ -338,14 +357,17 @@ const CrimeMap: React.FC = () => {
                 key={index} 
                 style={[
                   styles.statCard,
-                  { width: width / 3 - 16 }
+                  { 
+                    width: width / 3 - 16,
+                    backgroundColor: currentTheme.cardBackground
+                  }
                 ]}
               >
                 <Text 
                   style={[
                     styles.statTitle, 
                     styles.defaultFont,
-                    isSmallDevice && { fontSize: 9 }
+                    isSmallDevice && { fontSize: 12 }
                   ]}
                   numberOfLines={2}
                 >
@@ -358,7 +380,8 @@ const CrimeMap: React.FC = () => {
                       style={[
                         styles.statLocation, 
                         styles.defaultFont,
-                        isSmallDevice && { fontSize: 11 }
+                        isSmallDevice && { fontSize: 11 },
+                        { color: currentTheme.text }
                       ]}
                     >
                       {stat.location}
@@ -367,7 +390,8 @@ const CrimeMap: React.FC = () => {
                       style={[
                         styles.statType, 
                         styles.defaultFont,
-                        isSmallDevice && { fontSize: 10 }
+                        isSmallDevice && { fontSize: 9 },
+                        { color: currentTheme.subtitle }
                       ]}
                     >
                       {stat.type}
@@ -379,7 +403,8 @@ const CrimeMap: React.FC = () => {
                   style={[
                     styles.statValue, 
                     styles.defaultFont,
-                    isSmallDevice && { fontSize: 16 }
+                    isSmallDevice && { fontSize: 16 },
+                    { color: currentTheme.text }
                   ]}
                 >
                   {stat.value}
@@ -399,7 +424,6 @@ const CrimeMap: React.FC = () => {
 const styles = StyleSheet.create({
   rootBg: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   scrollView: {
     flex: 1,
@@ -419,24 +443,22 @@ const styles = StyleSheet.create({
   selectorBtn: {
     backgroundColor: '#E02323',
     borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',       // ← row layout
+    justifyContent: 'space-between',
   },
   selectorBtnText: {
     color: '#fff',
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    textAlign: 'center',
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    gap: 8,
+    marginTop: 16,
   },
   statCard: {
-    backgroundColor: '#FFD8D8',
     borderRadius: 8,
     padding: 12,
     shadowColor: '#000',
@@ -447,34 +469,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    alignItems: 'center',
   },
   statTitle: {
     fontSize: 12,
-    color: '#666',
+    color: '#E02323',
     marginBottom: 4,
     fontFamily: fonts.poppins.semiBold,
-    textAlign: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    color: '#212121',
-    fontFamily: fonts.poppins.bold,
-    textAlign: 'center',
+    fontWeight: '700',
   },
   statLocation: {
     fontSize: 14,
-    color: '#212121',
     marginBottom: 2,
     fontFamily: fonts.poppins.regular,
-    textAlign: 'center',
   },
   statType: {
     fontSize: 12,
-    color: '#666',
     marginBottom: 4,
     fontFamily: fonts.poppins.bold,
-    textAlign: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontFamily: fonts.poppins.bold,
+    fontWeight: '900',
   },
   bottomNav: {
     width: '100%',
@@ -560,11 +576,9 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '80%',
@@ -575,12 +589,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
   modalTitle: {
     fontSize: 18,
     fontFamily: fonts.poppins.medium,
-    color: '#212121',
+    color: '#E02323',
   },
   closeButton: {
     padding: 4,
@@ -588,18 +601,16 @@ const styles = StyleSheet.create({
   modalOption: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
   },
   modalOptionSelected: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#FFE5E5',
   },
   modalOptionText: {
     fontSize: 16,
-    color: '#212121',
     fontFamily: fonts.poppins.regular,
   },
   modalOptionTextSelected: {
-    color: '#007AFF',
+    color: '#E02323',
     fontFamily: fonts.poppins.medium,
   },
   statsContainer: {
@@ -612,7 +623,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 10,
     bottom: 10,
-    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 8,
     padding: 8,
     zIndex: 10,
@@ -631,7 +641,6 @@ const styles = StyleSheet.create({
   },
   legendLabel: {
     fontSize: 12,
-    color: '#333',
     fontFamily: fonts.poppins.regular,
   },
 });

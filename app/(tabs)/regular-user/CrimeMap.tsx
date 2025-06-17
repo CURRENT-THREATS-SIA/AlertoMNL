@@ -16,6 +16,7 @@ import CustomTabBar from '../../../app/components/CustomTabBar';
 import { crimeData, StationName, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 interface CrimeFeature extends Feature<Point> {
   properties: {
@@ -79,6 +80,8 @@ const severityLevels: SeverityLevel[] = [
 ];
 
 const CrimeMap: React.FC = () => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
   const containerPadding = isSmallDevice ? 12 : 1;
@@ -160,11 +163,11 @@ const CrimeMap: React.FC = () => {
 
     setCrimeStats([
       { 
-        title: 'Average Index Rate', 
+        title: 'Index Total Rate', 
         value: `${avgIndexRate}%`
       },
       { 
-        title: 'Average Non-index Rate', 
+        title: 'Non-index Total Rate', 
         value: `${avgNonIndexRate}%`
       },
       { 
@@ -174,6 +177,7 @@ const CrimeMap: React.FC = () => {
         value: highestCrime.count.toString() 
       },
     ]);
+
   };
 
   // Recalculate stats when filters change
@@ -213,7 +217,7 @@ const CrimeMap: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.rootBg}>
+    <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollViewContent}
@@ -227,23 +231,22 @@ const CrimeMap: React.FC = () => {
               userType="regular"
               data={crimeData}
             />
-            {/* Severity Legend */}
-            <View style={styles.legendContainer}>
+            <View style={[styles.legendContainer, { backgroundColor: currentTheme.cardBackground }]}>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-                <Text style={styles.legendLabel}>No reported cases</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>No reported cases</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-                <Text style={styles.legendLabel}>Low severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low severity</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
-                <Text style={styles.legendLabel}>Medium severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium severity</Text>
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-                <Text style={styles.legendLabel}>High severity</Text>
+                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High severity</Text>
               </View>
             </View>
           </View>
@@ -264,6 +267,11 @@ const CrimeMap: React.FC = () => {
                 crimeTypes.find(ct => ct.value === selectedCrimeType)?.label || selectedCrimeType : 
                 'Select Crime Type'}
             </Text>
+            <MaterialIcons
+              name="arrow-drop-down"    
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -281,6 +289,11 @@ const CrimeMap: React.FC = () => {
                 policeStations.find(ps => ps.value === selectedStation)?.label : 
                 'Select Station'}
             </Text>
+            <MaterialIcons
+              name="arrow-drop-down"    
+              size={24}
+              color="#fff"
+            />
           </TouchableOpacity>
 
           {/* Crime Type Modal */}
@@ -379,14 +392,17 @@ const CrimeMap: React.FC = () => {
                 key={index} 
                 style={[
                   styles.statCard,
-                  { width: width / 3 - 16 }
+                  { 
+                    width: width / 3 - 16,
+                    backgroundColor: currentTheme.cardBackground 
+                  }
                 ]}
               >
                 <Text 
                   style={[
                     styles.statTitle, 
                     styles.defaultFont,
-                    isSmallDevice && { fontSize: 9 }
+                    isSmallDevice && { fontSize: 12 }
                   ]}
                   numberOfLines={2}
                 >
@@ -399,7 +415,8 @@ const CrimeMap: React.FC = () => {
                       style={[
                         styles.statLocation, 
                         styles.defaultFont,
-                        isSmallDevice && { fontSize: 11 }
+                        isSmallDevice && { fontSize: 11 },
+                        { color: currentTheme.text }
                       ]}
                     >
                       {stat.location}
@@ -408,7 +425,8 @@ const CrimeMap: React.FC = () => {
                       style={[
                         styles.statType, 
                         styles.defaultFont,
-                        isSmallDevice && { fontSize: 10 }
+                        isSmallDevice && { fontSize: 9 },
+                        { color: currentTheme.subtitle }
                       ]}
                     >
                       {stat.type}
@@ -420,7 +438,8 @@ const CrimeMap: React.FC = () => {
                   style={[
                     styles.statValue, 
                     styles.defaultFont,
-                    isSmallDevice && { fontSize: 16 }
+                    isSmallDevice && { fontSize: 16 },
+                    { color: currentTheme.text }
                   ]}
                 >
                   {stat.value}
@@ -439,7 +458,6 @@ const CrimeMap: React.FC = () => {
 const styles = StyleSheet.create({
   rootBg: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollView: {
     flex: 1,
@@ -460,15 +478,15 @@ const styles = StyleSheet.create({
   selectorBtn: {
     backgroundColor: '#E02323',
     borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',       // ← row layout
+    justifyContent: 'space-between',
   },
   selectorBtnText: {
     color: '#fff',
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -493,7 +511,8 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontFamily: fonts.poppins.semiBold,
-    color: '#000',
+    color: '#E02323',
+
   },
   closeButton: {
     padding: 4,
@@ -521,7 +540,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   statCard: {
-    backgroundColor: '#FFD8D8',
+    backgroundColor:'#FEF3F2' ,
     borderRadius: 8,
     padding: 12,
     shadowColor: '#000',
@@ -535,9 +554,10 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 12,
-    color: '#666',
+    color: '#E02323',
     marginBottom: 4,
     fontFamily: fonts.poppins.semiBold,
+    fontWeight: '700',
   },
   statLocation: {
     fontSize: 14,
@@ -556,6 +576,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#212121',
     fontFamily: fonts.poppins.bold,
+    fontWeight: 900,
   },
   defaultFont: {
     fontFamily: fonts.poppins.regular,

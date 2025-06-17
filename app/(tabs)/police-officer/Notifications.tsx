@@ -18,6 +18,7 @@ import {
 // --- PATHS CORRECTED BELOW ---
 import { fonts } from '../../config/fonts';
 import { useAlert } from '../../context/AlertContext';
+import { theme, useTheme } from '../../context/ThemeContext';
 
 // --- API URLs ---
 const API_ACCEPT_SOS_URL = 'http://mnl911.atwebpages.com/accept-sos-alert.php'; 
@@ -31,20 +32,23 @@ interface AlertNotification {
 }
 
 const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId: number) => void }> = ({ notification, onAccept }) => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
       <Ionicons name="alert-circle" size={48} color="#e02323" style={{ marginBottom: 12 }} />
       <Text style={styles.title}>Someone needs your help!</Text>
       
       <View style={styles.detailsContainer}>
-        <Text style={styles.detailText}>
-          <Text style={styles.detailLabel}>From:</Text> {notification.user_full_name}
+        <Text style={[styles.detailText, { color: currentTheme.text }]}>
+          <Text style={[styles.detailLabel, { color: currentTheme.text }]}>From:</Text> {notification.user_full_name}
         </Text>
-        <Text style={styles.detailText}>
-          <Text style={styles.detailLabel}>Alert ID:</Text> {notification.alert_id}
+        <Text style={[styles.detailText, { color: currentTheme.text }]}>
+          <Text style={[styles.detailLabel, { color: currentTheme.text }]}>Alert ID:</Text> {notification.alert_id}
         </Text>
-        <Text style={styles.detailText}>
-          <Text style={styles.detailLabel}>Location:</Text> {notification.location}
+        <Text style={[styles.detailText, { color: currentTheme.text }]}>
+          <Text style={[styles.detailLabel, { color: currentTheme.text }]}>Location:</Text> {notification.location}
         </Text>
       </View>
 
@@ -61,7 +65,11 @@ const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId:
 // The main screen component
 const Notifications: React.FC = () => {
   const router = useRouter();
-  const { showAlert } = useAlert(); 
+  const alertContext = useAlert();
+  if (!alertContext) throw new Error('AlertContext must be used within AlertProvider');
+  const { showAlert } = alertContext;
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
   const [notifications, setNotifications] = React.useState<AlertNotification[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -91,7 +99,7 @@ const Notifications: React.FC = () => {
           
           if (hasNewAlert && prevNotifications.length > 0) {
             playAlertSound();
-            showAlert();
+            showAlert(data.notifications[0].alert_id);
           }
           
           return data.notifications;
@@ -148,13 +156,13 @@ const Notifications: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={currentTheme.background} />
+      <View style={[styles.header, { backgroundColor: currentTheme.cardBackground, borderBottomColor: currentTheme.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#424b5a" />
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pending Alerts</Text>
+        <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Pending Alerts</Text>
       </View>
       <ScrollView 
         style={styles.scrollView} 
@@ -166,8 +174,8 @@ const Notifications: React.FC = () => {
           <ActivityIndicator size="large" color="#e02323" style={{ marginTop: 50 }} />
         ) : notifications.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No pending alerts at the moment.</Text>
-            <Text style={styles.pullDownText}>Pull down to refresh.</Text>
+            <Text style={[styles.emptyText, { color: currentTheme.subtitle }]}>No pending alerts at the moment.</Text>
+            <Text style={[styles.pullDownText, { color: currentTheme.subtitle }]}>Pull down to refresh.</Text>
           </View>
         ) : (
           notifications.map((notification: AlertNotification) => (
@@ -185,14 +193,13 @@ const Notifications: React.FC = () => {
 
 // Styles remain the same
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f4f4f4' },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
   backButton: { padding: 8 },
-  headerTitle: { marginLeft: 16, fontSize: 20, fontFamily: fonts.poppins.bold, color: '#424b5a' },
+  headerTitle: { marginLeft: 16, fontSize: 20, fontFamily: fonts.poppins.bold },
   scrollView: { flex: 1 },
   scrollViewContent: { padding: 16, flexGrow: 1 },
   card: { 
-    backgroundColor: '#ffffff', 
     borderRadius: 20, 
     marginBottom: 16,
     padding: 24,
@@ -218,7 +225,6 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    color: '#333',
     marginBottom: 8,
   },
   detailLabel: {
@@ -239,8 +245,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.bold 
   },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 50 },
-  emptyText: { fontSize: 16, color: '#666', fontFamily: fonts.poppins.regular },
-  pullDownText: { fontSize: 14, color: '#999', marginTop: 8, fontFamily: fonts.poppins.regular },
+  emptyText: { fontSize: 16, fontFamily: fonts.poppins.regular },
+  pullDownText: { fontSize: 14, marginTop: 8, fontFamily: fonts.poppins.regular },
 });
 
 export default Notifications;

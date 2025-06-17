@@ -4,6 +4,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, } f
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
+import { useTheme } from '../../../context/ThemeContext';
 
 
 interface PolicySection {
@@ -75,16 +76,17 @@ const policyData: PolicySection[] = [
 const PrivacyPolicy: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme, isDarkMode } = useTheme();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: theme.surface }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Privacy Policy</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Privacy Policy</Text>
         </View>
       </View>
       
@@ -95,27 +97,27 @@ const PrivacyPolicy: React.FC = () => {
       >
         <View style={styles.content}>
           <View style={styles.lastUpdatedContainer}>
-            <MaterialIcons name="update" size={16} color="#666" />
-            <Text style={styles.lastUpdated}>Last Updated: April 2025</Text>
+            <MaterialIcons name="update" size={16} color={theme.subtitle} />
+            <Text style={[styles.lastUpdated, { color: theme.subtitle }]}>Last Updated: April 2025</Text>
           </View>
 
           {policyData.map((section, index) => (
-            <View key={index} style={styles.section}>
+            <View key={index} style={[styles.section, { backgroundColor: theme.cardBackground }]}>
               <View style={styles.sectionHeader}>
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, { backgroundColor: '#fff5f5' }]}>
                   <MaterialIcons name={section.icon} size={24} color="#e02323" />
                 </View>
-                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>{section.title}</Text>
               </View>
               <View style={styles.sectionContent}>
                 {section.content.map((item, itemIndex) => (
                   <View key={itemIndex} style={styles.bulletPoint}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.bulletText}>{item}</Text>
+                    <View style={[styles.bullet, { backgroundColor: '#e02323' }]} />
+                    <Text style={[styles.bulletText, { color: theme.subtitle }]}>{item}</Text>
                   </View>
                 ))}
               </View>
-              {index < policyData.length - 1 && <View style={styles.separator} />}
+              {index < policyData.length - 1 && <View style={[styles.separator, { backgroundColor: theme.border }]} />}
             </View>
           ))}
         </View>
@@ -127,7 +129,6 @@ const PrivacyPolicy: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   
   header: {

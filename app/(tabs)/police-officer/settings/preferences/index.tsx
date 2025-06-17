@@ -22,6 +22,7 @@ export default function PreferencesScreen() {
   const insets = useSafeAreaInsets();
   const { isDarkMode, toggleDarkMode } = useTheme();
   const [pressedIndex, setPressedIndex] = React.useState<number | null>(null);
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
 
   const preferenceItems: PreferenceItem[] = [
     {
@@ -55,22 +56,25 @@ export default function PreferencesScreen() {
     preferenceItems.map(item => item.defaultValue || false)
   );
 
-  const currentTheme = isDarkMode ? theme.dark : theme.light;
-
   return (
-    <View style={[styles.container]}>
+    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { 
+        paddingTop: insets.top + 12,
+        backgroundColor: currentTheme.cardBackground,
+        borderBottomColor: currentTheme.border,
+        borderBottomWidth: 1
+      }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Preferences</Text>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Preferences</Text>
         </View>
       </View>
 
       {/* Preference Items */}
-      <View style={[styles.preferencesContainer, { backgroundColor: currentTheme.surface }]}>
+      <View style={[styles.preferencesContainer, { backgroundColor: currentTheme.background }]}>
         {preferenceItems.map((item, index) => (
           <TouchableOpacity
             key={index}
@@ -80,7 +84,7 @@ export default function PreferencesScreen() {
             style={[
               styles.preferenceCard,
               pressedIndex === index && styles.preferenceCardPressed,
-              { backgroundColor: currentTheme.surface }
+              { backgroundColor: currentTheme.cardBackground }
             ]}
           >
             <View style={styles.preferenceContent}>
@@ -91,14 +95,14 @@ export default function PreferencesScreen() {
               </View>
               <View style={styles.textContainer}>
                 <Text style={[styles.preferenceLabel, { color: currentTheme.text }]}>{item.label}</Text>
-                <Text style={[styles.preferenceDescription, { color: isDarkMode ? 'rgba(255,255,255,0.6)' : '#666' }]}>
+                <Text style={[styles.preferenceDescription, { color: currentTheme.subtitle }]}>
                   {item.description}
                 </Text>
               </View>
               <Switch
-                trackColor={{ false: isDarkMode ? '#404040' : '#D1D1D1', true: '#E02323' }}
+                trackColor={{ false: currentTheme.switchTrack, true: '#E02323' }}
                 thumbColor="#FFFFFF"
-                ios_backgroundColor={isDarkMode ? '#404040' : '#D1D1D1'}
+                ios_backgroundColor={currentTheme.switchTrack}
                 value={switchStates[index]}
                 onValueChange={(newValue) => {
                   const newStates = [...switchStates];
@@ -119,13 +123,10 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
- 
   header: {
     flexDirection: 'row',
     paddingBottom: 12,
-    backgroundColor: 'white',
     paddingHorizontal: 16,
     gap: 8,
   },
@@ -139,7 +140,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontFamily: fonts.poppins.semiBold,
-    color: '#212121',
   },
   preferencesContainer: {
     flex: 1,
