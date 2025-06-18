@@ -4,12 +4,15 @@ import { FeatureCollection, Point } from 'geojson';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform, StyleSheet, View } from 'react-native';
 import WebView from 'react-native-webview';
+import { dbscan, DBSCANCluster } from '../../utils/dbscan';
 
 interface MapComponentProps {
-  selectedCrimeType: string;
-  selectedStation: string | null;
-  userType: 'regular' | 'police' | 'guest';
-  data: FeatureCollection<Point>;
+  selectedCrimeType?: string;
+  selectedStation?: string | null;
+  userType: string;
+  data?: FeatureCollection<Point>; // For clusters
+  routeCoords?: { lat: number; lng: number }[]; // For Dijkstra
+  officerLocation?: { lat: number; lng: number };
 }
 
 // Manila coordinates
@@ -19,7 +22,7 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation }) => {
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const webViewRef = useRef<WebView>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -27,6 +30,13 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
   const [isPatrolMode, setIsPatrolMode] = useState(false);
   const [patrolPath, setPatrolPath] = useState<Location.LocationObject[]>([]);
   const [patrolStartTime, setPatrolStartTime] = useState<number | null>(null);
+
+  // Determine mode
+  const isRouteMode = routeCoords && routeCoords.length > 1;
+  const isClusterMode = !isRouteMode && data && data.features && data.features.length > 0;
+
+  // For clusters
+  const [clusters, setClusters] = useState<DBSCANCluster[]>([]);
 
   const startLocationTracking = async () => {
     try {
@@ -188,6 +198,82 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
       setPatrolPath(prev => [...prev, deviceLocation]);
     }
   }, [deviceLocation, isPatrolMode]);
+
+  // Add effect to handle route updates
+  useEffect(() => {
+    if (!routeCoords || !webViewRef.current) {
+      console.log('DEBUG: No routeCoords or webViewRef:', { routeCoords, hasWebView: !!webViewRef.current });
+      return;
+    }
+    
+    console.log('DEBUG: Updating route with coords:', routeCoords);
+    const coordinates = routeCoords.map(coord => [coord.lng, coord.lat]);
+    console.log('DEBUG: Transformed coordinates:', coordinates);
+    
+    const script = `
+      console.log('DEBUG: Received route update:', ${JSON.stringify(coordinates)});
+      
+      // Remove existing route if it exists
+      if (map.getLayer('route-layer')) {
+        console.log('DEBUG: Removing existing route layer');
+        map.removeLayer('route-layer');
+      }
+      if (map.getSource('route-source')) {
+        console.log('DEBUG: Removing existing route source');
+        map.removeSource('route-source');
+      }
+
+      // Add new route
+      if (${JSON.stringify(coordinates)}.length > 1) {
+        console.log('DEBUG: Adding new route');
+        map.addSource('route-source', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: {
+              type: 'LineString',
+              coordinates: ${JSON.stringify(coordinates)}
+            }
+          }
+        });
+
+        map.addLayer({
+          id: 'route-layer',
+          type: 'line',
+          source: 'route-source',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#e31a1c',
+            'line-width': 8,
+            'line-opacity': 0.9
+          }
+        });
+
+        // Fit map to route bounds
+        const bounds = ${JSON.stringify(coordinates)}.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(${JSON.stringify(coordinates[0])}, ${JSON.stringify(coordinates[0])}));
+        map.fitBounds(bounds, { 
+          padding: 100,
+          maxZoom: 17,
+          duration: 1000
+        });
+      }
+      true;
+    `;
+
+    webViewRef.current.injectJavaScript(script);
+  }, [routeCoords]);
+
+  useEffect(() => {
+    if (isClusterMode && data) {
+      // Use default eps/minPoints or adjust as needed
+      const eps = 0.5;
+      const minPoints = 3;
+      setClusters(dbscan(data.features, eps, minPoints));
+    }
+  }, [isClusterMode, data]);
 
   const mapboxHTML = `
 <!DOCTYPE html>
