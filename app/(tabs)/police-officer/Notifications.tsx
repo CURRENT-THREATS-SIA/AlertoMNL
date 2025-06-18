@@ -16,6 +16,7 @@ import {
   View
 } from 'react-native';
 // --- PATHS CORRECTED BELOW ---
+import * as Location from 'expo-location';
 import { fonts } from '../../config/fonts';
 import { useAlert } from '../../context/AlertContext';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -89,7 +90,23 @@ const Notifications: React.FC = () => {
 
   const fetchNotifications = React.useCallback(async () => {
     try {
-      const response = await fetch(API_GET_NOTIFICATIONS_URL);
+      const policeId = await AsyncStorage.getItem('police_id');
+      if (!policeId) return;
+
+      // Get current location
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Location permission denied');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High
+      });
+
+      const response = await fetch(
+        `${API_GET_NOTIFICATIONS_URL}?police_id=${policeId}&latitude=${location.coords.latitude}&longitude=${location.coords.longitude}`
+      );
       const data = await response.json();
       
       if (data.success) {
