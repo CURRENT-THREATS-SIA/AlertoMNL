@@ -7,9 +7,12 @@ export default function IncidentResponseIndex() {
 
   useEffect(() => {
     if (alert_id) {
-      router.replace(`/police-officer/incident-response/MapStep?alert_id=${alert_id}`);
+      router.replace({
+        pathname: '/police-officer/incident-response/MapStep',
+        params: { alert_id: String(alert_id) }
+      });
     }
-  }, [alert_id]);
+  }, [alert_id, router]);
 
   return null;
-} 
+}

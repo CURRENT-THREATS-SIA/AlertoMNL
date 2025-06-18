@@ -119,38 +119,42 @@ export default function Login() {
       </View>
 
       {/* Password */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Password</Text>
-        <View style={{ position: 'relative' }}>
-          <TextInput
-            style={styles.input}
-            placeholderTextColor="#0000004D"
-            placeholder="Enter your password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
+      <View style={{ marginBottom: 10 }}>
+      <View style={{ position: 'relative' }}>
+        <TextInput
+          style={styles.input}
+          placeholderTextColor="#0000004D"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword(v => !v)}
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: 0,
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 8,
+            zIndex: 2,
+          }}
+        >
+          <MaterialIcons
+            name={showPassword ? 'visibility' : 'visibility-off'}
+            size={24}
+            color="#888"
           />
-          <TouchableOpacity
-            onPress={() => setShowPassword(v => !v)}
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: 0,
-              height: '100%',
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: 8,
-              zIndex: 2,
-            }}
-          >
-            <MaterialIcons
-              name={showPassword ? 'visibility' : 'visibility-off'}
-              size={24}
-              color="#888"
-            />
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       </View>
+      <View style={{ alignItems: 'flex-end', marginTop: 6 }}>
+        <TouchableOpacity onPress={() => router.push("/auth/VerificationEmail")}>  
+          <Text style={{ color: '#e02323', fontWeight: 'bold' }}>Forgot Password?</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
 
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Log in</Text>
