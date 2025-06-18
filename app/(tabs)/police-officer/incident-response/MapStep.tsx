@@ -285,49 +285,77 @@ export default function MapStep() {
 
   // Update Dijkstra effect to use loaded graph data
   useEffect(() => {
-    if (!officerLocation || !alertDetails || !graphData) return;
-    if (hasInitialRoute) return; // Only run once unless you want to recalculate
+    if (!officerLocation || !alertDetails || !graphData) {
+      console.log('DEBUG: Missing required data:', { 
+        hasOfficerLocation: !!officerLocation, 
+        hasAlertDetails: !!alertDetails, 
+        hasGraphData: !!graphData 
+      });
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
+    console.log('DEBUG: Starting route calculation');
+
+    const calculateRoute = () => {
       if (!isMountedRef.current) return;
+      
       const { graphNodes, graphEdges } = graphData;
       const { filteredNodes, filteredEdges } = filterGraphByProximity(
         graphNodes,
         graphEdges,
         officerLocation,
         { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) },
-        0.01 // much smaller radius for performance
+        0.01
       );
+
+      console.log('DEBUG: Filtered nodes:', filteredNodes.length);
+      
       const startNode = findNearestNodeHaversine(officerLocation.lat, officerLocation.lng, filteredNodes);
       const endNode = findNearestNodeHaversine(Number(alertDetails.a_latitude), Number(alertDetails.a_longitude), filteredNodes);
+      
+      console.log('DEBUG: Found nodes:', { startNode, endNode });
+
       if (!startNode || !endNode) {
         setRouteCoords(null);
         setError('Officer or incident location is not on the map.');
         setIsLoading(false);
         return;
       }
+
       const dijkstraResult = multidirectionalDijkstra(filteredEdges, startNode, endNode);
+      
       if (dijkstraResult && dijkstraResult.path && dijkstraResult.path.length > 1) {
         const coords = dijkstraResult.path.map(nodeId => {
           const node = filteredNodes.find(n => n.id === nodeId);
           return node ? { lat: node.lat, lng: node.lng } : null;
         }).filter(Boolean) as { lat: number; lng: number }[];
+
         const fullRoute = [
           officerLocation,
           ...coords,
           { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) }
         ];
+
+        console.log('DEBUG: Calculated route:', fullRoute);
         setRouteCoords(fullRoute);
         setError('');
-        setHasInitialRoute(true); // Don't recalculate unless you want to
       } else {
+        console.log('DEBUG: No route found');
         setRouteCoords(null);
         setError('No route found between officer and incident.');
       }
       setIsLoading(false);
-    }, 100); // Run pathfinding asynchronously
-    return () => {};
-  }, [officerLocation, alertDetails, graphData, hasInitialRoute]);
+    };
+
+    // Calculate route immediately and then every 5 seconds
+    calculateRoute();
+    const interval = setInterval(calculateRoute, 5000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [officerLocation, alertDetails, graphData]);
 
   const getFormattedTime = (dateString: string) => {
     const date = new Date(dateString);
