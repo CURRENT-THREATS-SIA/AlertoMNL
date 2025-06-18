@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Font from 'expo-font';
+import * as Location from 'expo-location';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -22,7 +23,21 @@ function GlobalAlertPoller() {
     try {
       const policeId = await AsyncStorage.getItem('police_id');
       if (!policeId) return;
-      const response = await fetch('http://mnl911.atwebpages.com/getnotifications1.php');
+
+      // Get current location
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Location permission denied');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High
+      });
+
+      const response = await fetch(
+        `http://mnl911.atwebpages.com/getnotifications1.php?police_id=${policeId}&latitude=${location.coords.latitude}&longitude=${location.coords.longitude}`
+      );
       const data = await response.json();
       if (data.success && data.notifications?.length > 0) {
         const latestAlert = data.notifications[0];
