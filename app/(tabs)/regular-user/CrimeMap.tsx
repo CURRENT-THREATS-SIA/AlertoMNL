@@ -97,6 +97,14 @@ const CrimeMap: React.FC = () => {
   const [showStationModal, setShowStationModal] = useState(false);
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
 
+  // Add reset function
+  const handleReset = () => {
+    setSelectedCrimeType('');
+    setSelectedStation(null);
+    setShowCrimeTypeModal(false);
+    setShowStationModal(false);
+  };
+
   // Function to calculate crime statistics based on filters
   const calculateCrimeStats = () => {
     let filteredFeatures = crimeData.features as CrimeFeature[];
@@ -376,6 +384,24 @@ const CrimeMap: React.FC = () => {
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
+                  {/* Reset Option for Crime Type */}
+                  <TouchableOpacity
+                    style={[
+                      styles.modalOption,
+                      { borderBottomColor: currentTheme.cardBorder }
+                    ]}
+                    onPress={() => {
+                      setSelectedCrimeType('');
+                      setShowCrimeTypeModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.modalOptionText,
+                      { color: '#E02323', fontFamily: fonts.poppins.semiBold }
+                    ]}>
+                      Show All Crime Types
+                    </Text>
+                  </TouchableOpacity>
                   {crimeTypes.map((type) => (
                     <TouchableOpacity
                       key={type.id}
@@ -421,6 +447,24 @@ const CrimeMap: React.FC = () => {
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
+                  {/* Reset Option for Station */}
+                  <TouchableOpacity
+                    style={[
+                      styles.modalOption,
+                      { borderBottomColor: currentTheme.cardBorder }
+                    ]}
+                    onPress={() => {
+                      setSelectedStation(null);
+                      setShowStationModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      styles.modalOptionText,
+                      { color: '#E02323', fontFamily: fonts.poppins.semiBold }
+                    ]}>
+                      Show All Stations
+                    </Text>
+                  </TouchableOpacity>
                   {policeStations.map((station) => (
                     <TouchableOpacity
                       key={station.id}
