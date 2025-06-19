@@ -207,8 +207,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   badgeContainer: {
-    width: 100,
-    height: 100,
+    width: 60,
+    height: 60,
   },
   badgeImage: {
     width: '100%',
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   shiftCard: {
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

@@ -48,11 +48,12 @@ export default function Header({ showNotification = true }: HeaderProps) {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingTop: 48,
+    paddingBottom: 16,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -68,11 +69,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontFamily: 'Poppins-Bold',
+    fontWeight: 'bold',
     color: '#e02323',
+    fontFamily: 'Poppins-Bold',
   },
   subtitle: {
     fontSize: 12,
+    color: '#424b5a',
     fontFamily: 'Poppins-Regular',
     marginTop: -4,
   },

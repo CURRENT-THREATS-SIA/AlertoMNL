@@ -1,6 +1,7 @@
 import { Feature, Point } from 'geojson';
 import React, { useEffect, useState } from 'react';
 import {
+  Animated,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -8,7 +9,7 @@ import {
   Text,
   TouchableOpacity,
   useWindowDimensions,
-  View
+  View,
 } from 'react-native';
 
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -85,7 +86,9 @@ const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375;
   const containerPadding = isSmallDevice ? 12 : 1;
-  const mapHeight = Math.min(height * 0.35, 400);
+  const mapHeight = Math.min(height * 0.45, 500);
+  const [isLegendVisible, setIsLegendVisible] = useState(false);
+  const legendAnimation = new Animated.Value(0);
 
   // State for dropdowns and stats
   const [selectedCrimeType, setSelectedCrimeType] = useState('');
@@ -216,6 +219,23 @@ const CrimeMap: React.FC = () => {
     setShowStationModal(false);
   };
 
+  // Function to toggle legend visibility with animation
+  const toggleLegend = () => {
+    setIsLegendVisible(!isLegendVisible);
+  };
+
+  // Start animation when legend becomes visible
+  useEffect(() => {
+    if (isLegendVisible) {
+      Animated.spring(legendAnimation, {
+        toValue: 1,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 40,
+      }).start();
+    }
+  }, [isLegendVisible]);
+
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <ScrollView 
@@ -231,24 +251,61 @@ const CrimeMap: React.FC = () => {
               userType="regular"
               data={crimeData}
             />
-            <View style={[styles.legendContainer, { backgroundColor: currentTheme.cardBackground }]}>
-              <View style={styles.legendRow}>
-                <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>No reported cases</Text>
-              </View>
-              <View style={styles.legendRow}>
-                <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low severity</Text>
-              </View>
-              <View style={styles.legendRow}>
-                <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
-                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium severity</Text>
-              </View>
-              <View style={styles.legendRow}>
-                <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-                <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High severity</Text>
-              </View>
-            </View>
+            
+            {/* Legend Toggle Button */}
+            <TouchableOpacity
+              style={[styles.legendToggle, { backgroundColor: currentTheme.cardBackground }]}
+              onPress={toggleLegend}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons
+                name="help"
+                size={24}
+                color={currentTheme.text}
+              />
+            </TouchableOpacity>
+
+            {/* Animated Legend Container */}
+            {isLegendVisible && (
+              <Animated.View 
+                style={[
+                  styles.legendContainer,
+                  { 
+                    backgroundColor: currentTheme.cardBackground,
+                    opacity: legendAnimation,
+                    transform: [{
+                      scale: legendAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.8, 1]
+                      })
+                    }]
+                  }
+                ]}
+              >
+                <View style={styles.legendHeader}>
+                  <Text style={[styles.legendTitle, { color: currentTheme.text }]}>Legend</Text>
+                  <TouchableOpacity onPress={toggleLegend}>
+                    <MaterialIcons name="close" size={20} color={currentTheme.text} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.legendRow}>
+                  <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>No reported cases</Text>
+                </View>
+                <View style={styles.legendRow}>
+                  <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low severity</Text>
+                </View>
+                <View style={styles.legendRow}>
+                  <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium severity</Text>
+                </View>
+                <View style={styles.legendRow}>
+                  <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High severity</Text>
+                </View>
+              </Animated.View>
+            )}
           </View>
 
           {/* Selectors and stats */}
@@ -275,7 +332,7 @@ const CrimeMap: React.FC = () => {
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.selectorBtn, { marginBottom: 16 }]}
+            style={[styles.selectorBtn,]}
             activeOpacity={0.7}
             onPress={() => setShowStationModal(true)}
             accessibilityLabel="Select police station"
@@ -474,11 +531,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 16,
+    
   },
   selectorBtn: {
     backgroundColor: '#E02323',
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: 6,
     paddingHorizontal: 16,
     flexDirection: 'row',       // ← row layout
     justifyContent: 'space-between',
@@ -542,7 +600,7 @@ const styles = StyleSheet.create({
   statCard: {
     backgroundColor:'#FEF3F2' ,
     borderRadius: 8,
-    padding: 12,
+    padding: 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -581,20 +639,59 @@ const styles = StyleSheet.create({
   defaultFont: {
     fontFamily: fonts.poppins.regular,
   },
+  legendToggle: {
+    position: 'absolute',
+    right: 10,
+    bottom: 45,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 11,
+  },
   legendContainer: {
     position: 'absolute',
-    left: 10,
+    right: 60,
     bottom: 10,
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 8,
-    padding: 8,
+    padding: 12,
     zIndex: 10,
-    minWidth: 120,
+    minWidth: 160,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  legendHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  legendTitle: {
+    fontSize: 14,
+    fontFamily: fonts.poppins.semiBold,
+    color: '#333',
   },
   legendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   legendColor: {
     width: 16,

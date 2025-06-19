@@ -75,7 +75,7 @@ const SetUpSOS: React.FC = () => {
               <View style={[styles.iconContainer, { backgroundColor: '#fff5f5' }]}>
                 <MaterialIcons name="visibility-off" size={24} color="#e02323" />
               </View>
-              <Text style={[styles.toggleText, { color: theme.text }]}>Hide SOS from button</Text>
+              <Text style={[styles.toggleText, { color: theme.text }]}>Hide SOS text from button</Text>
             </View>
             <View style={[styles.toggle, hideSOS && styles.toggleActive]}>
               <View style={[styles.toggleHandle, hideSOS && styles.toggleHandleActive]} />
