@@ -10,6 +10,7 @@ interface MapComponentProps {
   selectedStation: string | null;
   userType: 'regular' | 'police' | 'guest';
   data: FeatureCollection<Point>;
+  onZoomChange?: (zoom: number) => void; // ✅ Add this line
 }
 
 // Manila coordinates
@@ -19,7 +20,7 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, onZoomChange }) => {
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const webViewRef = useRef<WebView>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -230,7 +231,7 @@ body { margin: 0; padding: 0; }
   top: 8px !important;
 }
 .mapboxgl-ctrl-group {
-  margin-top: 60px !important;
+  margin-top: 20px !important;
 }
 .device-location-dot {
   width: 24px;
@@ -310,7 +311,7 @@ body { margin: 0; padding: 0; }
 ${userType === 'police' ? `
 .patrol-button {
   position: absolute;
-  bottom: 160px;
+  bottom: 45px;
   right: 10px;
   background: white;
   border: none;
@@ -384,6 +385,14 @@ const map = new mapboxgl.Map({
   zoom: ${MANILA_CENTER.zoom}
 });
 
+  map.on('zoomend', () => {
+  const zoom = map.getZoom();
+  window.ReactNativeWebView?.postMessage(JSON.stringify({
+    type: 'zoomLevel',
+    zoom: zoom
+  }));
+});
+
 // Add geocoder control
 const geocoder = new MapboxGeocoder({
   accessToken: mapboxgl.accessToken,
@@ -401,9 +410,9 @@ document.getElementById('centerLocationButton').addEventListener('click', () => 
   if (currentLocation) {
     map.flyTo({
       center: [currentLocation.longitude, currentLocation.latitude],
-      zoom: 17,
+      zoom: 14,
       duration: 1000,
-      pitch: 60, // Add some tilt for better perspective
+      // pitch: 60, // Add some tilt for better perspective
       bearing: currentLocation.heading || 0 // Align map with user's heading
     });
   }
@@ -1020,10 +1029,21 @@ function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
         startInLoadingState={true}
         onMessage={(event) => {
           const data = JSON.parse(event.nativeEvent.data);
-          if (data.type === 'patrolComplete' && userType === 'police') {
-            // Handle patrol completion
-            console.log('Patrol completed:', data.data);
-            // Here you could send the data to your backend
+          // if (data.type === 'patrolComplete' && userType === 'police') {
+          //   // Handle patrol completion
+          //   console.log('Patrol completed:', data.data);
+          //   // Here you could send the data to your backend
+          // }
+          if (data.type === 'zoomLevel') {
+            onZoomChange?.(data.zoom);
+            console.log('Zoom level:', data.zoom);
+
+            //Other messages, e.g. patrolComplete, etc.
+            if (data.type === 'patrolComplete' && userType === 'police') {
+              // Handle patrol completion
+              console.log('Patrol completed:', data.data);
+              // Here you could send the data to your backend
+            }
           }
         }}
       />

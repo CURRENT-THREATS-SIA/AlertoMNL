@@ -335,6 +335,26 @@ const GuestCrimeMap: React.FC = () => {
           </View>
         </View>
 
+        {/* Based on the System Legend
+            <View style={styles.legendContainer}>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
+                <Text style={styles.legendLabel}>No reported cases</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
+                <Text style={styles.legendLabel}>Low severity</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
+                <Text style={styles.legendLabel}>Medium severity</Text>
+              </View>
+              <View style={styles.legendRow}>
+                <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
+                <Text style={styles.legendLabel}>High severity</Text>
+              </View>
+            </View> */}
+
         {/* Crime Stats */}
         <View style={styles.statsContainer}>
           {crimeStats.map((stat, index) => (

@@ -170,6 +170,7 @@ const CrimeMap: React.FC = () => {
     setShowStationModal(false);
   };
 
+  const [zoomLevel, setZoomLevel] = useState(14);
   return (
     <SafeAreaView style={styles.rootBg}>
       <Header />
@@ -186,27 +187,31 @@ const CrimeMap: React.FC = () => {
               userType="police"
               selectedCrimeType={selectedCrimeType}
               selectedStation={selectedStation}
+              onZoomChange={setZoomLevel}
             />
             {/* Severity Legend */}
-            <View style={styles.legendContainer}>
+            <View style={[styles.legendContainer,
+              zoomLevel >= 12 && { minWidth: 40, padding: 4}
+            ]}>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-                <Text style={styles.legendLabel}>No reported cases</Text>
+                {zoomLevel < 15 && <Text style={styles.legendLabel}>No reported cases</Text>}
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-                <Text style={styles.legendLabel}>Low severity</Text>
+                {zoomLevel < 15 && <Text style={styles.legendLabel}>Low severity</Text>}
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
-                <Text style={styles.legendLabel}>Medium severity</Text>
+                {zoomLevel < 15 && <Text style={styles.legendLabel}>Medium severity</Text>}
               </View>
               <View style={styles.legendRow}>
                 <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-                <Text style={styles.legendLabel}>High severity</Text>
+                {zoomLevel < 15 && <Text style={styles.legendLabel}>High severity</Text>} 
               </View>
             </View>
           </View>
+
 
           {/* Selectors and stats */}
           <TouchableOpacity 
