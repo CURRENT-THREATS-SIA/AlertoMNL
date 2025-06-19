@@ -83,7 +83,6 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
           >
             <View style={[
               styles.bottomNavIconContainer,
-              { backgroundColor: item.active ? 'rgba(224, 35, 35, 0.1)' : 'transparent' }
             ]}>
               {item.icon}
             </View>

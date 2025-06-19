@@ -238,12 +238,12 @@ const AccountDetails: React.FC = () => {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
       
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: theme.surface }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Account Details</Text>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Account Details</Text>
         </View>
       </View>
       <KeyboardAvoidingView
@@ -258,14 +258,18 @@ const AccountDetails: React.FC = () => {
         >
           {/* Profile Picture */}
           <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, { backgroundColor: theme.cardBackground }]}>
+            <TouchableOpacity 
+              style={[styles.avatar, { backgroundColor: theme.cardBackground }]} 
+              onPress={() => {}}
+              activeOpacity={0.8}
+            >
               <MaterialIcons name="person" size={40} color="#e02323" />
-            </View>
-            {isEditing && (
-              <TouchableOpacity style={styles.editAvatarButton} onPress={() => {}}>
-                <Text style={styles.editAvatarText}>Change Photo</Text>
-              </TouchableOpacity>
-            )}
+              {isEditing && (
+                <View style={[styles.editAvatarOverlay, { borderColor: theme.background }]}>
+                  <MaterialIcons name="edit" size={16} color="white" />
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* Lockout Message */}
@@ -281,12 +285,19 @@ const AccountDetails: React.FC = () => {
           <View style={styles.formContainer}>
             {editableData.map((field) => (
               <View key={field.key} style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>{field.label}</Text>
+                <Text style={[
+                  styles.inputLabel, 
+                  { 
+                    color: theme.subtitle,
+                    backgroundColor: theme.background,
+                    opacity: 0.8
+                  }
+                ]}>{field.label}</Text>
                 <TextInput
                   style={[
                     styles.input,
                     { 
-                      backgroundColor: theme.cardBackground,
+                      backgroundColor: 'transparent',
                       color: theme.text,
                       borderColor: theme.border
                     },
@@ -305,12 +316,19 @@ const AccountDetails: React.FC = () => {
             {/* Password display in view mode */}
             {!isEditing && (
               <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>Password</Text>
+                <Text style={[
+                  styles.inputLabel, 
+                  { 
+                    color: theme.subtitle,
+                    backgroundColor: theme.background,
+                    opacity: 0.8
+                  }
+                ]}>Password</Text>
                 <TextInput
                   style={[
                     styles.input,
                     { 
-                      backgroundColor: theme.cardBackground,
+                      backgroundColor: 'transparent',
                       color: theme.text,
                       borderColor: theme.border
                     },
@@ -327,14 +345,21 @@ const AccountDetails: React.FC = () => {
             {isEditing && (
               <>
                 <View style={styles.inputContainer}>
-                  <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>Current Password</Text>
+                  <Text style={[
+                    styles.inputLabel, 
+                    { 
+                      color: theme.subtitle,
+                      backgroundColor: theme.background,
+                      opacity: 0.8
+                    }
+                  ]}>Current Password</Text>
                   <View style={styles.passwordInputWrapper}>
                     <TextInput
                       style={[
                         styles.input,
                         styles.passwordInput,
                         { 
-                          backgroundColor: theme.cardBackground,
+                          backgroundColor: 'transparent',
                           color: theme.text,
                           borderColor: theme.border
                         }
@@ -359,14 +384,21 @@ const AccountDetails: React.FC = () => {
                   </View>
                 </View>
                 <View style={styles.inputContainer}>
-                  <Text style={[styles.inputLabel, { color: theme.subtitle, backgroundColor: theme.background }]}>New Password</Text>
+                  <Text style={[
+                    styles.inputLabel, 
+                    { 
+                      color: theme.subtitle,
+                      backgroundColor: theme.background,
+                      opacity: 0.8
+                    }
+                  ]}>New Password</Text>
                   <View style={styles.passwordInputWrapper}>
                     <TextInput
                       style={[
                         styles.input,
                         styles.passwordInput,
                         { 
-                          backgroundColor: theme.cardBackground,
+                          backgroundColor: 'transparent',
                           color: theme.text,
                           borderColor: theme.border
                         }
@@ -464,61 +496,64 @@ const styles = StyleSheet.create({
     // other styles
   },
   scrollViewContent: {
-    padding: 16,
+    padding: 12,
     
   },
   avatarContainer: {
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 16,
   },
   avatar: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
+    width: 85,
+    height: 85,
+    borderRadius: 45,
     backgroundColor: '#ffd1d1',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    marginBottom: 16,
   },
-  editAvatarButton: {
-    marginTop: 8,
-    padding: 8,
-  },
-  editAvatarText: {
-    color: '#e02323',
-    fontFamily: fonts.poppins.medium,
-    fontSize: 14,
+  editAvatarOverlay: {
+    position: 'absolute',
+    bottom: -6,
+    right: -6,
+    backgroundColor: '#e02323',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
   formContainer: {
-    gap: 16,
+    gap: 8,
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
   inputLabel: {
     position: 'absolute',
     top: -8,
     left: 12,
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
     fontSize: 12,
-    color: '#666666',
     fontFamily: fonts.poppins.regular,
     zIndex: 1,
   },
   input: {
     height: 56,
     borderWidth: 1,
-    borderColor: '#15050266',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    color: '#212121',
-    backgroundColor: '#ffffff',
+    letterSpacing: 0.3,
+    paddingTop: 12
+
   },
   inputDisabled: {
-    backgroundColor: '#f5f5f5',
-    color: '#666666',
+    opacity: 0.6,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -532,6 +567,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 0,
   },
   cancelButton: {
     backgroundColor: '#ffffff',

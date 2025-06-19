@@ -24,7 +24,7 @@ export default function RegularUserHeader({ onProfilePress }: RegularUserHeaderP
   };
 
   return (
-    <View style={[styles.header, { backgroundColor: currentTheme.background }]}>
+    <View style={[styles.header, { backgroundColor: currentTheme.surface, paddingTop: insets.top + 12 }]}>
       {/* Logo and Title */}
       <View style={styles.logoContainer}>
         <Image
