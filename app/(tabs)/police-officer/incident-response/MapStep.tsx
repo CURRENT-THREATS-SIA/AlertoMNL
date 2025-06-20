@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import { multidirectionalDijkstra } from '../../../../utils/multidirectionalDijkstra';
 import MapComponent from '../../../components/MapComponent';
@@ -129,6 +129,9 @@ export default function MapStep() {
   const [graphLoading, setGraphLoading] = useState(true);
   const [graphError, setGraphError] = useState('');
   const [hasInitialRoute, setHasInitialRoute] = useState(false);
+  const routeIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const [showAccuracyModal, setShowAccuracyModal] = useState(false);
 
   useEffect(() => {
     if (!alert_id) {
@@ -202,8 +205,15 @@ export default function MapStep() {
         // Request permission if not already granted
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') return;
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
         if (!isMountedRef.current) return;
+        const accuracy = loc.coords.accuracy ?? 9999;
+        setLocationAccuracy(accuracy);
+        if (accuracy > 10) {
+          setShowAccuracyModal(true);
+        } else {
+          setShowAccuracyModal(false);
+        }
         const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
         setOfficerLocation(coords);
         // Send to backend
@@ -226,8 +236,8 @@ export default function MapStep() {
     };
     // Initial fetch
     fetchAndSendLocation();
-    // Repeat every 5 seconds
-    locationInterval = setInterval(fetchAndSendLocation, 5000);
+    // Repeat every 10 seconds
+    locationInterval = setInterval(fetchAndSendLocation, 10000);
 
     return () => {
       if (locationInterval) clearInterval(locationInterval);
@@ -251,7 +261,7 @@ export default function MapStep() {
       }
     };
     fetchOfficerLocation();
-    const interval = setInterval(fetchOfficerLocation, 5000);
+    const interval = setInterval(fetchOfficerLocation, 10000);
     return () => {
       clearInterval(interval);
     };
@@ -306,7 +316,7 @@ export default function MapStep() {
         graphEdges,
         officerLocation,
         { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) },
-        0.01
+        0.02
       );
 
       console.log('DEBUG: Filtered nodes:', filteredNodes.length);
@@ -348,14 +358,20 @@ export default function MapStep() {
       setIsLoading(false);
     };
 
-    // Calculate route immediately and then every 5 seconds
     calculateRoute();
-    const interval = setInterval(calculateRoute, 5000);
+    routeIntervalRef.current = setInterval(calculateRoute, 10000);
 
     return () => {
-      clearInterval(interval);
+      if (routeIntervalRef.current) clearInterval(routeIntervalRef.current);
     };
   }, [officerLocation, alertDetails, graphData]);
+
+  // Stop route calculation if navigated away or resolved
+  useEffect(() => {
+    return () => {
+      if (routeIntervalRef.current) clearInterval(routeIntervalRef.current);
+    };
+  }, []);
 
   const getFormattedTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -371,6 +387,17 @@ export default function MapStep() {
 
   // --- Improved error display logic ---
   const shouldShowError = !!error && (!officerLocation || !routeCoords);
+
+  // Calculate distance to incident (in meters)
+  let distanceToIncident = null;
+  if (officerLocation && alertDetails) {
+    distanceToIncident = haversine(
+      officerLocation.lat,
+      officerLocation.lng,
+      Number(alertDetails.a_latitude),
+      Number(alertDetails.a_longitude)
+    ) * 1000; // haversine returns km, convert to meters
+  }
 
   if (isLoading) {
     return (
@@ -414,8 +441,8 @@ export default function MapStep() {
           selectedStation={null}
           userType={'police'}
           data={{ type: 'FeatureCollection', features: [] }}
-          routeCoords={routeCoords}
-          officerLocation={officerLocation} // Pass officer location to MapComponent
+          routeCoords={routeCoords ?? undefined}
+          officerLocation={officerLocation ?? undefined}
         />
       </View>
       <View style={styles.infoCard}>
@@ -424,6 +451,14 @@ export default function MapStep() {
           <View style={styles.infoTextContainer}>
             <Text style={styles.label}>Incident Location</Text>
             <Text style={styles.value}>{alertDetails.a_address}</Text>
+            {locationAccuracy !== null && locationAccuracy > 10 && (
+              <Text style={[styles.value, { color: '#E02323', fontWeight: 'bold' }]}>Warning: Your location accuracy is poor ({locationAccuracy.toFixed(1)} meters). Please enable high-accuracy mode in your device settings.</Text>
+            )}
+            {distanceToIncident !== null && (
+              <Text style={styles.value}>
+                Distance to incident: {distanceToIncident.toFixed(1)} meters
+              </Text>
+            )}
           </View>
         </View>
         <View style={styles.infoRow}>
@@ -454,10 +489,38 @@ export default function MapStep() {
             <Text style={styles.value}>{alertDetails.f_name} {alertDetails.l_name} ({alertDetails.m_number})</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.button} onPress={() => router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`)}>
+        <TouchableOpacity
+          style={[styles.button, distanceToIncident !== null && distanceToIncident > 5 ? { backgroundColor: '#ccc' } : {}]}
+          onPress={() => {
+            if (distanceToIncident !== null && distanceToIncident <= 5) {
+              router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
+            }
+          }}
+          disabled={distanceToIncident === null || distanceToIncident > 5}
+        >
           <Text style={styles.buttonText}>You&apos;ve Arrived</Text>
         </TouchableOpacity>
       </View>
+      <Modal
+        visible={showAccuracyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAccuracyModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 24, alignItems: 'center', maxWidth: 320 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#E02323', marginBottom: 12 }}>Location Accuracy Warning</Text>
+            <Text style={{ color: '#333', fontSize: 15, marginBottom: 16, textAlign: 'center' }}>
+              Your current location accuracy is {locationAccuracy ? locationAccuracy.toFixed(1) : '?'} meters, which may not be sufficient for incident response.
+              {'\n'}
+              Please enable "High accuracy" mode in your device's location settings (Settings → Location → Mode → High accuracy) and ensure you have a clear view of the sky.
+            </Text>
+            <TouchableOpacity style={{ backgroundColor: '#E02323', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 24 }} onPress={() => setShowAccuracyModal(false)}>
+              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

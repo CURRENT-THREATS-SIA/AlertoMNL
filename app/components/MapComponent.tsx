@@ -13,6 +13,7 @@ interface MapComponentProps {
   data?: FeatureCollection<Point>; // For clusters
   routeCoords?: { lat: number; lng: number }[]; // For Dijkstra
   officerLocation?: { lat: number; lng: number };
+  incidentLocation?: { lat: number; lng: number };
 }
 
 // Manila coordinates
@@ -22,7 +23,7 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation }) => {
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const webViewRef = useRef<WebView>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -30,6 +31,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
   const [isPatrolMode, setIsPatrolMode] = useState(false);
   const [patrolPath, setPatrolPath] = useState<Location.LocationObject[]>([]);
   const [patrolStartTime, setPatrolStartTime] = useState<number | null>(null);
+  const lastIncidentCoordRef = React.useRef<string | null>(null);
 
   // Determine mode
   const isRouteMode = routeCoords && routeCoords.length > 1;
@@ -274,6 +276,34 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
       setClusters(dbscan(data.features, eps, minPoints));
     }
   }, [isClusterMode, data]);
+
+  useEffect(() => {
+    if (!webViewRef.current) return;
+    let incidentCoord;
+    if (routeCoords && routeCoords.length > 0) {
+      const coordinates = routeCoords.map(coord => [coord.lng, coord.lat]);
+      incidentCoord = coordinates[coordinates.length - 1];
+    } else if (incidentLocation) {
+      incidentCoord = [incidentLocation.lng, incidentLocation.lat];
+    }
+    if (!incidentCoord) return;
+    const coordKey = incidentCoord.join(',');
+    if (lastIncidentCoordRef.current === coordKey) return;
+    lastIncidentCoordRef.current = coordKey;
+    const markerScript = `
+      if (window.incidentMarker) {
+        window.incidentMarker.remove();
+      }
+      window.incidentMarker = new mapboxgl.Marker({
+        color: '#e31a1c',
+        scale: 1.5
+      })
+        .setLngLat([${incidentCoord[0]}, ${incidentCoord[1]}])
+        .setPopup(new mapboxgl.Popup().setText('Incident Location'))
+        .addTo(map);
+    `;
+    webViewRef.current.injectJavaScript(markerScript);
+  }, [routeCoords, incidentLocation]);
 
   const mapboxHTML = `
 <!DOCTYPE html>

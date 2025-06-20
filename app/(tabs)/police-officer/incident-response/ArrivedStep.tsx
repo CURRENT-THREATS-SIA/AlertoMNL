@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Circle, Path, Svg } from 'react-native-svg';
+import MapComponent from '../../../components/MapComponent';
 
 // --- SVG Icon Components ---
 
@@ -27,6 +28,8 @@ interface AlertDetails {
   f_name: string;
   l_name: string;
   m_number: string;
+  a_latitude: string;
+  a_longitude: string;
 }
 
 export default function ArrivedStep() {
@@ -36,33 +39,47 @@ export default function ArrivedStep() {
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[] | undefined>();
+  const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | undefined>();
 
   useEffect(() => {
     if (!alert_id) {
-        setError("Alert ID is missing.");
-        setIsLoading(false);
-        return;
-    };
-
+      setError('Alert ID is missing.');
+      setIsLoading(false);
+      return;
+    }
+    // Fetch alert details
     const fetchAlertDetails = async () => {
       try {
         const response = await fetch(`http://mnl911.atwebpages.com/get_alert_details.php?alert_id=${alert_id}`);
         const result = await response.json();
-
         if (result.success) {
           setAlertDetails(result.data);
         } else {
           setError(result.error || 'Failed to fetch alert details.');
         }
       } catch (e) {
-        console.error(e);
-        setError('An error occurred. Please check your connection.');
+        setError('Failed to fetch alert details.');
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchAlertDetails();
+    // Fetch route and officer location
+    const fetchRouteAndLocation = async () => {
+      try {
+        const res = await fetch(`http://mnl911.atwebpages.com/get_sos_route.php?alert_id=${alert_id}`);
+        const data = await res.json();
+        if (data.success) {
+          setRouteCoords([
+            { lat: data.officer.lat, lng: data.officer.lng },
+            { lat: data.user.lat, lng: data.user.lng }
+          ]);
+          setOfficerLocation({ lat: data.officer.lat, lng: data.officer.lng });
+        }
+      } catch {}
+    };
+    fetchRouteAndLocation();
   }, [alert_id]);
 
   const getFormattedTime = (dateString: string) => {
@@ -93,8 +110,16 @@ export default function ArrivedStep() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.mapPlaceholder}>
-        <Text style={styles.mapText}>[Map with incident location]</Text>
+      <View style={{ flex: 1, minHeight: 300 }}>
+        <MapComponent
+          selectedCrimeType={''}
+          selectedStation={null}
+          userType={'police'}
+          data={{ type: 'FeatureCollection', features: [] }}
+          routeCoords={routeCoords}
+          officerLocation={officerLocation}
+          incidentLocation={alertDetails && alertDetails.a_latitude && alertDetails.a_longitude ? { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) } : undefined}
+        />
       </View>
       
       <View style={styles.infoCard}>
