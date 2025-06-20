@@ -12,21 +12,6 @@ interface ActivityData {
   value: string;
 }
 
-const activityData: ActivityData[] = [
-  {
-    title: "Emergency Responded",
-    value: "5",
-  },
-  {
-    title: "Avg. Time Response",
-    value: "30.67%",
-  },
-  {
-    title: "Total Alerts Received",
-    value: "5",
-  },
-];
-
 const Profile: React.FC = () => {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
@@ -36,6 +21,8 @@ const Profile: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [station, setStation] = useState('');
   const [badge, setBadge] = useState('');
+  const [emergencyResponded, setEmergencyResponded] = useState<number | null>(null);
+  const [avgTimeResponse, setAvgTimeResponse] = useState<number | null>(null);
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -56,6 +43,24 @@ const Profile: React.FC = () => {
       }
     };
     loadUserInfo();
+  }, []);
+
+  useEffect(() => {
+    const fetchOfficerStats = async () => {
+      try {
+        const policeId = await AsyncStorage.getItem('police_id');
+        if (!policeId) return;
+        const res = await fetch(`http://mnl911.atwebpages.com/get_officer_stats.php?police_id=${policeId}`);
+        const data = await res.json();
+        if (data.success) {
+          setEmergencyResponded(data.emergency_responded);
+          setAvgTimeResponse(data.avg_time_response);
+        }
+      } catch (e) {
+        // Optionally handle error
+      }
+    };
+    fetchOfficerStats();
   }, []);
 
   return (
@@ -117,14 +122,15 @@ const Profile: React.FC = () => {
           {/* Activity Dashboard */}
           <View style={styles.dashboardSection}>
             <Text style={[styles.dashboardTitle, { color: currentTheme.text }]}>Activity Dashboard</Text>
-            
             <View style={styles.activityCards}>
-              {activityData.map((item, index) => (
-                <View key={index} style={[styles.activityCard, { backgroundColor: currentTheme.cardBackground }]}>
-                  <Text style={[styles.activityTitle, { color: '#E02323' }]}>{item.title}</Text>
-                  <Text style={[styles.activityValue, { color: currentTheme.text }]}>{item.value}</Text>
-                </View>
-              ))}
+              <View style={[styles.activityCard, { backgroundColor: currentTheme.cardBackground }]}> 
+                <Text style={[styles.activityTitle, { color: '#E02323' }]}>Emergency Responded</Text>
+                <Text style={[styles.activityValue, { color: currentTheme.text }]}>{emergencyResponded !== null ? emergencyResponded : '--'}</Text>
+              </View>
+              <View style={[styles.activityCard, { backgroundColor: currentTheme.cardBackground }]}> 
+                <Text style={[styles.activityTitle, { color: '#E02323' }]}>Avg. Time Response</Text>
+                <Text style={[styles.activityValue, { color: currentTheme.text }]}>{avgTimeResponse !== null ? `${avgTimeResponse}%` : '--'}</Text>
+              </View>
             </View>
           </View>
         </View>
