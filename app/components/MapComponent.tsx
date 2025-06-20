@@ -344,7 +344,7 @@ body { margin: 0; padding: 0; }
   top: 8px !important;
 }
 .mapboxgl-ctrl-group {
-  margin-top: 60px !important;
+  margin-top: 25px !important;
 }
 .device-location-dot {
   width: 24px;
@@ -421,47 +421,6 @@ body { margin: 0; padding: 0; }
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(4); opacity: 0; }
 }
-${userType === 'police' ? `
-.patrol-button {
-  position: absolute;
-  bottom: 160px;
-  right: 10px;
-  background: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px;
-  margin: 0;
-  cursor: pointer;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.patrol-button.active {
-  background: #4285F4;
-}
-.patrol-button svg {
-  width: 29px;
-  height: 29px;
-  fill: #333;
-}
-.patrol-button.active svg {
-  fill: white;
-}
-.patrol-stats {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: white;
-  border-radius: 4px;
-  padding: 10px;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
-  display: none;
-}
-.patrol-stats.active {
-  display: block;
-}
-` : ''}
 </style>
 </head>
 <body>
@@ -471,17 +430,6 @@ ${userType === 'police' ? `
     <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
   </svg>
 </button>
-${userType === 'police' ? `
-<button class="patrol-button" id="patrolButton" title="Toggle patrol mode">
-  <svg viewBox="0 0 24 24">
-    <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
-  </svg>
-</button>
-<div class="patrol-stats" id="patrolStats">
-  <div>Duration: <span id="patrolDuration">0:00</span></div>
-  <div>Distance: <span id="patrolDistance">0.0</span> km</div>
-</div>
-` : ''}
 <div class="location-loading">Getting your location...</div>
 <div class="location-error">Could not get your location</div>
 <script>
@@ -953,129 +901,6 @@ map.on('load', () => {
     });
   }
 });
-
-${userType === 'police' ? `
-// Initialize patrol mode variables
-let isPatrolMode = false;
-let patrolPath = [];
-let patrolStartTime = null;
-
-// Add patrol path source and layer
-map.on('load', () => {
-  map.addSource('patrol-path', {
-    type: 'geojson',
-    data: {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'LineString',
-        coordinates: []
-      }
-    }
-  });
-
-  map.addLayer({
-    id: 'patrol-path',
-    type: 'line',
-    source: 'patrol-path',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round'
-    },
-    paint: {
-      'line-color': '#4285F4',
-      'line-width': 4,
-      'line-opacity': 0.8
-    }
-  });
-});
-
-// Handle patrol button click
-document.getElementById('patrolButton').addEventListener('click', () => {
-  isPatrolMode = !isPatrolMode;
-  const button = document.getElementById('patrolButton');
-  const stats = document.getElementById('patrolStats');
-  
-  if (isPatrolMode) {
-    button.classList.add('active');
-    stats.classList.add('active');
-    patrolStartTime = Date.now();
-    patrolPath = currentLocation ? [[currentLocation.longitude, currentLocation.latitude]] : [];
-    updatePatrolStats();
-  } else {
-    button.classList.remove('active');
-    stats.classList.remove('active');
-    patrolStartTime = null;
-    // Send patrol data to React Native
-    window.ReactNativeWebView.postMessage(JSON.stringify({
-      type: 'patrolComplete',
-      data: {
-        path: patrolPath,
-        duration: document.getElementById('patrolDuration').textContent,
-        distance: document.getElementById('patrolDistance').textContent
-      }
-    }));
-  }
-});
-
-// Update patrol path when location changes
-window.addEventListener('message', (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === 'updateDeviceLocation' && isPatrolMode) {
-    const { latitude, longitude } = data.location;
-    patrolPath.push([longitude, latitude]);
-    
-    // Update path on map
-    const source = map.getSource('patrol-path');
-    if (source) {
-      source.setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: patrolPath
-        }
-      });
-    }
-    
-    updatePatrolStats();
-  }
-});
-
-// Update patrol statistics
-function updatePatrolStats() {
-  if (!patrolStartTime) return;
-  
-  const duration = Math.floor((Date.now() - patrolStartTime) / 1000);
-  const minutes = Math.floor(duration / 60);
-  const seconds = duration % 60;
-  document.getElementById('patrolDuration').textContent = 
-    minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-  
-  let distance = 0;
-  for (let i = 1; i < patrolPath.length; i++) {
-    const [lon1, lat1] = patrolPath[i - 1];
-    const [lon2, lat2] = patrolPath[i];
-    distance += getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) / 1000; // Convert to km
-  }
-  document.getElementById('patrolDistance').textContent = distance.toFixed(2);
-}
-
-function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371e3;
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const Δφ = (lat2 - lat1) * Math.PI / 180;
-  const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-          Math.cos(φ1) * Math.cos(φ2) *
-          Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-` : ''}
 </script>
 </body>
 </html>
