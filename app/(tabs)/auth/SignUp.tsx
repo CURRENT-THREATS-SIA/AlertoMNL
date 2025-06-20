@@ -1,22 +1,27 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { Dimensions, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
 import { ButtonReg } from "../../../components/ButtonReg";
 import { LineArrowLeft } from "../../../icons/LineArrowLeft";
 import { LineArrowRight1 } from "../../../icons/LineArrowRight1";
 import { User } from "../../../icons/User";
+
+const { width, height } = Dimensions.get('window');
 
 export const SignUp: React.FC = () => {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<"public" | "police" | null>(null);
 
   return (
-    <ScrollView contentContainerStyle={styles.signUp}>
-    
+    <SafeAreaView style={styles.container}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Main Content */}
         <View style={styles.frame}>
           <View style={styles.frame2}>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <LineArrowLeft style={styles.lineArrowLeft} />
             </TouchableOpacity>
             <View style={styles.frame3}>
@@ -95,74 +100,87 @@ export const SignUp: React.FC = () => {
             <Text style={styles.signupLink}>Log in</Text>
           </TouchableOpacity>
         </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  signUp: {
+  container: {
+    flex: 1,
     backgroundColor: "#ffffff",
-    height: "100%",
-    width: "100%",
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   frame: {
+    flex: 1,
     alignItems: "center",
     backgroundColor: '#ffffff',
+    justifyContent: 'center',
   },
   frame2: {
     alignItems: "flex-start",
     flexDirection: "column",
-    gap: 29,
+    gap: Math.min(29, height * 0.035),
     position: "relative",
-    width: 330,
+    width: Math.min(330, width - 40),
+    maxWidth: '100%',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    marginTop: Math.max(20, height * 0.02),
   },
   lineArrowLeft: {
     height: 24,
     width: 24,
     position: "relative",
-    marginTop: 74,
   },
   frame3: {
-    gap: 200,
+    flex: 1,
+    gap: Math.min(200, height * 0.25),
     position: "relative",
     width: "100%",
+    justifyContent: 'space-between',
   },
   frame4: {
     alignItems: "flex-start",
     alignSelf: "stretch",
     flexDirection: "column",
-    gap: 38,
+    gap: Math.min(38, height * 0.045),
     position: "relative",
     width: "100%",
   },
   frame5: {
     alignItems: "flex-start",
     flexDirection: "column",
-    gap: 10,
+    gap: Math.min(10, height * 0.012),
     position: "relative",
     width: "100%",
   },
   textWrapper2: {
     alignSelf: "stretch",
     color: "#e02323",
-    fontSize: 34,
+    fontSize: Math.min(34, width * 0.08),
     fontWeight: "700",
-    lineHeight: 52,
+    lineHeight: Math.min(52, width * 0.12),
     marginTop: -1,
     position: "relative",
   },
   p: {
     alignSelf: "stretch",
     color: "#150502bf",
-    fontSize: 16,
+    fontSize: Math.min(16, width * 0.04),
     fontWeight: "400",
-    lineHeight: 24,
+    lineHeight: Math.min(24, width * 0.06),
     position: "relative",
   },
   frame6: {
     alignSelf: "stretch",
     flexDirection: "column",
-    gap: 12,
+    gap: Math.min(12, height * 0.015),
     position: "relative",
     width: "100%",
   },
@@ -174,52 +192,54 @@ const styles = StyleSheet.create({
     borderColor: "#e9e9e9",
     borderRadius: 5,
     flexDirection: "column",
-    gap: 10,
-
-    paddingVertical: 16,
-    paddingHorizontal: 27,
+    gap: Math.min(10, height * 0.012),
+    paddingVertical: Math.min(16, height * 0.02),
+    paddingHorizontal: Math.min(27, width * 0.06),
     position: "relative",
     width: "100%",
+    minHeight: Math.min(83, height * 0.1),
   },
   frame7: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 14,
+    gap: Math.min(14, width * 0.035),
     position: "relative",
+    flex: 1,
   },
   userInstance: {
-    height: 50,
-    width: 50,
+    height: Math.min(50, width * 0.12),
+    width: Math.min(50, width * 0.12),
     position: "relative",
   },
   frame8: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 22,
+    gap: Math.min(22, width * 0.055),
     position: "relative",
+    flex: 1,
+    justifyContent: 'space-between',
   },
   frame9: {
     alignItems: "flex-start",
     flexDirection: "column",
     position: "relative",
-    width: 171,
+    flex: 1,
   },
   textWrapper3: {
     alignSelf: "stretch",
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: Math.min(16, width * 0.04),
     fontWeight: "600",
-    lineHeight: 24,
+    lineHeight: Math.min(24, width * 0.06),
     marginTop: -1,
     position: "relative",
   },
   textWrapper4: {
     alignSelf: "stretch",
     color: "#c1c1c1",
-    fontSize: 10,
+    fontSize: Math.min(10, width * 0.025),
     fontWeight: "400",
-    height: 13,
-    lineHeight: 15,
+    lineHeight: Math.min(15, width * 0.035),
     position: "relative",
   },
   lineArrowRight: {
@@ -233,36 +253,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#ac3a3a",
     borderRadius: 5,
     flexDirection: "column",
-    gap: 10,
-    height: 83,
-    paddingVertical: 16,
-    paddingHorizontal: 26,
+    gap: Math.min(10, height * 0.012),
+    minHeight: Math.min(83, height * 0.1),
+    paddingVertical: Math.min(16, height * 0.02),
+    paddingHorizontal: Math.min(26, width * 0.06),
     position: "relative",
     width: "100%",
   },
   frame10: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 15,
+    gap: Math.min(15, width * 0.035),
     position: "relative",
   },
   chatgptImageApr: {
-    height: 50,
-    width: 50,
+    height: Math.min(50, width * 0.12),
+    width: Math.min(50, width * 0.12),
     resizeMode: "cover",
     position: "relative",
   },
   frame11: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 21,
+    gap: Math.min(21, width * 0.05),
     position: "relative",
   },
   frame12: {
     alignItems: "center",
     alignSelf: "stretch",
     flexDirection: "column",
-    gap: 10,
+    gap: Math.min(10, height * 0.012),
     position: "relative",
     width: "100%",
   },
@@ -276,33 +296,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 4,
     position: "relative",
-    
   },
   textWrapper5: {
     color: "#000000",
-    fontSize: 16,
+    fontSize: Math.min(16, width * 0.04),
     fontWeight: "400",
-    lineHeight: 24,
+    lineHeight: Math.min(24, width * 0.06),
     marginTop: -1,
     position: "relative",
     textAlign: "center",
   },
-
   textButton16px: {
     color: '#e02323',
     fontWeight: 'bold',
-    },
+  },
   barsHomeIndicatorInstance: {
     backgroundColor: "#a4a4a4",
     left: 136,
     top: 9,
     position: "absolute",
-  },
-  container: {
-    padding: 20,
-    paddingTop: 30,
-    backgroundColor: "#fff",
-    alignItems: "center",
   },
   title: {
     fontWeight: "bold",
@@ -397,17 +409,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 16,
+    marginTop: Math.min(16, height * 0.02),
+    paddingBottom: Math.min(20, height * 0.025),
   },
   signupText: {
     color: "#000",
-    fontSize: 16,
+    fontSize: Math.min(16, width * 0.04),
     marginRight: 8,
   },
   signupLink: {
     color: "#e02323",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: Math.min(16, width * 0.04),
   },
 });
 
