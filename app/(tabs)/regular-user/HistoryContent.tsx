@@ -1,4 +1,5 @@
 import { Audio } from 'expo-av';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -21,6 +22,10 @@ interface HistoryDetails {
   severity: string;
   crime_description: string;
   voice_record_url: string;
+  officer_number: string;
+  officer_email: string;
+  officer_station: string;
+  officer_badge: string;
 }
 
 const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
@@ -32,6 +37,8 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
 
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const router = useRouter();
 
   async function handlePlaySound() {
     if (!details?.voice_record_url) return;
@@ -112,7 +119,7 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
     const formattedDate = startDate.toLocaleDateString('en-US', dateOptions);
     const startTime = startDate.toLocaleTimeString('en-US', timeOptions);
     const endTime = endDate.toLocaleTimeString('en-US', timeOptions);
-    return `${formattedDate}, ${startTime} - ${endTime}`;
+    return `${formattedDate}, ${startTime} -\n${endTime}`;
   };
 
   const renderLocation = (locationString: string) => {
@@ -154,14 +161,23 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 8, marginBottom: 8 }}>
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center' }}
+          onPress={() => router.back()}
+        >
+          <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
+        </TouchableOpacity>
+        <Text style={{ marginLeft: 12, color: currentTheme.text, fontSize: 22, fontFamily: fonts.poppins.semiBold }}>
+          Crime Report Details
+        </Text>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollViewContent, { paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <Text style={[styles.title, { color: currentTheme.text }]}>Crime Report History</Text>
-
           <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
             <View style={styles.locationHeader}>
               <View style={styles.locationDetails}>
@@ -170,26 +186,60 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
               </View>
               <View style={styles.responderInfo}>
                 <Text style={[styles.respondedBy, { color: currentTheme.text }]}>Responded by</Text>
-                <Text style={[styles.responder, { color: currentTheme.subtitle }]}>
+                <Text
+                  style={[
+                    styles.responder,
+                    { color: currentTheme.subtitle },
+                    { maxWidth: 120 },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
                   {details.officer_fname} {details.officer_lname}
                 </Text>
               </View>
             </View>
-            <View style={styles.victimInfo}>
-              <Text style={[styles.victimInfoTitle, { color: currentTheme.text }]}>Victim's Information</Text>
-              <View style={styles.victimDetailRow}>
-                <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Name:</Text>
-                <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{`${details.victim_fname} ${details.victim_lname}`}</Text>
+            {details.officer_fname && details.officer_lname ? (
+              <View style={styles.victimInfo}>
+                <Text style={[styles.victimInfoTitle, { color: currentTheme.text }]}>Police Information</Text>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Name:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{`${details.officer_fname} ${details.officer_lname}`}</Text>
+                </View>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Phone Number:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.officer_number || 'N/A'}</Text>
+                </View>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Email:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.officer_email || 'N/A'}</Text>
+                </View>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Station:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.officer_station || 'N/A'}</Text>
+                </View>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Badge Number:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.officer_badge || 'N/A'}</Text>
+                </View>
               </View>
-              <View style={styles.victimDetailRow}>
-                <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Phone Number:</Text>
-                <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.victim_number}</Text>
+            ) : (
+              <View style={styles.victimInfo}>
+                <Text style={[styles.victimInfoTitle, { color: currentTheme.text }]}>Victim's Information</Text>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Name:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{`${details.victim_fname} ${details.victim_lname}`}</Text>
+                </View>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Phone Number:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.victim_number}</Text>
+                </View>
+                <View style={styles.victimDetailRow}>
+                  <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Email:</Text>
+                  <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.victim_email}</Text>
+                </View>
               </View>
-              <View style={styles.victimDetailRow}>
-                <Text style={[styles.victimInfoLabel, { color: currentTheme.text }]}>Email:</Text>
-                <Text style={[styles.victimInfoText, { color: currentTheme.subtitle }]}>{details.victim_email}</Text>
-              </View>
-            </View>
+            )}
           </View>
 
           <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
@@ -245,16 +295,15 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   scrollViewContent: { padding: 20 },
   content: { gap: 16 },
-  title: { fontSize: 22, fontFamily: fonts.poppins.semiBold, color: '#212121', marginBottom: 16 },
   card: { backgroundColor: '#fff', borderRadius: 10, padding: 20, gap: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   locationHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   locationDetails: { flex: 1, marginRight: 10 },
   location: { fontSize: 16, fontFamily: fonts.poppins.medium, color: '#E02323', flexWrap: 'wrap' },
   locationArea: { fontSize: 14, fontFamily: fonts.poppins.regular, color: '#E02323', flexWrap: 'wrap' },
   dateTime: { fontSize: 12, fontFamily: fonts.poppins.medium, color: 'rgba(0, 0, 0, 0.4)', marginTop: 8 },
-  responderInfo: { alignItems: 'flex-end', gap: 6 },
+  responderInfo: { alignItems: 'flex-end', gap: 6, maxWidth: 120 },
   respondedBy: { fontSize: 11, fontFamily: fonts.poppins.medium, color: '#19F315' },
-  responder: { fontSize: 12, fontFamily: fonts.poppins.medium, color: 'rgba(0, 0, 0, 0.4)' },
+  responder: { fontSize: 12, fontFamily: fonts.poppins.medium, color: 'rgba(0, 0, 0, 0.4)', maxWidth: 120 },
   detailsRow: { flexDirection: 'row', gap: 18 },
   detailColumn: { flex: 1 },
   detailLabel: { fontSize: 14, fontFamily: fonts.poppins.semiBold, color: '#000', marginBottom: 2 },
