@@ -32,7 +32,7 @@ function GlobalAlertPoller() {
       }
 
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High
+        accuracy: Location.Accuracy.BestForNavigation
       });
 
       const response = await fetch(

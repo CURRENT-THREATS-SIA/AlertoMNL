@@ -292,7 +292,7 @@ export default function RegularUserHome() {
   const startLocationUpdates = async () => {
     if (Platform.OS === 'web') {
       // For web, just get the location once
-      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
       setLocation(location);
       try {
         const addresses = await Location.reverseGeocodeAsync(location.coords);
@@ -304,7 +304,7 @@ export default function RegularUserHome() {
     }
 
     const subscription = await Location.watchPositionAsync(
-      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 10 },
+      { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 10 },
       async (newLocation) => {
         setLocation(newLocation);
         try {
@@ -455,7 +455,7 @@ export default function RegularUserHome() {
       const nuserId = await AsyncStorage.getItem('nuser_id');
       if (!nuserId) throw new Error('User ID not found.');
       let currentLocation = location;
-      if (!currentLocation) currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (!currentLocation) currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
       setLocation(currentLocation);
       const formData = new FormData();
       formData.append('nuser_id', nuserId);
