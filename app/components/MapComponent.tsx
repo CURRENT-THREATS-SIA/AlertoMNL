@@ -503,8 +503,65 @@ const geocoder = new MapboxGeocoder({
   accessToken: mapboxgl.accessToken,
   mapboxgl: mapboxgl,
   countries: 'ph',
-  bbox: [120.9745, 14.5907, 120.9942, 14.6019],
-  placeholder: 'Search in Manila...'
+  bbox: [120.9547, 14.5547, 121.0272, 14.6380], // Expanded to cover all of Manila
+  placeholder: 'Search in Manila...',
+  flyTo: function(location) {
+    if (location && location.center) {
+      const [lng, lat] = location.center;
+      if (
+        lng >= 120.9547 && lng <= 121.0272 &&
+        lat >= 14.5547 && lat <= 14.6380
+      ) {
+        map.flyTo({ center: location.center, zoom: 16 });
+      } else {
+        showManilaReminder('Reminder: Please select a location within Manila.');
+        geocoder.clear();
+        // Do NOT move the map
+      }
+    }
+  }
+});
+
+// Add a custom reminder div
+const reminderDiv = document.createElement('div');
+reminderDiv.id = 'manila-reminder';
+reminderDiv.style.position = 'absolute';
+reminderDiv.style.top = '20px';
+reminderDiv.style.left = '50%';
+reminderDiv.style.transform = 'translateX(-50%)';
+reminderDiv.style.background = '#e02323';
+reminderDiv.style.color = 'white';
+reminderDiv.style.padding = '12px 24px';
+reminderDiv.style.borderRadius = '8px';
+reminderDiv.style.fontSize = '16px';
+reminderDiv.style.fontFamily = 'sans-serif';
+reminderDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+reminderDiv.style.zIndex = '9999';
+reminderDiv.style.display = 'none';
+document.body.appendChild(reminderDiv);
+
+function showManilaReminder(message) {
+  reminderDiv.textContent = message;
+  reminderDiv.style.display = 'block';
+  setTimeout(() => {
+    reminderDiv.style.display = 'none';
+  }, 3000);
+}
+
+// Only allow results within Manila (for extra safety)
+geocoder.on('result', function(e) {
+  const place = e.result;
+  const [lng, lat] = place.center;
+  const inManila =
+    lng >= 120.9547 && lng <= 121.0272 &&
+    lat >= 14.5547 && lat <= 14.6380 &&
+    place.place_name.includes('Manila');
+  if (!inManila) {
+    showManilaReminder('Reminder: Please select a location within Manila.');
+    geocoder.clear();
+    // Force map back to Manila center
+    map.flyTo({ center: [120.9842, 14.5995], zoom: 12 });
+  }
 });
 
 map.addControl(geocoder);

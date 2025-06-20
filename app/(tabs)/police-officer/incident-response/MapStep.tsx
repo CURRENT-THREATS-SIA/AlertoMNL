@@ -316,7 +316,7 @@ export default function MapStep() {
         graphEdges,
         officerLocation,
         { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) },
-        0.02
+        0.05
       );
 
       console.log('DEBUG: Filtered nodes:', filteredNodes.length);
@@ -451,7 +451,7 @@ export default function MapStep() {
           <View style={styles.infoTextContainer}>
             <Text style={styles.label}>Incident Location</Text>
             <Text style={styles.value}>{alertDetails.a_address}</Text>
-            {locationAccuracy !== null && locationAccuracy > 10 && (
+            {locationAccuracy !== null && locationAccuracy > 25 && (
               <Text style={[styles.value, { color: '#E02323', fontWeight: 'bold' }]}>Warning: Your location accuracy is poor ({locationAccuracy.toFixed(1)} meters). Please enable high-accuracy mode in your device settings.</Text>
             )}
             {distanceToIncident !== null && (
@@ -490,13 +490,13 @@ export default function MapStep() {
           </View>
         </View>
         <TouchableOpacity
-          style={[styles.button, distanceToIncident !== null && distanceToIncident > 5 ? { backgroundColor: '#ccc' } : {}]}
+          style={[styles.button, distanceToIncident !== null && distanceToIncident > 20 ? { backgroundColor: '#ccc' } : {}]}
           onPress={() => {
-            if (distanceToIncident !== null && distanceToIncident <= 5) {
+            if (distanceToIncident !== null && distanceToIncident <= 20) {
               router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
             }
           }}
-          disabled={distanceToIncident === null || distanceToIncident > 5}
+          disabled={distanceToIncident === null || distanceToIncident > 20}
         >
           <Text style={styles.buttonText}>You&apos;ve Arrived</Text>
         </TouchableOpacity>
