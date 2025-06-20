@@ -549,7 +549,7 @@ map.on('load', () => {
     type: 'circle',
     source: 'device-location',
     paint: {
-      'circle-radius': 1,
+      'circle-radius': 5,
       'circle-color': '#4285F4',
       'circle-stroke-width': 2,
       'circle-stroke-color': '#ffffff',
