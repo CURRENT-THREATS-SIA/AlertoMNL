@@ -3,8 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Dimensions, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width, height } = Dimensions.get('window');
 
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isValidBadgeNumber = (badge: string) => /^[A-Za-z]{4}-\d{6}$/.test(badge);
@@ -91,18 +93,62 @@ export default function SignUpPolice() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+        <ScrollView 
+          contentContainerStyle={styles.container} 
+          keyboardShouldPersistTaps="handled" 
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.title}>Let&rsquo;s sign you up.</Text>
           <Text style={styles.subtitle}>Please enter your information to create your account.</Text>
 
-          <View style={{ marginBottom: 18 }}><Text style={styles.label}>First Name</Text><TextInput style={styles.input} placeholderTextColor="#0000004D" placeholder="Input first name" value={firstName} onChangeText={setFirstName} /></View>
-          <View style={{ marginBottom: 18 }}><Text style={styles.label}>Last Name</Text><TextInput style={styles.input} placeholderTextColor="#0000004D" placeholder="Input last name" value={lastName} onChangeText={setLastName} /></View>
-          <View style={{ marginBottom: 18 }}><Text style={styles.label}>Police Badge Number</Text><TextInput style={styles.input} placeholderTextColor="#0000004D" placeholder="E.g. ABCD-123456" value={badgeNumber} onChangeText={handleBadgeInput} /></View>
-          <View style={{ marginBottom: 18 }}><Text style={styles.label}>Email Address</Text><TextInput style={styles.input} placeholderTextColor="#0000004D" placeholder="Input email address" value={email} onChangeText={setEmail} keyboardType="email-address" /></View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>First Name</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholderTextColor="#0000004D" 
+              placeholder="Input first name" 
+              value={firstName} 
+              onChangeText={setFirstName} 
+            />
+          </View>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Last Name</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholderTextColor="#0000004D" 
+              placeholder="Input last name" 
+              value={lastName} 
+              onChangeText={setLastName} 
+            />
+          </View>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Police Badge Number</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholderTextColor="#0000004D" 
+              placeholder="E.g. ABCD-123456" 
+              value={badgeNumber} 
+              onChangeText={handleBadgeInput} 
+            />
+          </View>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholderTextColor="#0000004D" 
+              placeholder="Input email address" 
+              value={email} 
+              onChangeText={setEmail} 
+              keyboardType="email-address" 
+            />
+          </View>
 
-          <View style={{ marginBottom: 18 }}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Station</Text>
             <View style={styles.pickerContainer}>
               <Picker selectedValue={station} onValueChange={(itemValue: string) => setStation(itemValue)} style={styles.picker}>
@@ -111,19 +157,36 @@ export default function SignUpPolice() {
             </View>
           </View>
 
-          <View style={{ marginBottom: 18 }}><Text style={styles.label}>Phone Number</Text><TextInput style={styles.input} placeholderTextColor="#0000004D" placeholder="Input phone number" value={phone} onChangeText={text => setPhone(text.replace(/[^0-9]/g, '').slice(0, 11))} keyboardType="phone-pad" /></View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholderTextColor="#0000004D" 
+              placeholder="Input phone number" 
+              value={phone} 
+              onChangeText={text => setPhone(text.replace(/[^0-9]/g, '').slice(0, 11))} 
+              keyboardType="phone-pad" 
+            />
+          </View>
 
-          <View style={{ marginBottom: 20 }}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.passwordContainer}>
-              <TextInput style={styles.passwordInput} placeholderTextColor="#0000004D" placeholder="Create Password" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
+              <TextInput 
+                style={styles.passwordInput} 
+                placeholderTextColor="#0000004D" 
+                placeholder="Create Password" 
+                value={password} 
+                onChangeText={setPassword} 
+                secureTextEntry={!showPassword} 
+              />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                <Ionicons name={showPassword ? "eye" : "eye-off"} size={24} color="#888" />
+                <Ionicons name={showPassword ? "eye" : "eye-off"} size={Math.min(24, width * 0.06)} color="#888" />
               </TouchableOpacity>
             </View>
           </View>
 
-          <View style={{ marginBottom: 18 }}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Security Question</Text>
             <View style={styles.pickerContainer}>
               <Picker selectedValue={selectedQuestion} onValueChange={setSelectedQuestion} style={styles.picker}>
@@ -133,27 +196,44 @@ export default function SignUpPolice() {
           </View>
 
           {selectedQuestion === OTHERS_VALUE && (
-            <View style={{ marginBottom: 18 }}>
+            <View style={styles.inputGroup}>
               <Text style={styles.label}>Your Custom Question</Text>
-              <TextInput style={styles.input} placeholderTextColor="#0000004D" placeholder="Type your security question" value={customQuestion} onChangeText={setCustomQuestion} />
+              <TextInput 
+                style={styles.input} 
+                placeholderTextColor="#0000004D" 
+                placeholder="Type your security question" 
+                value={customQuestion} 
+                onChangeText={setCustomQuestion} 
+              />
             </View>
           )}
 
-          <View style={{ marginBottom: 20 }}>
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Security Answer</Text>
             <View style={styles.passwordContainer}>
-              <TextInput style={styles.passwordInput} placeholderTextColor="#0000004D" placeholder="Your answer" value={securityAnswer} onChangeText={setSecurityAnswer} secureTextEntry={!showAnswer} />
+              <TextInput 
+                style={styles.passwordInput} 
+                placeholderTextColor="#0000004D" 
+                placeholder="Your answer" 
+                value={securityAnswer} 
+                onChangeText={setSecurityAnswer} 
+                secureTextEntry={!showAnswer} 
+              />
               <TouchableOpacity onPress={() => setShowAnswer(!showAnswer)} style={styles.eyeIcon}>
-                <Ionicons name={showAnswer ? "eye" : "eye-off"} size={24} color="#888" />
+                <Ionicons name={showAnswer ? "eye" : "eye-off"} size={Math.min(24, width * 0.06)} color="#888" />
               </TouchableOpacity>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleSignUp}><Text style={styles.buttonText}>Sign up</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+            <Text style={styles.buttonText}>Sign up</Text>
+          </TouchableOpacity>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
-            <Text style={{ color: '#000' }}>Already a member? </Text>
-            <TouchableOpacity onPress={() => router.push("/auth/Login")}><Text style={styles.loginLink}>Log in</Text></TouchableOpacity>
+          <View style={styles.loginRow}>
+            <Text style={styles.loginText}>Already a member? </Text>
+            <TouchableOpacity onPress={() => router.push("/auth/Login")}>
+              <Text style={styles.loginLink}>Log in</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -162,10 +242,17 @@ export default function SignUpPolice() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  keyboardView: {
+    flex: 1,
+  },
   container: {
-    padding: 20,
-    paddingTop: 40,
-    paddingBottom: 20,
+    padding: Math.min(20, width * 0.05),
+    paddingTop: Math.min(40, height * 0.05),
+    paddingBottom: Math.min(20, height * 0.025),
     flexGrow: 1,
     backgroundColor: '#fff',
   },
@@ -176,9 +263,14 @@ const styles = StyleSheet.create({
     color: '#e02323',
   },
   subtitle: {
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: Math.min(16, width * 0.04),
+    marginBottom: Math.min(20, height * 0.025),
     color: '#0000007a',
+    lineHeight: Math.min(24, width * 0.06),
+  },
+  inputGroup: {
+    marginBottom: Math.min(18, height * 0.022),
+    position: 'relative',
   },
   label: {
     position: 'absolute',
@@ -186,7 +278,7 @@ const styles = StyleSheet.create({
     left: 14,
     backgroundColor: '#fff',
     paddingHorizontal: 4,
-    fontSize: 13,
+    fontSize: Math.min(13, width * 0.032),
     color: '#888',
     fontWeight: 'bold',
     zIndex: 2,
@@ -194,16 +286,16 @@ const styles = StyleSheet.create({
   },
   input: {
     padding: 0,
-    fontSize: 16,
-    height: 42,
+    fontSize: Math.min(16, width * 0.04),
+    height: Math.min(42, height * 0.05),
     borderWidth: 1,
     borderColor: "#15050266",
     borderRadius: 8,
-    paddingHorizontal: 18,
+    paddingHorizontal: Math.min(18, width * 0.045),
     backgroundColor: "#fff",
   },
   pickerContainer: {
-    height: 42,
+    height: Math.min(42, height * 0.05),
     borderWidth: 1,
     borderColor: "#15050266",
     borderRadius: 8,
@@ -215,21 +307,32 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#e02323',
-    padding: 10,
+    padding: Math.min(10, height * 0.012),
     borderRadius: 10,
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: Math.min(12, height * 0.015),
+    marginBottom: Math.min(8, height * 0.01),
   },
   buttonText: {
     color: '#fff',
     textAlign: 'center',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: Math.min(16, width * 0.04),
+  },
+  loginRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: Math.min(16, height * 0.02),
+    alignItems: 'center',
+  },
+  loginText: {
+    color: '#000',
+    fontSize: Math.min(16, width * 0.04),
   },
   loginLink: {
     color: '#e02323',
     fontWeight: 'bold',
     textAlign: 'center',
+    fontSize: Math.min(16, width * 0.04),
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -237,14 +340,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#15050266",
     borderRadius: 8,
-    height: 42,
+    height: Math.min(42, height * 0.05),
   },
   passwordInput: {
     flex: 1,
-    paddingHorizontal: 18,
-    fontSize: 16,
+    paddingHorizontal: Math.min(18, width * 0.045),
+    fontSize: Math.min(16, width * 0.04),
   },
   eyeIcon: {
-    paddingHorizontal: 10,
+    paddingHorizontal: Math.min(10, width * 0.025),
   },
 });
