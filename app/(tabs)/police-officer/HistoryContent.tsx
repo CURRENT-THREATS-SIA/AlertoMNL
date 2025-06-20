@@ -1,10 +1,10 @@
 import { Audio } from 'expo-av';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import Header from '../../../components/Header';
-import NavBottomBar from '../../../components/NavBottomBar';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
 
@@ -25,6 +25,8 @@ interface HistoryDetails {
 }
 
 const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [details, setDetails] = useState<HistoryDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -135,9 +137,19 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
   if (isLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-        <Header />
-        <ActivityIndicator style={{ flex: 1 }} size="large" color="#E02323" />
-        <NavBottomBar activeScreen="History" />
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+          >
+            <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>History Details</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E02323" />
+        </View>
       </SafeAreaView>
     );
   }
@@ -145,22 +157,40 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
   if (error || !details) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-        <Header />
+        <View style={[styles.header, { paddingTop: insets.top }]}>
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => router.back()}
+          >
+            <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>History Details</Text>
+          <View style={styles.placeholder} />
+        </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <Text style={[styles.errorText, { color: currentTheme.text }]}>Could Not Load Details</Text>
           <Text style={[styles.errorSubText, { color: currentTheme.subtitle }]}>{error}</Text>
         </View>
-        <NavBottomBar activeScreen="History" />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-      <Header />
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => router.back()}
+        >
+          <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: currentTheme.text }]}>History Details</Text>
+        <View style={styles.placeholder} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollViewContent, { paddingBottom: 120 }]}
+        contentContainerStyle={[styles.scrollViewContent, { paddingBottom: 20 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
@@ -235,7 +265,6 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
           </View>
         </View>
       </ScrollView>
-      <NavBottomBar activeScreen="History" />
     </SafeAreaView>
   );
 };
@@ -272,6 +301,30 @@ const styles = StyleSheet.create({
   playButton: { marginRight: 12 },
   waveform: { flex: 1, flexDirection: 'row', alignItems: 'center', height: '100%', gap: 2 },
   waveformBar: { width: 3, backgroundColor: 'rgba(224, 35, 35, 0.6)', borderRadius: 2 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: fonts.poppins.semiBold,
+  },
+  backButton: {
+    padding: 8,
+  },
+  placeholder: {
+    width: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 export default HistoryContent;

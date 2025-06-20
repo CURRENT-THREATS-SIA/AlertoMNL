@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
-import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
@@ -39,12 +38,6 @@ const initialPermissions: Permission[] = [
     enabled: false,
     description: 'Send emergency SMS alerts to your emergency contacts',
   },
-  {
-    name: 'Storage',
-    iconName: 'folder',
-    enabled: false,
-    description: 'Store emergency information and media files locally on your device',
-  },
 ];
 
 const AppPermission: React.FC = () => {
@@ -65,9 +58,6 @@ const AppPermission: React.FC = () => {
     // SMS (can only check if available, not permission)
     const isSMSAvailable = await SMS.isAvailableAsync();
     checkedPermissions.push({ ...initialPermissions[2], enabled: isSMSAvailable });
-    // Storage
-    const { status: storageStatus } = await MediaLibrary.getPermissionsAsync();
-    checkedPermissions.push({ ...initialPermissions[3], enabled: storageStatus === 'granted' });
     setPermissions(checkedPermissions);
   };
 
@@ -98,9 +88,6 @@ const AppPermission: React.FC = () => {
         granted = status === 'granted';
       } else if (perm.name === 'Microphone') {
         const { status } = await Audio.requestPermissionsAsync();
-        granted = status === 'granted';
-      } else if (perm.name === 'Storage') {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
         granted = status === 'granted';
       } else if (perm.name === 'SMS') {
         // No permission dialog, just check if available
