@@ -54,7 +54,7 @@ const About: React.FC = () => {
 
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
+        contentContainerStyle={[styles.scrollViewContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* App Logo */}

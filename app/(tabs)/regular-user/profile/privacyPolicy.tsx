@@ -92,7 +92,7 @@ const PrivacyPolicy: React.FC = () => {
       
       <ScrollView 
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
+        contentContainerStyle={[styles.scrollViewContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
@@ -155,10 +155,12 @@ const styles = StyleSheet.create({
   },
   scrollViewContent: {
     padding: 16,
+    marginBottom: 24,
   },
   content: {
     flex: 1,
     gap: 24,
+    marginBottom: 24 ,
   },
   lastUpdatedContainer: {
     flexDirection: 'row',

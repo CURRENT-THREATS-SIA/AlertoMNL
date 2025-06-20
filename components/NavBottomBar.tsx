@@ -83,7 +83,7 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
           >
             <View style={[
               styles.bottomNavIconContainer,
-            ]}>
+             ]}>
               {item.icon}
             </View>
             <Text 

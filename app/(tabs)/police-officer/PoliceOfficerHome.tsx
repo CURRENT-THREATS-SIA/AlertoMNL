@@ -356,7 +356,7 @@ const CrimeMap: React.FC = () => {
                   >
                     <Text style={[
                       styles.modalOptionText,
-                      { color: '#f4f4f4', fontFamily: fonts.poppins.semiBold }
+                      { color: '#E02323', fontFamily: fonts.poppins.semiBold }
                     ]}>
                       Show All Crime Types
                     </Text>

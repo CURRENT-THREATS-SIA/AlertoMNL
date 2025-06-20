@@ -1,7 +1,7 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
-import * as MediaLibrary from 'expo-media-library';
+import { useRouter } from 'expo-router';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
 import {
@@ -19,8 +19,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 import { theme, useTheme } from '../../../context/ThemeContext';
+
+
 
 
 
@@ -53,17 +56,12 @@ const initialPermissions: Permission[] = [
     enabled: false,
     description: 'Send and receive emergency SMS alerts and updates from the command center',
   },
-  {
-    name: 'Storage',
-    iconName: 'folder',
-    enabled: false,
-    description: 'Store incident reports, evidence files, and other important documents locally on your device',
-  },
 ];
 
 const AppPermissions: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
   const [permissions, setPermissions] = useState<Permission[]>(initialPermissions);
@@ -80,9 +78,6 @@ const AppPermissions: React.FC = () => {
     // SMS (can only check if available, not permission)
     const isSMSAvailable = await SMS.isAvailableAsync();
     checkedPermissions.push({ ...initialPermissions[2], enabled: isSMSAvailable });
-    // Storage
-    const { status: storageStatus } = await MediaLibrary.getPermissionsAsync();
-    checkedPermissions.push({ ...initialPermissions[3], enabled: storageStatus === 'granted' });
     setPermissions(checkedPermissions);
   };
 
@@ -114,9 +109,6 @@ const AppPermissions: React.FC = () => {
       } else if (perm.name === 'Microphone') {
         const { status } = await Audio.requestPermissionsAsync();
         granted = status === 'granted';
-      } else if (perm.name === 'Storage') {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        granted = status === 'granted';
       } else if (perm.name === 'SMS') {
         // No permission dialog, just check if available
         granted = await SMS.isAvailableAsync();
@@ -145,13 +137,9 @@ const AppPermissions: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={currentTheme.background} />
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: currentTheme.surface }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="arrow-left" size={24} color={currentTheme.text} />
+      <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: currentTheme.surface }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: currentTheme.text }]}>App Permissions</Text>
