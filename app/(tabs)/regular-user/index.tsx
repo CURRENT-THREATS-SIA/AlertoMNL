@@ -1,7 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
+import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -55,6 +57,9 @@ export default function RegularUserHome() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [sosDisabledUntil, setSosDisabledUntil] = useState<number | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const [hideSOS, setHideSOS] = useState(false);
+  const [sosDelay, setSosDelay] = useState(3); // default to 3 seconds
+  const cancelCountdownRef = useRef(false);
 
   // Animated values for rings
   const ring1Anim = useRef(new Animated.Value(1)).current;
@@ -91,6 +96,29 @@ export default function RegularUserHome() {
       if (animation) animation.stop();
     };
   }, [sosState]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Reload settings
+      AsyncStorage.getItem('hideSOSButton').then(val => {
+        setHideSOS(val === '1');
+      });
+      AsyncStorage.getItem('sosDelay').then(val => {
+        setSosDelay(val ? Number(val) : 3);
+      });
+
+      // Reset SOS state and related UI
+      setSosState('idle');
+      setCountdown(null);
+      setIsSendingSOS(false);
+      setCurrentAlertId(null);
+
+      // Optionally clear polling interval if needed
+      if (pollingRef.current) clearInterval(pollingRef.current);
+
+      // Optionally reset other state if needed
+    }, [])
+  );
 
   // --- AGGRESSIVE CLEANUP FUNCTION WITH FORCED PAUSE ---
   const ensureAudioIsFree = async () => {
@@ -408,10 +436,17 @@ export default function RegularUserHome() {
   const handleSOS = async () => {
     if (isSendingSOS || (sosDisabledUntil && Date.now() < sosDisabledUntil)) return;
     await ensureAudioIsFree();
+    cancelCountdownRef.current = false; // Reset before starting
     setIsSendingSOS(true);
     setSosState('countdown');
-    setCountdown(5);
-    for (let i = 5; i > 0; i--) {
+    setCountdown(sosDelay);
+    for (let i = sosDelay; i > 0; i--) {
+      if (cancelCountdownRef.current) {
+        setIsSendingSOS(false);
+        setCountdown(null);
+        setSosState('idle');
+        return; // Exit early if cancelled
+      }
       await new Promise(resolve => setTimeout(resolve, 1000));
       setCountdown(i - 1);
     }
@@ -433,6 +468,9 @@ export default function RegularUserHome() {
       setCurrentAlertId(data.alert_id);
       setSosState('active');
       Alert.alert('SOS Triggered', 'Voice recording will automatically start for 30 seconds.');
+      // Send SMS to contacts
+      const emergencyMessage = `This is an SOS! I need help. My location: ${locationAddress}`;
+      await sendSOSMessages(emergencyMessage);
       recordAndUploadAudio(data.alert_id);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to send SOS.');
@@ -467,6 +505,37 @@ export default function RegularUserHome() {
   const isSosButtonDisabled =
     !!(isSendingSOS || !location || sosState === 'received' || sosState === 'countdown' ||
     (sosDisabledUntil && Date.now() < sosDisabledUntil));
+
+  const sendSOSMessages = async (message: string) => {
+    try {
+      const nuser_id = await AsyncStorage.getItem('nuser_id');
+      if (!nuser_id) {
+        console.log('No nuser_id');
+        return;
+      }
+      const response = await fetch(`http://mnl911.atwebpages.com/get_contacts1.php?nuser_id=${nuser_id}`);
+      const data = await response.json();
+      console.log('Contacts fetch result:', data);
+      if (data.success && data.contacts && data.contacts.length > 0) {
+        const phoneNumbers = data.contacts.map((c: any) => String(c.contact_number));
+        console.log('Phone numbers:', phoneNumbers);
+        const isAvailable = await SMS.isAvailableAsync();
+        console.log('SMS available:', isAvailable);
+        if (isAvailable) {
+          await SMS.sendSMSAsync(phoneNumbers, message);
+          console.log('SMS sendSMSAsync called');
+        } else {
+          Alert.alert('SMS is not available on this device');
+          console.log('SMS not available');
+        }
+      } else {
+        console.log('No contacts or fetch failed');
+      }
+    } catch (e) {
+      console.log('SMS error:', e);
+      Alert.alert('Failed to send SMS to contacts');
+    }
+  };
 
   // --- JSX / RENDER ---
   return (
@@ -516,26 +585,28 @@ export default function RegularUserHome() {
               sosState === 'resolved' && styles.blueCenter,
               (!location && !isSendingSOS) && styles.sosCenterDisabled
             ]}>
-              {sosState === 'countdown' ? (
-                <View style={styles.countdownContainer}>
-                  <Text style={styles.countdownText}>{countdown}</Text>
-                  <Text style={styles.countdownLabel}>seconds</Text>
-                </View>
-              ) : sosState === 'active' ? (
-                <Text style={styles.sosText}>STOP</Text>
-              ) : sosState === 'received' ? (
-                <Text style={styles.sosText}>RECEIVED</Text>
-              ) : sosState === 'resolved' ? (
-                <Text style={styles.sosText}>RESOLVED</Text>
-              ) : isSendingSOS ? (
-                <ActivityIndicator size="large" color="#ffffff" />
-              ) : !location ? (
-                <View style={styles.countdownContainer}>
+              {!hideSOS && (
+                sosState === 'countdown' ? (
+                  <View style={styles.countdownContainer}>
+                    <Text style={styles.countdownText}>{countdown}</Text>
+                    <Text style={styles.countdownLabel}>seconds</Text>
+                  </View>
+                ) : sosState === 'active' ? (
+                  <Text style={styles.sosText}>STOP</Text>
+                ) : sosState === 'received' ? (
+                  <Text style={styles.sosText}>RECEIVED</Text>
+                ) : sosState === 'resolved' ? (
+                  <Text style={styles.sosText}>RESOLVED</Text>
+                ) : isSendingSOS ? (
                   <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={styles.locatingText}>Locating...</Text>
-                </View>
-              ) : (
-                <Text style={styles.sosText}>SOS</Text>
+                ) : !location ? (
+                  <View style={styles.countdownContainer}>
+                    <ActivityIndicator size="large" color="#ffffff" />
+                    <Text style={styles.locatingText}>Locating...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.sosText}>SOS</Text>
+                )
               )}
             </View>
           </TouchableOpacity>
@@ -570,6 +641,27 @@ export default function RegularUserHome() {
             )}
           </View>
         </TouchableOpacity>
+        {(sosState === 'countdown') && (
+          <TouchableOpacity
+            style={[
+              styles.voiceButton,
+              { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', marginTop: 12 }
+            ]}
+            onPress={() => {
+              cancelCountdownRef.current = true;
+              setSosState('idle');
+              setCountdown(null);
+              setIsSendingSOS(false);
+            }}
+          >
+            <View style={styles.voiceButtonContent}>
+              <View style={styles.voiceButtonInner}>
+                <MaterialIcons name="cancel" size={24} color="#e02323" />
+                <Text style={[styles.voiceButtonText, { color: '#e02323' }]}>Cancel</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

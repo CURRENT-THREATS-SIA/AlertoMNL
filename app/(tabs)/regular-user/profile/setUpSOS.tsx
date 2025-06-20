@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -39,8 +40,23 @@ const SetUpSOS: React.FC = () => {
   const [selectedDelay, setSelectedDelay] = useState<number>(3);
   const [selectedInterval, setSelectedInterval] = useState<number>(0);
 
+  useEffect(() => {
+    AsyncStorage.getItem('hideSOSButton').then(val => {
+      setHideSOS(val === '1');
+    });
+    AsyncStorage.getItem('sosDelay').then(val => {
+      setSelectedDelay(val ? Number(val) : 3);
+    });
+  }, []);
+
+  const handleHideSOSToggle = () => {
+    setHideSOS(!hideSOS);
+    AsyncStorage.setItem('hideSOSButton', !hideSOS ? '1' : '0');
+  };
+
   const handleDelaySelect = (value: number) => {
     setSelectedDelay(value);
+    AsyncStorage.setItem('sosDelay', value.toString());
   };
 
   const handleIntervalSelect = (value: number) => {
@@ -69,7 +85,7 @@ const SetUpSOS: React.FC = () => {
           {/* Hide SOS Toggle */}
           <TouchableOpacity
             style={styles.toggleItem}
-            onPress={() => setHideSOS(!hideSOS)}
+            onPress={handleHideSOSToggle}
           >
             <View style={styles.toggleLeft}>
               <View style={[styles.iconContainer, { backgroundColor: '#fff5f5' }]}>

@@ -110,9 +110,9 @@ const History: React.FC = () => {
           ) : (
             <View style={styles.historyList}>
               {historyItems.length > 0 ? (
-                historyItems.map((item) => (
+                historyItems.map((item, idx) => (
                   <HistoryCard
-                    key={item.history_id}
+                    key={item.history_id + '-' + idx}
                     item={item}
                     onPress={() => handleHistoryItemPress(item.history_id)}
                   />
