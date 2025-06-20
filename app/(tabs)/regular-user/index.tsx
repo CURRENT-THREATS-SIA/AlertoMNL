@@ -1,5 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
@@ -55,6 +56,9 @@ export default function RegularUserHome() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [sosDisabledUntil, setSosDisabledUntil] = useState<number | null>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
+  const [hideSOS, setHideSOS] = useState(false);
+  const [sosDelay, setSosDelay] = useState(3); // default to 3 seconds
+  const cancelCountdownRef = useRef(false);
 
   // Animated values for rings
   const ring1Anim = useRef(new Animated.Value(1)).current;
@@ -91,6 +95,29 @@ export default function RegularUserHome() {
       if (animation) animation.stop();
     };
   }, [sosState]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Reload settings
+      AsyncStorage.getItem('hideSOSButton').then(val => {
+        setHideSOS(val === '1');
+      });
+      AsyncStorage.getItem('sosDelay').then(val => {
+        setSosDelay(val ? Number(val) : 3);
+      });
+
+      // Reset SOS state and related UI
+      setSosState('idle');
+      setCountdown(null);
+      setIsSendingSOS(false);
+      setCurrentAlertId(null);
+
+      // Optionally clear polling interval if needed
+      if (pollingRef.current) clearInterval(pollingRef.current);
+
+      // Optionally reset other state if needed
+    }, [])
+  );
 
   // --- AGGRESSIVE CLEANUP FUNCTION WITH FORCED PAUSE ---
   const ensureAudioIsFree = async () => {
@@ -408,10 +435,17 @@ export default function RegularUserHome() {
   const handleSOS = async () => {
     if (isSendingSOS || (sosDisabledUntil && Date.now() < sosDisabledUntil)) return;
     await ensureAudioIsFree();
+    cancelCountdownRef.current = false; // Reset before starting
     setIsSendingSOS(true);
     setSosState('countdown');
-    setCountdown(5);
-    for (let i = 5; i > 0; i--) {
+    setCountdown(sosDelay);
+    for (let i = sosDelay; i > 0; i--) {
+      if (cancelCountdownRef.current) {
+        setIsSendingSOS(false);
+        setCountdown(null);
+        setSosState('idle');
+        return; // Exit early if cancelled
+      }
       await new Promise(resolve => setTimeout(resolve, 1000));
       setCountdown(i - 1);
     }
@@ -516,26 +550,28 @@ export default function RegularUserHome() {
               sosState === 'resolved' && styles.blueCenter,
               (!location && !isSendingSOS) && styles.sosCenterDisabled
             ]}>
-              {sosState === 'countdown' ? (
-                <View style={styles.countdownContainer}>
-                  <Text style={styles.countdownText}>{countdown}</Text>
-                  <Text style={styles.countdownLabel}>seconds</Text>
-                </View>
-              ) : sosState === 'active' ? (
-                <Text style={styles.sosText}>STOP</Text>
-              ) : sosState === 'received' ? (
-                <Text style={styles.sosText}>RECEIVED</Text>
-              ) : sosState === 'resolved' ? (
-                <Text style={styles.sosText}>RESOLVED</Text>
-              ) : isSendingSOS ? (
-                <ActivityIndicator size="large" color="#ffffff" />
-              ) : !location ? (
-                <View style={styles.countdownContainer}>
+              {!hideSOS && (
+                sosState === 'countdown' ? (
+                  <View style={styles.countdownContainer}>
+                    <Text style={styles.countdownText}>{countdown}</Text>
+                    <Text style={styles.countdownLabel}>seconds</Text>
+                  </View>
+                ) : sosState === 'active' ? (
+                  <Text style={styles.sosText}>STOP</Text>
+                ) : sosState === 'received' ? (
+                  <Text style={styles.sosText}>RECEIVED</Text>
+                ) : sosState === 'resolved' ? (
+                  <Text style={styles.sosText}>RESOLVED</Text>
+                ) : isSendingSOS ? (
                   <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={styles.locatingText}>Locating...</Text>
-                </View>
-              ) : (
-                <Text style={styles.sosText}>SOS</Text>
+                ) : !location ? (
+                  <View style={styles.countdownContainer}>
+                    <ActivityIndicator size="large" color="#ffffff" />
+                    <Text style={styles.locatingText}>Locating...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.sosText}>SOS</Text>
+                )
               )}
             </View>
           </TouchableOpacity>
@@ -570,6 +606,27 @@ export default function RegularUserHome() {
             )}
           </View>
         </TouchableOpacity>
+        {(sosState === 'countdown') && (
+          <TouchableOpacity
+            style={[
+              styles.voiceButton,
+              { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', marginTop: 12 }
+            ]}
+            onPress={() => {
+              cancelCountdownRef.current = true;
+              setSosState('idle');
+              setCountdown(null);
+              setIsSendingSOS(false);
+            }}
+          >
+            <View style={styles.voiceButtonContent}>
+              <View style={styles.voiceButtonInner}>
+                <MaterialIcons name="cancel" size={24} color="#e02323" />
+                <Text style={[styles.voiceButtonText, { color: '#e02323' }]}>Cancel</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
