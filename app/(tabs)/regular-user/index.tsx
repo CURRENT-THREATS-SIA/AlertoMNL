@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
+import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -467,6 +468,9 @@ export default function RegularUserHome() {
       setCurrentAlertId(data.alert_id);
       setSosState('active');
       Alert.alert('SOS Triggered', 'Voice recording will automatically start for 30 seconds.');
+      // Send SMS to contacts
+      const emergencyMessage = `This is an SOS! I need help. My location: ${locationAddress}`;
+      await sendSOSMessages(emergencyMessage);
       recordAndUploadAudio(data.alert_id);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to send SOS.');
@@ -501,6 +505,37 @@ export default function RegularUserHome() {
   const isSosButtonDisabled =
     !!(isSendingSOS || !location || sosState === 'received' || sosState === 'countdown' ||
     (sosDisabledUntil && Date.now() < sosDisabledUntil));
+
+  const sendSOSMessages = async (message: string) => {
+    try {
+      const nuser_id = await AsyncStorage.getItem('nuser_id');
+      if (!nuser_id) {
+        console.log('No nuser_id');
+        return;
+      }
+      const response = await fetch(`http://mnl911.atwebpages.com/get_contacts1.php?nuser_id=${nuser_id}`);
+      const data = await response.json();
+      console.log('Contacts fetch result:', data);
+      if (data.success && data.contacts && data.contacts.length > 0) {
+        const phoneNumbers = data.contacts.map((c: any) => String(c.contact_number));
+        console.log('Phone numbers:', phoneNumbers);
+        const isAvailable = await SMS.isAvailableAsync();
+        console.log('SMS available:', isAvailable);
+        if (isAvailable) {
+          await SMS.sendSMSAsync(phoneNumbers, message);
+          console.log('SMS sendSMSAsync called');
+        } else {
+          Alert.alert('SMS is not available on this device');
+          console.log('SMS not available');
+        }
+      } else {
+        console.log('No contacts or fetch failed');
+      }
+    } catch (e) {
+      console.log('SMS error:', e);
+      Alert.alert('Failed to send SMS to contacts');
+    }
+  };
 
   // --- JSX / RENDER ---
   return (
