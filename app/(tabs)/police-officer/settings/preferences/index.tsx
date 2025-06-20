@@ -1,4 +1,6 @@
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as KeepAwake from 'expo-keep-awake';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -42,7 +44,14 @@ export default function PreferencesScreen() {
       icon: 'smartphone',
       label: 'Keep screen on',
       description: 'Prevent screen from turning off while using the app',
-      defaultValue: true,
+      defaultValue: false,
+      onToggle: async (value: boolean) => {
+        if (value) {
+          await KeepAwake.activateKeepAwakeAsync();
+        } else {
+          await KeepAwake.deactivateKeepAwake();
+        }
+      },
     },
     {
       icon: 'settings',
@@ -55,6 +64,24 @@ export default function PreferencesScreen() {
   const [switchStates, setSwitchStates] = React.useState(
     preferenceItems.map(item => item.defaultValue || false)
   );
+
+  // Persist and load 'Keep screen on' toggle
+  React.useEffect(() => {
+    (async () => {
+      const value = await AsyncStorage.getItem('keepScreenOn');
+      if (value !== null) {
+        const newStates = [...switchStates];
+        newStates[2] = value === 'true';
+        setSwitchStates(newStates);
+        if (value === 'true') {
+          await KeepAwake.activateKeepAwakeAsync();
+        } else {
+          await KeepAwake.deactivateKeepAwake();
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
@@ -104,10 +131,13 @@ export default function PreferencesScreen() {
                 thumbColor="#FFFFFF"
                 ios_backgroundColor={currentTheme.switchTrack}
                 value={switchStates[index]}
-                onValueChange={(newValue) => {
+                onValueChange={async (newValue) => {
                   const newStates = [...switchStates];
                   newStates[index] = newValue;
                   setSwitchStates(newStates);
+                  if (item.label === 'Keep screen on') {
+                    await AsyncStorage.setItem('keepScreenOn', newValue ? 'true' : 'false');
+                  }
                   item.onToggle?.(newValue);
                 }}
                 style={styles.switch}
