@@ -66,7 +66,7 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
     <View style={[
       styles.bottomNav, 
       { 
-        paddingBottom: insets.bottom + 8,
+        paddingBottom: insets.bottom,
         backgroundColor: currentTheme.cardBackground,
         borderTopColor: currentTheme.border
       }
