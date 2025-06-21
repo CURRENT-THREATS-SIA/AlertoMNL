@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -39,7 +40,6 @@ export default function ArrivedStep() {
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[] | undefined>();
   const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | undefined>();
 
   useEffect(() => {
@@ -48,38 +48,48 @@ export default function ArrivedStep() {
       setIsLoading(false);
       return;
     }
-    // Fetch alert details
-    const fetchAlertDetails = async () => {
+
+    const fetchAllDetails = async () => {
       try {
-        const response = await fetch(`http://mnl911.atwebpages.com/get_alert_details.php?alert_id=${alert_id}`);
-        const result = await response.json();
-        if (result.success) {
-          setAlertDetails(result.data);
-        } else {
-          setError(result.error || 'Failed to fetch alert details.');
+        const policeId = await AsyncStorage.getItem('police_id');
+        if (!policeId) {
+          setError('Police ID not found.');
+          return;
         }
-      } catch (e) {
-        setError('Failed to fetch alert details.');
+
+        // Fetch alert and officer location details in parallel
+        const [alertRes, locationRes] = await Promise.all([
+          fetch(`http://mnl911.atwebpages.com/get_alert_details.php?alert_id=${alert_id}`),
+          fetch(`http://mnl911.atwebpages.com/get_police_location.php?police_id=${policeId}&alert_id=${alert_id}`)
+        ]);
+
+        const alertResult = await alertRes.json();
+        const locationResult = await locationRes.json();
+
+        if (alertResult.success) {
+          setAlertDetails(alertResult.data);
+        } else {
+          throw new Error(alertResult.error || 'Failed to fetch alert details.');
+        }
+
+        if (locationResult.success && locationResult.location) {
+          setOfficerLocation({
+            lat: parseFloat(locationResult.location.latitude),
+            lng: parseFloat(locationResult.location.longitude)
+          });
+        } else {
+          // It's okay if officer location fails, we can still show the incident
+          console.warn('Could not fetch officer location on ArrivedStep.');
+        }
+
+      } catch (e: any) {
+        setError(e.message || 'An unexpected error occurred.');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchAlertDetails();
-    // Fetch route and officer location
-    const fetchRouteAndLocation = async () => {
-      try {
-        const res = await fetch(`http://mnl911.atwebpages.com/get_sos_route.php?alert_id=${alert_id}`);
-        const data = await res.json();
-        if (data.success) {
-          setRouteCoords([
-            { lat: data.officer.lat, lng: data.officer.lng },
-            { lat: data.user.lat, lng: data.user.lng }
-          ]);
-          setOfficerLocation({ lat: data.officer.lat, lng: data.officer.lng });
-        }
-      } catch {}
-    };
-    fetchRouteAndLocation();
+
+    fetchAllDetails();
   }, [alert_id]);
 
   const getFormattedTime = (dateString: string) => {
@@ -116,7 +126,6 @@ export default function ArrivedStep() {
           selectedStation={null}
           userType={'police'}
           data={{ type: 'FeatureCollection', features: [] }}
-          routeCoords={routeCoords}
           officerLocation={officerLocation}
           incidentLocation={alertDetails && alertDetails.a_latitude && alertDetails.a_longitude ? { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) } : undefined}
         />

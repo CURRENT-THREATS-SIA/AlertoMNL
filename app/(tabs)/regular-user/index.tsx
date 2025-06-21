@@ -462,18 +462,38 @@ export default function RegularUserHome() {
       formData.append('a_latitude', currentLocation.coords.latitude.toString());
       formData.append('a_longitude', currentLocation.coords.longitude.toString());
       formData.append('location_address', locationAddress);
+      
+      console.log('Sending SOS alert to server...');
       const response = await fetch(API_TRIGGER_SOS_URL, { method: 'POST', body: formData });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+      
       const data = await response.json();
       if (!data.success) throw new Error(data.message || 'Failed to create SOS alert.');
+      
       setCurrentAlertId(data.alert_id);
       setSosState('active');
       Alert.alert('SOS Triggered', 'Voice recording will automatically start for 30 seconds.');
+      
       // Send SMS to contacts
       const emergencyMessage = `This is an SOS! I need help. My location: ${locationAddress}`;
       await sendSOSMessages(emergencyMessage);
       recordAndUploadAudio(data.alert_id);
     } catch (error: any) {
+      console.log('SOS error:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed')) {
+          Alert.alert('Network Error', 'Unable to connect to server. Please check your internet connection and try again.');
+        } else if (error.message.includes('Server error')) {
+          Alert.alert('Server Error', 'Server is not responding. Please try again later.');
+        } else {
       Alert.alert('Error', error.message || 'Failed to send SOS.');
+        }
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      }
       setSosState('idle');
     } finally {
       setIsSendingSOS(false);
@@ -513,27 +533,52 @@ export default function RegularUserHome() {
         console.log('No nuser_id');
         return;
       }
+      
+      console.log('Fetching contacts for user:', nuser_id);
       const response = await fetch(`http://mnl911.atwebpages.com/get_contacts1.php?nuser_id=${nuser_id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
       console.log('Contacts fetch result:', data);
+      
       if (data.success && data.contacts && data.contacts.length > 0) {
         const phoneNumbers = data.contacts.map((c: any) => String(c.contact_number));
         console.log('Phone numbers:', phoneNumbers);
+        
         const isAvailable = await SMS.isAvailableAsync();
         console.log('SMS available:', isAvailable);
+        
         if (isAvailable) {
-          await SMS.sendSMSAsync(phoneNumbers, message);
-          console.log('SMS sendSMSAsync called');
+          try {
+            await SMS.sendSMSAsync(phoneNumbers, message);
+            console.log('SMS sendSMSAsync called successfully');
+          } catch (smsError) {
+            console.log('SMS sendSMSAsync error:', smsError);
+            Alert.alert('SMS Error', 'Failed to send SMS. Please check your SMS permissions.');
+          }
         } else {
           Alert.alert('SMS is not available on this device');
           console.log('SMS not available');
         }
       } else {
-        console.log('No contacts or fetch failed');
+        console.log('No contacts or fetch failed:', data);
       }
     } catch (e) {
       console.log('SMS error:', e);
-      Alert.alert('Failed to send SMS to contacts');
+      if (e instanceof Error) {
+        if (e.message.includes('Network request failed')) {
+          Alert.alert('Network Error', 'Unable to connect to server. Please check your internet connection.');
+        } else if (e.message.includes('HTTP error')) {
+          Alert.alert('Server Error', 'Server is not responding. Please try again later.');
+        } else {
+          Alert.alert('Error', `Failed to send SMS: ${e.message}`);
+        }
+      } else {
+        Alert.alert('Failed to send SMS to contacts');
+      }
     }
   };
 
@@ -587,25 +632,25 @@ export default function RegularUserHome() {
             ]}>
               {!hideSOS && (
                 sosState === 'countdown' ? (
-                  <View style={styles.countdownContainer}>
-                    <Text style={styles.countdownText}>{countdown}</Text>
-                    <Text style={styles.countdownLabel}>seconds</Text>
-                  </View>
-                ) : sosState === 'active' ? (
-                  <Text style={styles.sosText}>STOP</Text>
-                ) : sosState === 'received' ? (
-                  <Text style={styles.sosText}>RECEIVED</Text>
-                ) : sosState === 'resolved' ? (
-                  <Text style={styles.sosText}>RESOLVED</Text>
-                ) : isSendingSOS ? (
+                <View style={styles.countdownContainer}>
+                  <Text style={styles.countdownText}>{countdown}</Text>
+                  <Text style={styles.countdownLabel}>seconds</Text>
+                </View>
+              ) : sosState === 'active' ? (
+                <Text style={styles.sosText}>STOP</Text>
+              ) : sosState === 'received' ? (
+                <Text style={styles.sosText}>RECEIVED</Text>
+              ) : sosState === 'resolved' ? (
+                <Text style={styles.sosText}>RESOLVED</Text>
+              ) : isSendingSOS ? (
+                <ActivityIndicator size="large" color="#ffffff" />
+              ) : !location ? (
+                <View style={styles.countdownContainer}>
                   <ActivityIndicator size="large" color="#ffffff" />
-                ) : !location ? (
-                  <View style={styles.countdownContainer}>
-                    <ActivityIndicator size="large" color="#ffffff" />
-                    <Text style={styles.locatingText}>Locating...</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.sosText}>SOS</Text>
+                  <Text style={styles.locatingText}>Locating...</Text>
+                </View>
+              ) : (
+                <Text style={styles.sosText}>SOS</Text>
                 )
               )}
             </View>

@@ -13,6 +13,10 @@ export function multidirectionalDijkstra(
   start: string,
   end: string
 ): DijkstraResult {
+  if (start === end) {
+    return { path: [start], distance: 0 };
+  }
+
   const distances: Record<string, number> = {};
   const prev: Record<string, string | null> = {};
   const visited = new Set<string>();
