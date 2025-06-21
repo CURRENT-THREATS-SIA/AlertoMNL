@@ -54,6 +54,7 @@ export default function Login() {
         setLockoutUntil(null);
         setLockoutCountdown("");
         if (data.user_type === "police") {
+          alert(`Login successful. Welcome, Officer ${data.last_name}!`);
           await AsyncStorage.setItem('police_id', data.police_id.toString());
           await AsyncStorage.setItem('firstName', data.first_name);
           await AsyncStorage.setItem('lastName', data.last_name);
@@ -78,7 +79,11 @@ export default function Login() {
         setLockoutMessage("");
         setLockoutUntil(null);
         setLockoutCountdown("");
-        alert(data.message || "Invalid credentials");
+        if (data.message.includes('verify your status') || data.message.includes('suspended') || data.message.includes('terminated')) {
+            setLockoutMessage(data.message);
+        } else {
+            alert(data.message || "Invalid credentials");
+        }
       }
     } catch (error) {
       setLockoutMessage("");
