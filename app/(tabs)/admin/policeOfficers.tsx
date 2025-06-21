@@ -1,4 +1,4 @@
-import { ChevronDown, Edit as EditIcon, Filter, RefreshCw, Search } from 'lucide-react-native';
+import { ChevronDown, Filter, RefreshCw, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
@@ -14,6 +14,12 @@ import AdminLayout from '../../components/AdminLayout';
 
 const stationOptions = ['All Stations', 'Station 1', 'Station 2', 'Station 3', 'Station 4', 'Station 5', 'Station 6', 'Station 7', 'Station 8', 'Station 9', 'Station 10', 'Station 11', 'Station 12', 'Station 13', 'Station 14'];
 const sortOptions = [{ label: 'Name (A-Z)', value: 'name_asc' }, { label: 'Name (Z-A)', value: 'name_desc' }, { label: 'Station', value: 'station' }, { label: 'ID', value: 'id' }];
+const statusOptions = [
+    { label: 'Verification', value: 'P.Verification' },
+    { label: 'Active', value: 'P.Active' },
+    { label: 'Suspended', value: 'P.Suspended' },
+    { label: 'Terminated', value: 'P.Terminated' },
+];
 
 interface PoliceOfficer {
     id: string;
@@ -26,7 +32,30 @@ interface PoliceOfficer {
     password: string;
     securityQuestion: string;
     securityAnswer: string;
+    account_status?: string;
+    suspension_end_date?: string | null;
 }
+
+// Helper function for status color
+const getStatusStyle = (status?: string | null): { color: string; fontWeight: "600" } => {
+    switch (status) {
+        case 'P.Active':
+            return { color: '#28a745', fontWeight: '600' }; // Green
+        case 'P.Suspended':
+            return { color: '#ff7675', fontWeight: '600' }; // Light Red
+        case 'P.Terminated':
+            return { color: '#d63031', fontWeight: '600' }; // Dark Red
+        case 'P.Verification':
+        default:
+            return { color: '#212529', fontWeight: '600' }; // Black
+    }
+};
+
+// Helper function to format status text for display
+const formatStatusDisplay = (status?: string | null) => {
+    if (!status) return 'Verification';
+    return status.replace('P.', '');
+};
 
 const formatPhoneNumber = (phoneStr: string) => {
     if (!phoneStr) return '';
@@ -73,6 +102,10 @@ export default function PoliceOfficers() {
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [hoveredStation, setHoveredStation] = useState<string | null>(null);
     const [hoveredSortOption, setHoveredSortOption] = useState<string | null>(null);
+
+    const [statusModal, setStatusModal] = useState<{visible: boolean, officer: PoliceOfficer | null, newStatus: string | null}>({visible: false, officer: null, newStatus: null});
+    const [suspendDays, setSuspendDays] = useState<number>(7);
+    const [isUpdating, setIsUpdating] = useState(false);
 
     useEffect(() => {
         const fetchOfficers = async () => {
@@ -186,8 +219,6 @@ export default function PoliceOfficers() {
                                                     <TouchableOpacity
                                                         style={styles.dropdownItem}
                                                         onPress={() => { setSelectedStation(station); setShowStationDropdown(false); }}
-                                                        onMouseEnter={() => setHoveredStation(station)}
-                                                        onMouseLeave={() => setHoveredStation(null)}
                                                     >
                                                         <Text style={[styles.dropdownItemText, hoveredStation === station && styles.dropdownItemTextHovered, selectedStation === station && styles.dropdownItemTextSelected]}>
                                                             {station}
@@ -212,8 +243,6 @@ export default function PoliceOfficers() {
                                                     key={option.value}
                                                     style={styles.dropdownItem}
                                                     onPress={() => { setSortBy(option.value); setShowSortDropdown(false); }}
-                                                    onMouseEnter={() => setHoveredSortOption(option.value)}
-                                                    onMouseLeave={() => setHoveredSortOption(null)}
                                                 >
                                                     <Text style={[styles.dropdownItemText, hoveredSortOption === option.value && styles.dropdownItemTextHovered, sortBy === option.value && styles.dropdownItemTextSelected]}>
                                                         {option.label}
@@ -243,7 +272,7 @@ export default function PoliceOfficers() {
                             <FlatList
                                 data={paginatedData}
                                 keyExtractor={(item) => item.id}
-                                ListHeaderComponent={<View style={styles.tableHeader}><Text style={[styles.headerCell, styles.idColumn]}>POLICE ID</Text><Text style={[styles.headerCell, styles.firstNameColumn]}>FIRST NAME</Text><Text style={[styles.headerCell, styles.lastNameColumn]}>LAST NAME</Text><Text style={[styles.headerCell, styles.stationColumn]}>STATION</Text><Text style={[styles.headerCell, styles.badgeColumn]}>BADGE</Text><Text style={[styles.headerCell, styles.phoneColumn]}>PHONE</Text><Text style={[styles.headerCell, styles.emailColumn]}>EMAIL</Text><Text style={[styles.headerCell, styles.passwordColumn]}>PASS</Text><Text style={[styles.headerCell, styles.secQuestionColumn]}>SEC. Q</Text><Text style={[styles.headerCell, styles.secAnswerColumn]}>SEC. A</Text><Text style={[styles.headerCell, styles.actionColumn]}>ACTION</Text></View>}
+                                ListHeaderComponent={<View style={styles.tableHeader}><Text style={[styles.headerCell, styles.idColumn]}>POLICE ID</Text><Text style={[styles.headerCell, styles.firstNameColumn]}>FIRST NAME</Text><Text style={[styles.headerCell, styles.lastNameColumn]}>LAST NAME</Text><Text style={[styles.headerCell, styles.stationColumn]}>STATION</Text><Text style={[styles.headerCell, styles.badgeColumn]}>BADGE</Text><Text style={[styles.headerCell, styles.phoneColumn]}>PHONE</Text><Text style={[styles.headerCell, styles.emailColumn]}>EMAIL</Text><Text style={[styles.headerCell, styles.passwordColumn]}>PASS</Text><Text style={[styles.headerCell, styles.secQuestionColumn]}>SEC. Q</Text><Text style={[styles.headerCell, styles.secAnswerColumn]}>SEC. A</Text><Text style={[styles.headerCell, styles.actionColumn]}>STATUS</Text></View>}
                                 renderItem={({ item }) => (
                                     <View style={styles.tableRow}>
                                         <HighlightText style={[styles.cell, styles.idColumn]} text={item.id} highlight={search} />
@@ -252,12 +281,22 @@ export default function PoliceOfficers() {
                                         <HighlightText style={[styles.cell, styles.stationColumn]} text={item.station} highlight={search} />
                                         <HighlightText style={[styles.cell, styles.badgeColumn]} text={item.badge} highlight={search} />
                                         <HighlightText style={[styles.cell, styles.phoneColumn]} text={formatPhoneNumber(item.phone)} highlight={search} />
-                                        {/* THE FIX: Apply numberOfLines and ellipsizeMode to truncate long emails */}
                                         <HighlightText style={[styles.cell, styles.emailColumn]} text={item.email} highlight={search} numberOfLines={1} ellipsizeMode="tail" />
                                         <Text style={[styles.cell, styles.passwordColumn]}>{item.password}</Text>
                                         <Text style={[styles.cell, styles.secQuestionColumn]} numberOfLines={1} ellipsizeMode="tail">{item.securityQuestion}</Text>
                                         <Text style={[styles.cell, styles.secAnswerColumn]} numberOfLines={1} ellipsizeMode="tail">{item.securityAnswer}</Text>
-                                        <View style={[styles.cell, styles.actionColumn]}><TouchableOpacity style={styles.actionButton}><EditIcon size={20} color="#666" /></TouchableOpacity></View>
+                                        <View style={[styles.cell, styles.actionColumn]}>
+                                            <TouchableOpacity
+                                                style={styles.actionButton}
+                                                onPress={() => setStatusModal({visible: true, officer: item, newStatus: item.account_status || 'P.Verification'})}
+                                            >
+                                                <Text style={getStatusStyle(item.account_status)}>{formatStatusDisplay(item.account_status)}</Text>
+                                                <ChevronDown width={16} height={16} color="#666" />
+                                            </TouchableOpacity>
+                                            {item.account_status === 'P.Suspended' && item.suspension_end_date && (
+                                                <Text style={{fontSize: 10, color: '#ff7675'}}>Until: {item.suspension_end_date.split(' ')[0]}</Text>
+                                            )}
+                                        </View>
                                     </View>
                                 )}
                                 ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -273,6 +312,88 @@ export default function PoliceOfficers() {
                     </>
                 )}
             </Pressable>
+
+            {statusModal.visible && statusModal.officer && (
+                <View style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'center', alignItems: 'center', zIndex: 100}}>
+                    <View style={{backgroundColor: '#fff', borderRadius: 12, padding: 24, width: 320, alignItems: 'center'}}>
+                        <Text style={{fontSize: 18, fontWeight: '700', marginBottom: 16}}>Change Status</Text>
+                        {statusOptions.map(opt => (
+                            <TouchableOpacity
+                                key={opt.value}
+                                style={{padding: 10, width: '100%', alignItems: 'center', backgroundColor: statusModal.newStatus === opt.value ? '#f8f9fa' : '#fff'}}
+                                onPress={() => setStatusModal(sm => ({...sm, newStatus: opt.value}))}
+                            >
+                                <Text style={{color: opt.value === 'P.Terminated' ? '#e02323' : '#222', fontWeight: statusModal.newStatus === opt.value ? '700' : '400'}}>{opt.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                        {statusModal.newStatus === 'P.Suspended' && (
+                            <View style={{marginTop: 16, alignItems: 'center'}}>
+                                <Text style={{fontSize: 14, marginBottom: 8}}>Suspension Duration (days):</Text>
+                                <View style={{flexDirection: 'row', gap: 8}}>
+                                    {[7, 15, 30].map(days => (
+                                        <TouchableOpacity key={days} style={{padding: 8, backgroundColor: suspendDays === days ? '#e02323' : '#eee', borderRadius: 6, marginHorizontal: 4}} onPress={() => setSuspendDays(days)}>
+                                            <Text style={{color: suspendDays === days ? '#fff' : '#222'}}>{days}d</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+                        <View style={{flexDirection: 'row', marginTop: 24, gap: 12}}>
+                            <TouchableOpacity
+                                style={{backgroundColor: '#e02323', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8}}
+                                disabled={isUpdating}
+                                onPress={async () => {
+                                    if (!statusModal.officer || !statusModal.newStatus) return;
+                                    setIsUpdating(true);
+                                    let body: any = {
+                                        police_id: parseInt(statusModal.officer.id, 10),
+                                        account_status: statusModal.newStatus
+                                    };
+                                    if (statusModal.newStatus === 'P.Suspended') {
+                                        const now = new Date();
+                                        now.setDate(now.getDate() + suspendDays);
+                                        const yyyy = now.getFullYear();
+                                        const mm = String(now.getMonth() + 1).padStart(2, '0');
+                                        const dd = String(now.getDate()).padStart(2, '0');
+                                        const hh = String(now.getHours()).padStart(2, '0');
+                                        const min = String(now.getMinutes()).padStart(2, '0');
+                                        const ss = String(now.getSeconds()).padStart(2, '0');
+                                        body.suspension_end_date = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+                                    }
+                                    try {
+                                        const res = await fetch('http://mnl911.atwebpages.com/update_police_status.php', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(body)
+                                        });
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            // Refresh officers
+                                            setOfficers(prev => prev.map(o => o.id === statusModal.officer?.id ? { ...o, account_status: statusModal.newStatus || undefined, suspension_end_date: body.suspension_end_date || undefined } : o));
+                                            setStatusModal({visible: false, officer: null, newStatus: null});
+                                        } else {
+                                            alert(data.message || 'Failed to update status');
+                                        }
+                                    } catch (err) {
+                                        alert('Network error');
+                                    } finally {
+                                        setIsUpdating(false);
+                                    }
+                                }}
+                            >
+                                <Text style={{color: '#fff', fontWeight: '700'}}>Save</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={{backgroundColor: '#eee', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8}}
+                                disabled={isUpdating}
+                                onPress={() => setStatusModal({visible: false, officer: null, newStatus: null})}
+                            >
+                                <Text style={{color: '#222', fontWeight: '700'}}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            )}
         </AdminLayout>
     );
 }
