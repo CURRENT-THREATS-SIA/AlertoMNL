@@ -106,6 +106,7 @@ export default function PoliceOfficers() {
     const [statusModal, setStatusModal] = useState<{visible: boolean, officer: PoliceOfficer | null, newStatus: string | null}>({visible: false, officer: null, newStatus: null});
     const [suspendDays, setSuspendDays] = useState<number>(7);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [terminationReason, setTerminationReason] = useState('');
 
     useEffect(() => {
         const fetchOfficers = async () => {
@@ -321,7 +322,13 @@ export default function PoliceOfficers() {
                             <TouchableOpacity
                                 key={opt.value}
                                 style={{padding: 10, width: '100%', alignItems: 'center', backgroundColor: statusModal.newStatus === opt.value ? '#f8f9fa' : '#fff'}}
-                                onPress={() => setStatusModal(sm => ({...sm, newStatus: opt.value}))}
+                                onPress={() => {
+                                    setStatusModal(sm => ({...sm, newStatus: opt.value}));
+                                    // Reset reason when changing status
+                                    if (opt.value !== 'P.Terminated') {
+                                        setTerminationReason('');
+                                    }
+                                }}
                             >
                                 <Text style={{color: opt.value === 'P.Terminated' ? '#e02323' : '#222', fontWeight: statusModal.newStatus === opt.value ? '700' : '400'}}>{opt.label}</Text>
                             </TouchableOpacity>
@@ -336,6 +343,17 @@ export default function PoliceOfficers() {
                                         </TouchableOpacity>
                                     ))}
                                 </View>
+                            </View>
+                        )}
+                        {statusModal.newStatus === 'P.Terminated' && (
+                            <View style={{marginTop: 16, width: '100%'}}>
+                                <Text style={{fontSize: 14, marginBottom: 8, textAlign: 'center'}}>Reason for Termination (Optional):</Text>
+                                <TextInput
+                                    style={styles.reasonInput}
+                                    placeholder="e.g., Violation of policy"
+                                    value={terminationReason}
+                                    onChangeText={setTerminationReason}
+                                />
                             </View>
                         )}
                         <View style={{flexDirection: 'row', marginTop: 24, gap: 12}}>
@@ -359,6 +377,9 @@ export default function PoliceOfficers() {
                                         const min = String(now.getMinutes()).padStart(2, '0');
                                         const ss = String(now.getSeconds()).padStart(2, '0');
                                         body.suspension_end_date = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+                                    }
+                                    if (statusModal.newStatus === 'P.Terminated') {
+                                        body.termination_reason = terminationReason;
                                     }
                                     try {
                                         const res = await fetch('http://mnl911.atwebpages.com/update_police_status.php', {
@@ -501,5 +522,13 @@ const styles = StyleSheet.create({
     },
     highlightedText: {
         backgroundColor: '#fff8b4'
-    }
+    },
+    reasonInput: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        padding: 10,
+        width: '100%',
+        fontSize: 14,
+    },
 });
