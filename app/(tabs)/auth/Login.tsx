@@ -43,11 +43,17 @@ export default function Login() {
       return;
     }
     try {
+      console.log('Attempting login...');
       const response = await fetch('http://mnl911.atwebpages.com/login.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
       });
+      
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+      }
+      
       const data = await response.json();
       if (data.success) {
         setLockoutMessage("");
@@ -84,8 +90,18 @@ export default function Login() {
       setLockoutMessage("");
       setLockoutUntil(null);
       setLockoutCountdown("");
-      console.log(error)
-      alert("Network error. Please try again.");
+      console.log('Login error:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed')) {
+          alert("Network error. Unable to connect to server. Please check your internet connection.");
+        } else if (error.message.includes('Server error')) {
+          alert("Server error. Server is not responding. Please try again later.");
+        } else {
+          alert(`Network error: ${error.message}. Please try again.`);
+        }
+      } else {
+        alert("Network error. Please try again.");
+      }
     }
   };
 

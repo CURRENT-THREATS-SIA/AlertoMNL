@@ -47,13 +47,13 @@ module.exports = {
         "@rnmapbox/maps",
         {
           RNMapboxMapsImpl: "mapbox",
-          RNMapboxMapsDownloadToken: process.env.MAPBOX_TOKEN
+          RNMapboxMapsDownloadToken: "sk.eyJ1IjoiZWl2cnlsbGUiLCJhIjoiY21jNHR1ZWprMGd5bTJsc2EzaXh4NnBpcSJ9.KvK2S1BY-iri9cyoijAc-g"
         }
       ]
     ],
     extra: {
       eas: {
-        projectId: "your-project-id"
+        projectId: "e8fdf69d-c71c-49fa-bf8d-e9c1de446f8d"
       }
     }
   }

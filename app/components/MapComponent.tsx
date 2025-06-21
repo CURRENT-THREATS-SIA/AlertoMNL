@@ -1,4 +1,3 @@
-import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 import { FeatureCollection, Point } from 'geojson';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -32,6 +31,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
   const [patrolPath, setPatrolPath] = useState<Location.LocationObject[]>([]);
   const [patrolStartTime, setPatrolStartTime] = useState<number | null>(null);
   const lastIncidentCoordRef = React.useRef<string | null>(null);
+  const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Determine mode
   const isRouteMode = routeCoords && routeCoords.length > 1;
@@ -68,34 +68,41 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
           mayShowUserSettingsDialog: true // Prompt user to enable high accuracy if needed
         },
         (location) => {
-          setDeviceLocation(location);
-          
-          // Check if we have network connectivity
-          NetInfo.fetch().then(state => {
-            if (state.isConnected) {
-              // Inject location into the map with additional data
-              if (Platform.OS !== 'web') {
-                const locationUpdate = {
-                  type: 'updateDeviceLocation',
-                  location: {
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                    accuracy: location.coords.accuracy,
-                    heading: location.coords.heading,
-                    speed: location.coords.speed,
-                    altitude: location.coords.altitude,
-                    timestamp: location.timestamp
-                  }
-                };
-                webViewRef.current?.injectJavaScript(`
-                  window.dispatchEvent(new MessageEvent('message', {
-                    data: '${JSON.stringify(locationUpdate)}'
-                  }));
-                  true;
-                `);
-              }
+          // Debounce: Only update if moved >10 meters
+          const newLoc = {
+            lat: location.coords.latitude,
+            lng: location.coords.longitude
+          };
+          const lastLoc = lastLocationRef.current;
+          const moved = !lastLoc || getDistanceFromLatLonInMeters(
+            lastLoc.lat, lastLoc.lng, newLoc.lat, newLoc.lng
+          ) > 10;
+          if (moved) {
+            lastLocationRef.current = newLoc;
+            setDeviceLocation(location);
+            // Inject location into the map with additional data
+            if (Platform.OS !== 'web') {
+              const locationUpdate = {
+                type: 'updateDeviceLocation',
+                location: {
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                  accuracy: location.coords.accuracy,
+                  heading: location.coords.heading,
+                  speed: location.coords.speed,
+                  altitude: location.coords.altitude,
+                  timestamp: location.timestamp
+                }
+              };
+              webViewRef.current?.injectJavaScript(`
+                window.dispatchEvent(new MessageEvent('message', {
+                  data: '${JSON.stringify(locationUpdate)}'
+                }));
+                true;
+              `);
             }
-          });
+          }
+          // else: skip update to avoid unnecessary computation/renders
         }
       );
     } catch (error) {
@@ -201,6 +208,60 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
     }
   }, [deviceLocation, isPatrolMode]);
 
+  // Add effect to handle incident location marker
+  useEffect(() => {
+    if (!webViewRef.current || !incidentLocation) return;
+
+    const incidentCoord = [incidentLocation.lng, incidentLocation.lat];
+    
+    const coordKey = incidentCoord.join(',');
+    if (lastIncidentCoordRef.current === coordKey) return;
+    lastIncidentCoordRef.current = coordKey;
+
+    const markerScript = `
+      (function() {
+        // Remove existing incident marker if it exists
+        if (window.incidentMarker) {
+          window.incidentMarker.remove();
+        }
+
+        // Add custom marker style to the document head
+        if (!document.getElementById('incident-marker-style')) {
+          const style = document.createElement('style');
+          style.id = 'incident-marker-style';
+          style.innerHTML = \`
+            .incident-marker {
+              display: block;
+              border: 3px solid #E02323;
+              border-radius: 50%;
+              width: 24px;
+              height: 24px;
+              background-color: #E02323;
+              box-shadow: 0 0 0 rgba(224, 35, 35, 0.4);
+              animation: incidentPulse 2s infinite;
+            }
+            @keyframes incidentPulse {
+              0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(224, 35, 35, 0.7); }
+              70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(224, 35, 35, 0); }
+              100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(224, 35, 35, 0); }
+            }
+          \`;
+          document.head.appendChild(style);
+        }
+        
+        // Create the marker element
+        const el = document.createElement('div');
+        el.className = 'incident-marker';
+        
+        // Add the new marker to the map
+        window.incidentMarker = new mapboxgl.Marker(el)
+          .setLngLat([${incidentCoord[0]}, ${incidentCoord[1]}])
+          .addTo(map);
+      })();
+    `;
+    webViewRef.current.injectJavaScript(markerScript);
+  }, [incidentLocation]);
+
   // Add effect to handle route updates
   useEffect(() => {
     if (!routeCoords || !webViewRef.current) {
@@ -276,34 +337,6 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
       setClusters(dbscan(data.features, eps, minPoints));
     }
   }, [isClusterMode, data]);
-
-  useEffect(() => {
-    if (!webViewRef.current) return;
-    let incidentCoord;
-    if (routeCoords && routeCoords.length > 0) {
-      const coordinates = routeCoords.map(coord => [coord.lng, coord.lat]);
-      incidentCoord = coordinates[coordinates.length - 1];
-    } else if (incidentLocation) {
-      incidentCoord = [incidentLocation.lng, incidentLocation.lat];
-    }
-    if (!incidentCoord) return;
-    const coordKey = incidentCoord.join(',');
-    if (lastIncidentCoordRef.current === coordKey) return;
-    lastIncidentCoordRef.current = coordKey;
-    const markerScript = `
-      if (window.incidentMarker) {
-        window.incidentMarker.remove();
-      }
-      window.incidentMarker = new mapboxgl.Marker({
-        color: '#e31a1c',
-        scale: 1.5
-      })
-        .setLngLat([${incidentCoord[0]}, ${incidentCoord[1]}])
-        .setPopup(new mapboxgl.Popup().setText('Incident Location'))
-        .addTo(map);
-    `;
-    webViewRef.current.injectJavaScript(markerScript);
-  }, [routeCoords, incidentLocation]);
 
   const mapboxHTML = `
 <!DOCTYPE html>

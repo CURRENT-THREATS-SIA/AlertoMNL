@@ -50,12 +50,33 @@ const Contacts: React.FC = () => {
       Alert.alert('User not found. Please log in again.');
       return;
     }
-    fetch(`http://mnl911.atwebpages.com/get_contacts1.php?nuser_id=${nuser_id}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setContacts(data.contacts);
-        else Alert.alert(data.message || "Failed to fetch contacts");
-      });
+    try {
+      const response = await fetch(`http://mnl911.atwebpages.com/get_contacts1.php?nuser_id=${nuser_id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setContacts(data.contacts);
+      } else {
+        Alert.alert('Error', data.message || "Failed to fetch contacts");
+      }
+    } catch (error) {
+      console.log('Contacts fetch error:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Network request failed')) {
+          Alert.alert('Network Error', 'Unable to connect to server. Please check your internet connection.');
+        } else if (error.message.includes('HTTP error')) {
+          Alert.alert('Server Error', 'Server is not responding. Please try again later.');
+        } else {
+          Alert.alert('Error', `Failed to fetch contacts: ${error.message}`);
+        }
+      } else {
+        Alert.alert('Error', 'Failed to fetch contacts. Please try again.');
+      }
+    }
   };
 
   useEffect(() => {

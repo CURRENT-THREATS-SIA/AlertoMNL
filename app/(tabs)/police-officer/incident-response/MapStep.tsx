@@ -4,7 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
-import { multidirectionalDijkstra } from '../../../../utils/multidirectionalDijkstra';
+import {
+  multidirectionalDijkstra,
+} from "../../../../utils/multidirectionalDijkstra";
 import MapComponent from '../../../components/MapComponent';
 import { loadGraphData } from '../../../utils/loadGraphData';
 
@@ -47,6 +49,12 @@ interface AlertDetails {
   m_number: string;
 }
 
+type DijkstraResult = { path: string[]; distance: number };
+
+interface RouteResult extends DijkstraResult {
+  coords?: { lat: number; lng: number }[];
+}
+
 // Utility: Haversine distance for more accurate nearest node
 function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371; // Earth radius in km
@@ -86,7 +94,7 @@ function filterGraphByProximity(
   radius = 0.05 // increased radius for better connectivity
 ): { filteredNodes: GraphNode[]; filteredEdges: Record<string, GraphEdge[]> } {
   const isNear = (node: GraphNode) =>
-    haversine(node.lat, node.lng, officer.lat, officer.lng) < radius * 111 &&
+    haversine(node.lat, node.lng, officer.lat, officer.lng) < radius * 111 ||
     haversine(node.lat, node.lng, incident.lat, incident.lng) < radius * 111;
   let filteredNodes = graphNodes.filter(isNear);
   // Always include nearest nodes to officer and incident
@@ -120,23 +128,23 @@ export default function MapStep() {
   console.log('MapStep alert_id:', alert_id); // <--- Add this
 
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [routeCoords, setRouteCoords] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [error, setError] = useState("");
+  const [routeCoords, setRouteCoords] = useState<
+    { lat: number; lng: number }[] | null
+  >(null);
   const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [officerAddress, setOfficerAddress] = useState<string>('Fetching location...');
   const [graphData, setGraphData] = useState<{ graphNodes: any[]; graphEdges: any } | null>(null);
   const [graphLoading, setGraphLoading] = useState(true);
-  const [graphError, setGraphError] = useState('');
-  const [hasInitialRoute, setHasInitialRoute] = useState(false);
+  const [graphError, setGraphError] = useState("");
   const routeIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [showAccuracyModal, setShowAccuracyModal] = useState(false);
+  const hasShownAccuracyWarning = React.useRef(false);
 
   useEffect(() => {
     if (!alert_id) {
       setError("Alert ID is missing.");
-      setIsLoading(false);
       return;
     }
     const fetchAlertDetails = async () => {
@@ -152,50 +160,13 @@ export default function MapStep() {
           };
           setAlertDetails(data);
         } else {
-          setError(result.error || 'Failed to fetch alert details.');
+          setError(result.error || "Failed to fetch alert details.");
         }
       } catch (e) {
-        setError('Failed to fetch alert details.');
-      } finally {
-        setIsLoading(false);
+        setError("Failed to fetch alert details.");
       }
     };
     fetchAlertDetails();
-  }, [alert_id]);
-
-  useEffect(() => {
-    if (!alert_id) {
-      setError('Alert ID is missing. Cannot fetch route.');
-      setIsLoading(false);
-      return;
-    }
-    console.log('Fetching route for alert_id:', alert_id); // Add this line
-
-    fetch(`http://mnl911.atwebpages.com/get_sos_route.php?alert_id=${alert_id}`)
-      .then(async res => {
-        // Check if response is JSON
-        const contentType = res.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Response is not JSON');
-        }
-        return res.json();
-      })
-      .then(data => {
-        if (data.success) {
-          setRouteCoords([
-            { lat: data.officer.lat, lng: data.officer.lng },
-            { lat: data.user.lat, lng: data.user.lng }
-          ]);
-        } else {
-          setRouteCoords(null);
-          setError(data.error || 'Failed to fetch route.');
-        }
-      })
-      .catch((err) => {
-        setRouteCoords(null);
-        setError('Route fetch error: ' + (err.message || 'Failed to fetch route.'));
-        console.error('Route fetch error:', err);
-      });
   }, [alert_id]);
 
   useEffect(() => {
@@ -204,16 +175,18 @@ export default function MapStep() {
       try {
         // Request permission if not already granted
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+        if (status !== "granted") return;
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.BestForNavigation,
+        });
         if (!isMountedRef.current) return;
         const accuracy = loc.coords.accuracy ?? 9999;
         setLocationAccuracy(accuracy);
-        if (accuracy > 10) {
+        if (accuracy > 25 && !hasShownAccuracyWarning.current) {
           setShowAccuracyModal(true);
-        } else {
-          setShowAccuracyModal(false);
+          hasShownAccuracyWarning.current = true;
         }
+
         const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
         setOfficerLocation(coords);
         // Send to backend
@@ -296,66 +269,137 @@ export default function MapStep() {
   // Update Dijkstra effect to use loaded graph data
   useEffect(() => {
     if (!officerLocation || !alertDetails || !graphData) {
-      console.log('DEBUG: Missing required data:', { 
-        hasOfficerLocation: !!officerLocation, 
-        hasAlertDetails: !!alertDetails, 
-        hasGraphData: !!graphData 
+      console.log("DEBUG: Missing required data:", {
+        hasOfficerLocation: !!officerLocation,
+        hasAlertDetails: !!alertDetails,
+        hasGraphData: !!graphData,
       });
       return;
     }
 
-    setIsLoading(true);
-    console.log('DEBUG: Starting route calculation');
-
-    const calculateRoute = () => {
+    const calculateRoute = async () => {
       if (!isMountedRef.current) return;
-      
-      const { graphNodes, graphEdges } = graphData;
-      const { filteredNodes, filteredEdges } = filterGraphByProximity(
-        graphNodes,
-        graphEdges,
-        officerLocation,
-        { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) },
-        0.05
-      );
 
-      console.log('DEBUG: Filtered nodes:', filteredNodes.length);
-      
-      const startNode = findNearestNodeHaversine(officerLocation.lat, officerLocation.lng, filteredNodes);
-      const endNode = findNearestNodeHaversine(Number(alertDetails.a_latitude), Number(alertDetails.a_longitude), filteredNodes);
-      
-      console.log('DEBUG: Found nodes:', { startNode, endNode });
+      // --- EXTERNAL API CALL ---
+      let dijkstraResult: RouteResult | null = null;
+      try {
+        const apiUrl =
+          "https://djikstra-calculation.onrender.com/calculate_route";
+        const payload = {
+          start: officerLocation,
+          end: {
+            lat: Number(alertDetails.a_latitude),
+            lng: Number(alertDetails.a_longitude),
+          },
+        };
+        console.log("Calling Dijkstra API with coordinates:", {
+          url: apiUrl,
+        });
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      if (!startNode || !endNode) {
-        setRouteCoords(null);
-        setError('Officer or incident location is not on the map.');
-        setIsLoading(false);
-        return;
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API Error: ${response.status} ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.route) && data.route.length > 0) {
+          dijkstraResult = { path: [], distance: 0, coords: data.route };
+        } else {
+          // If API succeeds but finds no route, throw to fallback
+          throw new Error(
+            data.error || "API was successful but found no route."
+          );
+        }
+      } catch (err) {
+        console.error(
+          "External Dijkstra API failed, falling back to local:",
+          err
+        );
+        // Fallback to local calculation
+        try {
+          const { graphNodes, graphEdges } = graphData;
+          const { filteredNodes, filteredEdges } = filterGraphByProximity(
+            graphNodes,
+            graphEdges,
+            officerLocation,
+            {
+              lat: Number(alertDetails.a_latitude),
+              lng: Number(alertDetails.a_longitude),
+            },
+            0.1 // Use a larger radius for local fallback
+          );
+          // BUG FIX: Always find nearest node from the FULL graph
+          const startNode = findNearestNodeHaversine(
+            officerLocation.lat,
+            officerLocation.lng,
+            graphNodes 
+          );
+          const endNode = findNearestNodeHaversine(
+            Number(alertDetails.a_latitude),
+            Number(alertDetails.a_longitude),
+            graphNodes
+          );
+
+          if (startNode && endNode) {
+            const localResult = multidirectionalDijkstra(
+              filteredEdges,
+              startNode,
+              endNode
+            );
+            if (
+              localResult &&
+              localResult.path &&
+              localResult.path.length > 1
+            ) {
+              dijkstraResult = {
+                ...localResult,
+                coords: localResult.path
+                  .map((nodeId: string) => {
+                    const node = filteredNodes.find((n) => n.id === nodeId);
+                    return node ? { lat: node.lat, lng: node.lng } : null;
+                  })
+                  .filter(Boolean) as { lat: number; lng: number }[],
+              };
+            } else {
+              dijkstraResult = null;
+            }
+          } else {
+            dijkstraResult = null;
+          }
+        } catch (e) {
+          dijkstraResult = null;
+          console.error("Local Dijkstra calculation also failed:", e);
+        }
       }
 
-      const dijkstraResult = multidirectionalDijkstra(filteredEdges, startNode, endNode);
-      
-      if (dijkstraResult && dijkstraResult.path && dijkstraResult.path.length > 1) {
-        const coords = dijkstraResult.path.map(nodeId => {
-          const node = filteredNodes.find(n => n.id === nodeId);
-          return node ? { lat: node.lat, lng: node.lng } : null;
-        }).filter(Boolean) as { lat: number; lng: number }[];
-
+      if (
+        dijkstraResult &&
+        dijkstraResult.coords &&
+        dijkstraResult.coords.length > 0
+      ) {
         const fullRoute = [
           officerLocation,
-          ...coords,
-          { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) }
+          ...dijkstraResult.coords,
+          {
+            lat: Number(alertDetails.a_latitude),
+            lng: Number(alertDetails.a_longitude),
+          },
         ];
 
-        console.log('DEBUG: Calculated route:', fullRoute);
+        console.log("DEBUG: Calculated route:", fullRoute.length, "points");
         setRouteCoords(fullRoute);
-        setError('');
+        setError("");
       } else {
-        console.log('DEBUG: No route found');
+        console.log("DEBUG: No route found");
         setRouteCoords(null);
-        setError('No route found between officer and incident.');
+        setError("No route found between officer and incident.");
       }
-      setIsLoading(false);
     };
 
     calculateRoute();
@@ -399,20 +443,13 @@ export default function MapStep() {
     ) * 1000; // haversine returns km, convert to meters
   }
 
-  if (isLoading) {
+  if (graphLoading || !alertDetails) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#E02323" />
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
-
-  if (graphLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#E02323" />
-        <Text>Loading Map Data...</Text>
+        <Text>
+          {graphLoading ? "Loading Map Data..." : "Loading Alert Details..."}
+        </Text>
       </View>
     );
   }
@@ -443,6 +480,14 @@ export default function MapStep() {
           data={{ type: 'FeatureCollection', features: [] }}
           routeCoords={routeCoords ?? undefined}
           officerLocation={officerLocation ?? undefined}
+          incidentLocation={
+            alertDetails
+              ? {
+                  lat: alertDetails.a_latitude,
+                  lng: alertDetails.a_longitude,
+                }
+              : undefined
+          }
         />
       </View>
       <View style={styles.infoCard}>
