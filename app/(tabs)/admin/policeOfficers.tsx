@@ -294,7 +294,7 @@ export default function PoliceOfficers() {
                                                 <ChevronDown width={16} height={16} color="#666" />
                                             </TouchableOpacity>
                                             {item.account_status === 'P.Suspended' && item.suspension_end_date && (
-                                                <Text style={{fontSize: 10, color: '#ff7675'}}>Until: {item.suspension_end_date.split(' ')[0]}</Text>
+                                                <Text style={{fontSize: 10, color: '#ff7675', marginTop: 4}}>Until: {item.suspension_end_date.split(' ')[0]}</Text>
                                             )}
                                         </View>
                                     </View>
@@ -429,7 +429,16 @@ const styles = StyleSheet.create({
     headerCell: { fontSize: 12, fontWeight: '600', color: '#666', paddingHorizontal: 4, textAlign: 'center' },
     tableRow: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center', backgroundColor: '#fff' },
     cell: { fontSize: 14, color: '#444', paddingHorizontal: 4, textAlign: 'center' },
-    actionButton: { padding: 8, borderRadius: 6, backgroundColor: '#f8f9fa' },
+    actionButton: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        backgroundColor: '#f8f9fa',
+        width: '100%',
+    },
     separator: { height: 1, backgroundColor: '#eee' },
     // THE FIX: Adjusted flex values for better alignment and changed actionColumn to a fixed width.
     idColumn: { flex: 1 },
@@ -442,7 +451,10 @@ const styles = StyleSheet.create({
     passwordColumn: { flex: 1 },
     secQuestionColumn: { flex: 2.5 },
     secAnswerColumn: { flex: 2.5 },
-    actionColumn: { width: 60, alignItems: 'center' }, // Fixed width for stability
+    actionColumn: {
+        width: 130, // Set a fixed width for the status column
+        alignItems: 'center'
+    },
     pagination: { 
         flexDirection: 'row', 
         justifyContent: 'space-between', 
