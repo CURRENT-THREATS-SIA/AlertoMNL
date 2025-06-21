@@ -137,6 +137,7 @@ export default function Login() {
       {/* Password */}
       <View style={{ marginBottom: 10 }}>
       <View style={{ position: 'relative' }}>
+      <Text style={styles.label}>Password</Text>
         <TextInput
           style={styles.input}
           placeholderTextColor="#0000004D"
