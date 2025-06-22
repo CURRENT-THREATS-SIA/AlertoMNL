@@ -20,11 +20,10 @@ const Profile: React.FC = () => {
   const { theme } = useTheme();
 
   const settingsMenuItems: SettingsMenuItem[] = [
-    { title: "Account Details", icon: "settings", route: "/regular-user/profile/accountDetails/" },
-    { title: "SetUpSOS", icon: "security", route: "/regular-user/profile/setUpSOS" },
-    { title: "Settings", icon: "security", route: "/regular-user/profile/settings" },
-    { title: "Voice Records", icon: "security", route: "/regular-user/profile/voiceRecords" },
-    { title: "App Permissions", icon: "security", route: "/regular-user/profile/appPermission" },
+    { title: "Account Details", icon: "manage-accounts", route: "/regular-user/profile/accountDetails/" },
+    { title: "SetUpSOS", icon: "sos", route: "/regular-user/profile/setUpSOS" },
+    { title: "Preferences", icon: "tune", route: "/regular-user/profile/settings" },
+    { title: "App Permissions", icon: "phonelink-lock", route: "/regular-user/profile/appPermission" },
     { title: "Privacy Policy", icon: "privacy-tip", route: "/regular-user/profile/privacyPolicy" },
     { title: "About", icon: "info", route: "/regular-user/profile/about" },
   ];
@@ -71,7 +70,7 @@ const Profile: React.FC = () => {
         borderBottomWidth: 1
       }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
+          <MaterialIcons name="arrow-back" size={24} color="#FF0000" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Profile Settings</Text>
@@ -98,9 +97,10 @@ const Profile: React.FC = () => {
               >
                 <View style={styles.menuItemContent}>
                   <View style={styles.menuItemLeft}>
+                    <MaterialIcons name={item.icon as any} size={22} color="#FF0000" style={styles.iconStyle} />
                     <Text style={[styles.menuItemText, { color: theme.text }]}>{item.title}</Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={24} color={theme.text} />
+                  <MaterialIcons name="chevron-right" size={24} color="#FF0000" />
                 </View>
               </TouchableOpacity>
             ))}
@@ -154,6 +154,9 @@ const styles = StyleSheet.create({
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  iconStyle: {
+    marginRight: 16,
   },
   menuItemText: {
     fontSize: 16,

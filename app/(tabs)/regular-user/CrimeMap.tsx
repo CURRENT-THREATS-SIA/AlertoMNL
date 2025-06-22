@@ -14,7 +14,7 @@ import {
 
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
-import { crimeData, StationName, totalRates } from '../../../constants/mapData';
+import { createCrimeTypeData, StationName, totalCrime, totalCrimeData, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -96,6 +96,7 @@ const CrimeMap: React.FC = () => {
   const [showCrimeTypeModal, setShowCrimeTypeModal] = useState(false);
   const [showStationModal, setShowStationModal] = useState(false);
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
+  const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
 
   // Add reset function
   const handleReset = () => {
@@ -103,16 +104,56 @@ const CrimeMap: React.FC = () => {
     setSelectedStation(null);
     setShowCrimeTypeModal(false);
     setShowStationModal(false);
+    setFilteredMapData(totalCrimeData);
   };
+
+  // Function to filter map data based on selections
+  const filterMapData = () => {
+    let dataToUse = totalCrimeData;
+    
+    // If a specific crime type is selected, use that crime type's data
+    if (selectedCrimeType) {
+      dataToUse = createCrimeTypeData(selectedCrimeType);
+    }
+    
+    let filtered = dataToUse.features as CrimeFeature[];
+    
+    // Apply station filter if selected
+    if (selectedStation) {
+      filtered = filtered.filter(feature => 
+        feature.properties.station === selectedStation
+      );
+    }
+    
+    setFilteredMapData({
+      type: 'FeatureCollection',
+      features: filtered
+    });
+  };
+
+  // Update filtered data when selections change
+  useEffect(() => {
+    filterMapData();
+  }, [selectedCrimeType, selectedStation]);
 
   // Function to calculate crime statistics based on filters
   const calculateCrimeStats = () => {
-    let filteredFeatures = crimeData.features as CrimeFeature[];
+    let filteredFeatures = totalCrimeData.features as CrimeFeature[];
     
     // Apply crime type filter if selected
     if (selectedCrimeType) {
+      // For total crime data, we need to check if the crime type matches
+      // Since we're showing total crime, we'll filter based on whether the station has that crime type
+      filteredFeatures = filteredFeatures.filter(feature => {
+        // For total crime data, we'll show all stations but highlight the ones with the selected crime type
+        return true; // Show all stations for now, filtering will be handled by the map
+      });
+    }
+
+    // Apply station filter if selected
+    if (selectedStation) {
       filteredFeatures = filteredFeatures.filter(feature => 
-        feature.properties.crimeType === selectedCrimeType
+        feature.properties.station === selectedStation
       );
     }
 
@@ -121,20 +162,20 @@ const CrimeMap: React.FC = () => {
     // If a station is selected, show its specific rates
     if (selectedStation) {
       const stationRates = totalRates[selectedStation];
+      const stationCrimeData = totalCrime[selectedStation];
       
-      // Find highest crime for the selected station
-      filteredFeatures
-        .filter(feature => feature.properties.station === selectedStation)
-        .forEach((feature: CrimeFeature) => {
-          const { station, crimeType, count } = feature.properties;
-          if (count > highestCrime.count) {
-            highestCrime = {
-              count,
-              location: station.split(' - ')[1],
-              type: crimeType
-            };
-          }
-        });
+      // Find the selected station's crime data
+      const stationFeature = filteredFeatures.find(feature => 
+        feature.properties.station === selectedStation
+      );
+      
+      if (stationFeature) {
+        highestCrime = {
+          count: stationFeature.properties.count,
+          location: selectedStation.split(' - ')[1],
+          type: selectedCrimeType || 'Total Crime'
+        };
+      }
 
       setCrimeStats([
         { 
@@ -146,10 +187,10 @@ const CrimeMap: React.FC = () => {
           value: `${stationRates.nonIndexRate}%`
         },
         { 
-          title: 'Highest Crime', 
+          title: selectedCrimeType ? `${selectedCrimeType} Count` : 'Total Crime Count', 
           location: highestCrime.location || 'N/A', 
           type: highestCrime.type || 'N/A', 
-          value: highestCrime.count.toString() 
+          value: stationCrimeData.totalCrime.toString() 
         },
       ]);
       return;
@@ -162,12 +203,12 @@ const CrimeMap: React.FC = () => {
 
     // Find highest crime across all stations
     filteredFeatures.forEach((feature: CrimeFeature) => {
-      const { station, crimeType, count } = feature.properties;
+      const { station, count } = feature.properties;
       if (count > highestCrime.count) {
         highestCrime = {
           count,
           location: station.split(' - ')[1],
-          type: crimeType
+          type: selectedCrimeType || 'Total Crime'
         };
       }
     });
@@ -182,7 +223,7 @@ const CrimeMap: React.FC = () => {
         value: `${avgNonIndexRate}%`
       },
       { 
-        title: 'Highest Crime', 
+        title: selectedCrimeType ? `Highest ${selectedCrimeType}` : 'Highest Crime', 
         location: highestCrime.location || 'N/A', 
         type: highestCrime.type || 'N/A', 
         value: highestCrime.count.toString() 
@@ -200,11 +241,10 @@ const CrimeMap: React.FC = () => {
     });
     
     // Log the filtered data before calculation
-    const filteredFeatures = crimeData.features.filter((feature) => {
+    const filteredFeatures = totalCrimeData.features.filter((feature) => {
       const crimeFeature = feature as CrimeFeature;
-      const matchesCrimeType = !selectedCrimeType || crimeFeature.properties.crimeType === selectedCrimeType;
       const matchesStation = !selectedStation || crimeFeature.properties.station === selectedStation;
-      return matchesCrimeType && matchesStation;
+      return matchesStation;
     });
     
     console.log('Filtered data stats:', {
@@ -257,7 +297,7 @@ const CrimeMap: React.FC = () => {
               selectedCrimeType={selectedCrimeType} 
               selectedStation={selectedStation}
               userType="regular"
-              data={crimeData}
+              data={filteredMapData}
             />
             
             {/* Legend Toggle Button */}
@@ -298,19 +338,15 @@ const CrimeMap: React.FC = () => {
                 </View>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>No reported cases</Text>
-                </View>
-                <View style={styles.legendRow}>
-                  <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low severity</Text>
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low (0-100)</Text>
                 </View>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium severity</Text>
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium (101-799)</Text>
                 </View>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High severity</Text>
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High (800+)</Text>
                 </View>
               </Animated.View>
             )}

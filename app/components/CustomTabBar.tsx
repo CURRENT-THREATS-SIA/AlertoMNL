@@ -30,6 +30,10 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
   const isCrimeMapSection = pathname === '/regular-user/CrimeMap';
   const isContactsSection = pathname === '/regular-user/Contacts';
 
+  if (activeScreen === 'History' && pathname.includes('/history/')) {
+    return null;
+  }
+
   const navItems: NavItem[] = [
     { 
       icon: <MaterialIcons name="home" size={24} color={isHomeSection ? "#E02323" : currentTheme.subtitle} />, 
@@ -81,7 +85,6 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
           >
             <View style={[
               styles.bottomNavIconContainer,
-              { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'transparent' }
             ]}>
               {item.icon}
             </View>

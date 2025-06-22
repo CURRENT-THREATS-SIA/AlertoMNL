@@ -25,12 +25,12 @@ const Settings: React.FC = () => {
   const settingsMenuItems: SettingsMenuItem[] = [
     {
       title: "Preferences",
-      icon: "settings",
+      icon: "tune",
       route: "/police-officer/settings/preferences/",
     },
     {
       title: "App Permissions",
-      icon: "security",
+      icon: "phonelink-lock",
       route: "/police-officer/settings/app-permissions",
     },
     {
@@ -102,10 +102,10 @@ const Settings: React.FC = () => {
               >
                 <View style={styles.menuItemContent}>
                   <View style={styles.menuItemLeft}>
-                    <MaterialIcons name={item.icon} size={24} color={currentTheme.iconColor} style={styles.menuIcon} />
+                    <MaterialIcons name={item.icon as any} size={24} color="#FF0000" style={styles.menuIcon} />
                     <Text style={[styles.menuItemText, { color: currentTheme.text }]}>{item.title}</Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={24} color={currentTheme.iconColor} />
+                  <MaterialIcons name="chevron-right" size={24} color="#FF0000" />
                 </View>
               </TouchableOpacity>
             ))}
@@ -113,10 +113,10 @@ const Settings: React.FC = () => {
 
           {/* Logout Button */}
           <TouchableOpacity 
-            style={[styles.logoutButton, { borderColor: currentTheme.iconColor }]}
+            style={[styles.logoutButton, { borderColor: "#FF0000" }]}
             onPress={handleLogout}
           >
-            <Text style={[styles.logoutText, { color: currentTheme.iconColor }]}>Logout</Text>
+            <Text style={[styles.logoutText, { color: "#FF0000" }]}>Logout</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

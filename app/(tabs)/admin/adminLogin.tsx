@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Platform,
   SafeAreaView,
@@ -11,19 +12,77 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 
 export const LoginScreen: React.FC = () => {
+  const { login } = useAdminAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('User123@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const onLogin = () => {
-    // Add validation if needed
-    if (email && password) {
-      // Change the route path to match your file structure
-      router.push('/(tabs)/admin/dashboard');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // --- State for hidden button on logo ---
+  const [logoClickCount, setLogoClickCount] = useState(0);
+  const clickTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const handleLogoClick = () => {
+    if (clickTimeout.current) {
+      clearTimeout(clickTimeout.current);
+    }
+    const newCount = logoClickCount + 1;
+    if (newCount >= 3) { // Set to 3 clicks
+      router.push('/(tabs)/admin/createAdmin');
+      setLogoClickCount(0);
+    } else {
+      setLogoClickCount(newCount);
+      clickTimeout.current = setTimeout(() => {
+        setLogoClickCount(0);
+      }, 1500); // Reset after 1.5 seconds
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (clickTimeout.current) {
+        clearTimeout(clickTimeout.current);
+      }
+    };
+  }, []);
+  // --- End of hidden button logic ---
+
+  const onLogin = async () => {
+    setError('');
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://mnl911.atwebpages.com/admin_login.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        login(email);
+      } else {
+        setError(data.message || 'An unknown error occurred.');
+      }
+    } catch (e) {
+      console.error(e);
+      setError('Login failed. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -35,22 +94,27 @@ export const LoginScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.innerContainer}>
         {/* Left section: form */}
-        <View style={styles.formContainer}>          <View style={styles.logoRow}>
-            <Image
-              source={require('../../../assets/images/ALERTOMNL-ICON.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <View>
-              <Text style={styles.logoTitle}>ALERTO MNL</Text>
-              <Text style={styles.logoSubtitle}>Response System</Text>
+        <View style={styles.formContainer}>
+          <TouchableOpacity onPress={handleLogoClick} activeOpacity={0.9}>
+            <View style={styles.logoRow}>
+              <Image
+                source={require('../../../assets/images/ALERTOMNL-ICON.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <View>
+                <Text style={styles.logoTitle}>ALERTO MNL</Text>
+                <Text style={styles.logoSubtitle}>Response System</Text>
+              </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.header}>
             <Text style={styles.title}>Login</Text>
             <Text style={styles.subtitle}>Enter your official credentials to access</Text>
           </View>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <View style={styles.fieldsContainer}>
             <View style={styles.fieldWrapper}>
@@ -99,8 +163,12 @@ export const LoginScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={onLogin}>
-              <Text style={styles.loginButtonText}>Login</Text>
+            <TouchableOpacity style={styles.loginButton} onPress={onLogin} disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.loginButtonText}>Login</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>        {/* Right section: Welcome */}
@@ -287,6 +355,13 @@ const styles = StyleSheet.create({
     color: '#666666',
     textAlign: 'center',
     lineHeight: 24,
+  },
+  errorText: {
+    color: '#D32F2F',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 export default LoginScreen;

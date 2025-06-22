@@ -1,10 +1,10 @@
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-import CustomTabBar from '../../components/CustomTabBar';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
 
@@ -142,7 +142,6 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
         <ActivityIndicator style={{ flex: 1 }} size="large" color="#E02323" />
-        <CustomTabBar activeScreen="History" />
       </SafeAreaView>
     );
   }
@@ -154,21 +153,27 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
           <Text style={[styles.errorText, { color: currentTheme.text }]}>Could Not Load Details</Text>
           <Text style={[styles.errorSubText, { color: currentTheme.subtitle }]}>{error}</Text>
         </View>
-        <CustomTabBar activeScreen="History" />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 8, marginBottom: 8 }}>
-        <TouchableOpacity
-          style={{ flexDirection: 'row', alignItems: 'center' }}
-          onPress={() => router.back()}
-        >
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: currentTheme.cardBackground,
+            borderBottomColor: currentTheme.border,
+          },
+        ]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
-        <Text style={{ marginLeft: 12, color: currentTheme.text, fontSize: 22, fontFamily: fonts.poppins.semiBold }}>
+        <Text
+          style={[styles.headerTitle, { color: currentTheme.text }]}
+          numberOfLines={1}
+          ellipsizeMode="tail">
           Crime Report Details
         </Text>
       </View>
@@ -283,13 +288,28 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
           </View>
         </View>
       </ScrollView>
-      <CustomTabBar activeScreen="History" />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 22,
+    fontFamily: fonts.poppins.semiBold,
+  },
   errorText: { fontSize: 18, fontWeight: 'bold', fontFamily: fonts.poppins.semiBold, color: '#333', textAlign: 'center' },
   errorSubText: { fontSize: 14, fontFamily: fonts.poppins.regular, color: '#666', marginTop: 8, textAlign: 'center' },
   scrollView: { flex: 1 },

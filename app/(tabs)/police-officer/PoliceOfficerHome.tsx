@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
-import { crimeData, StationName, totalRates } from '../../../constants/mapData';
+import { createCrimeTypeData, StationName, totalCrime, totalCrimeData, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
 import { useAlerts } from '../../context/AlertContext';
@@ -132,13 +132,16 @@ const CrimeMap: React.FC = () => {
   const [showCrimeTypeModal, setShowCrimeTypeModal] = useState(false);
   const [showStationModal, setShowStationModal] = useState(false);
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
-  
+
   // --- ALERTS ARE NOW HANDLED BY THE CONTEXT ---
   const { notifications, acceptAlert } = useAlerts();
 
   // --- NEW: State for the Alert Modal ---
   const [activeAlert, setActiveAlert] = useState<AlertNotification | null>(null);
   const seenAlertIds = useRef(new Set<number>());
+
+  // --- Map Filtering State from master ---
+  const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
 
   useEffect(() => {
     // When notifications update, check for a new one to display in the modal
@@ -152,56 +155,52 @@ const CrimeMap: React.FC = () => {
 
   useEffect(() => {
     const registerForPushNotificationsAsync = async () => {
-        let token;
-        if (Platform.OS === 'android') {
-            // --- NEW: Create a dedicated channel for emergency alerts ---
-            await Notifications.setNotificationChannelAsync('emergency-alerts', {
-                name: 'Emergency SOS Alerts',
-                importance: Notifications.AndroidImportance.MAX,
-                vibrationPattern: [0, 250, 250, 500, 250, 250, 500], // More insistent pattern
-                lightColor: '#FF231F7C',
-                sound: 'default', // Ensure it plays a sound
+      let token;
+      if (Platform.OS === 'android') {
+        // --- NEW: Create a dedicated channel for emergency alerts ---
+        await Notifications.setNotificationChannelAsync('emergency-alerts', {
+          name: 'Emergency SOS Alerts',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 500, 250, 250, 500], // More insistent pattern
+          lightColor: '#FF231F7C',
+          sound: 'default', // Ensure it plays a sound
+        });
+      }
+
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        alert('Failed to get push token for push notification!');
+        return;
+      }
+      try {
+        const expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
+        console.log('Expo Push Token:', expoPushToken);
+        if (expoPushToken) {
+          const policeId = await AsyncStorage.getItem('police_id');
+          if (policeId) {
+            const formData = new FormData();
+            formData.append('police_id', policeId);
+            formData.append('expo_push_token', expoPushToken);
+            const response = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
+              method: 'POST',
+              body: formData,
             });
-        }
-
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
-        if (existingStatus !== 'granted') {
-            const { status } = await Notifications.requestPermissionsAsync();
-            finalStatus = status;
-        }
-        if (finalStatus !== 'granted') {
-            alert('Failed to get push token for push notification!');
-            return;
-        }
-        
-        try {
-            const expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
-            console.log("Expo Push Token:", expoPushToken);
-
-            if (expoPushToken) {
-                const policeId = await AsyncStorage.getItem('police_id');
-                if (policeId) {
-                    const formData = new FormData();
-                    formData.append('police_id', policeId);
-                    formData.append('expo_push_token', expoPushToken);
-
-                    const response = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
-                        method: 'POST',
-                        body: formData,
-                    });
-                    const responseData = await response.json();
-                    console.log('Token registration response:', responseData);
-                    if (!responseData.success) {
-                        console.error("Failed to register token:", responseData.error);
-                    }
-                }
+            const responseData = await response.json();
+            console.log('Token registration response:', responseData);
+            if (!responseData.success) {
+              console.error('Failed to register token:', responseData.error);
             }
-        } catch (error) {
-            console.error("Error getting or registering push token", error);
+          }
         }
+      } catch (error) {
+        console.error('Error getting or registering push token', error);
+      }
     };
-
     registerForPushNotificationsAsync();
   }, []);
 
@@ -211,6 +210,7 @@ const CrimeMap: React.FC = () => {
     setSelectedStation(null);
     setShowCrimeTypeModal(false);
     setShowStationModal(false);
+    setFilteredMapData(totalCrimeData);
   };
 
   // Function to toggle legend visibility with animation
@@ -232,104 +232,96 @@ const CrimeMap: React.FC = () => {
 
   // Function to calculate crime statistics based on filters
   const calculateCrimeStats = () => {
-    let filteredFeatures = crimeData.features;
-    
-    // Apply crime type filter if selected
-    if (selectedCrimeType) {
-      filteredFeatures = filteredFeatures.filter(feature => 
-        feature.properties?.crimeType === selectedCrimeType
-      );
-    }
-
+    let filteredFeatures = totalCrimeData.features;
     let highestCrime = { count: 0, location: '', type: '' };
-
     // If a station is selected, show its specific rates
     if (selectedStation) {
       const stationRates = totalRates[selectedStation];
-      
-      // Find highest crime for the selected station
-      filteredFeatures
-        .filter(feature => feature.properties?.station === selectedStation)
-        .forEach(feature => {
-          const properties = feature.properties;
-          if (!properties) return;
-          
-          const { station, crimeType, count } = properties as { station: string; crimeType: string; count: number };
-          if (count > highestCrime.count) {
-            highestCrime = {
-              count,
-              location: station.split(' - ')[1],
-              type: crimeType
-            };
-          }
-        });
-
+      const stationCrimeData = totalCrime[selectedStation];
+      // Find the selected station's crime data
+      const stationFeature = filteredFeatures.find(feature => 
+        feature.properties?.station === selectedStation
+      );
+      if (stationFeature) {
+        const properties = stationFeature.properties;
+        if (properties) {
+          highestCrime = {
+            count: properties.count,
+            location: selectedStation.split(' - ')[1],
+            type: 'Total Crime'
+          };
+        }
+      }
       setCrimeStats([
-        { 
-          title: 'Index Total Rate', 
-          value: `${stationRates.indexRate}%`
-        },
-        { 
-          title: 'Non-index Total Rate', 
-          value: `${stationRates.nonIndexRate}%`
-        },
-        { 
-          title: 'Highest Crime', 
-          location: highestCrime.location || 'N/A', 
-          type: highestCrime.type || 'N/A', 
-          value: highestCrime.count.toString() 
-        },
+        { title: 'Index Total Rate', value: `${stationRates.indexRate}%` },
+        { title: 'Non-index Total Rate', value: `${stationRates.nonIndexRate}%` },
+        { title: 'Total Crime Count', location: highestCrime.location || 'N/A', type: highestCrime.type || 'N/A', value: stationCrimeData.totalCrime.toString() },
       ]);
       return;
     }
-
     // If no station is selected, calculate averages of all stations
     const stations = Object.keys(totalRates) as StationName[];
     const avgIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].indexRate, 0) / stations.length).toFixed(2);
     const avgNonIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].nonIndexRate, 0) / stations.length).toFixed(2);
-
     // Find highest crime across all stations
     filteredFeatures.forEach(feature => {
       const properties = feature.properties;
       if (!properties) return;
-      
-      const { station, crimeType, count } = properties as { station: string; crimeType: string; count: number };
+      const { station, count } = properties as { station: string; count: number };
       if (count > highestCrime.count) {
         highestCrime = {
           count,
           location: station.split(' - ')[1],
-          type: crimeType
+          type: 'Total Crime'
         };
       }
     });
-
     setCrimeStats([
       { title: 'Index Total Rate', value: `${avgIndexRate}%` },
       { title: 'Non-index Total Rate', value: `${avgNonIndexRate}%` },
-      { 
-        title: 'Highest Crime',
-        location: highestCrime.location,
-        type: highestCrime.type,
-        value: highestCrime.count.toString()
-      },
+      { title: 'Highest Crime', location: highestCrime.location, type: highestCrime.type, value: highestCrime.count.toString() },
     ]);
   };
 
   // Update stats when filters change
   useEffect(() => {
     calculateCrimeStats();
-  }, [selectedCrimeType, selectedStation]);
+  }, [selectedStation]);
 
   const handleCrimeTypeSelect = (value: string) => {
     setSelectedCrimeType(value);
     setShowCrimeTypeModal(false);
   };
 
-
   const handleStationSelect = (value: StationName) => {
     setSelectedStation(value);
     setShowStationModal(false);
   };
+
+  // Function to filter map data based on selections
+  const filterMapData = () => {
+    let dataToUse = totalCrimeData;
+    // If a specific crime type is selected, use that crime type's data
+    if (selectedCrimeType) {
+      dataToUse = createCrimeTypeData(selectedCrimeType);
+    }
+    let filtered = dataToUse.features;
+    // Apply station filter if selected
+    if (selectedStation) {
+      filtered = filtered.filter(feature => 
+        feature.properties?.station === selectedStation
+      );
+    }
+    setFilteredMapData({
+      type: 'FeatureCollection',
+      features: filtered
+    });
+  };
+
+  // Update filtered data when selections change
+  useEffect(() => {
+    filterMapData();
+  }, [selectedCrimeType, selectedStation]);
 
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
@@ -354,7 +346,7 @@ const CrimeMap: React.FC = () => {
         <View style={styles.contentWrapper}>
           <View style={[styles.mapSection, { height: mapHeight }]}>
             <MapComponent 
-              data={crimeData}
+              data={filteredMapData}
               userType="police"
               selectedCrimeType={selectedCrimeType}
               selectedStation={selectedStation}
@@ -398,19 +390,15 @@ const CrimeMap: React.FC = () => {
                 </View>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>No reported cases</Text>
-                </View>
-                <View style={styles.legendRow}>
-                  <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low severity</Text>
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Low (0-100)</Text>
                 </View>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium severity</Text>
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>Medium (101-799)</Text>
                 </View>
                 <View style={styles.legendRow}>
                   <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High severity</Text>
+                  <Text style={[styles.legendLabel, { color: currentTheme.text }]}>High (800+)</Text>
                 </View>
               </Animated.View>
             )}

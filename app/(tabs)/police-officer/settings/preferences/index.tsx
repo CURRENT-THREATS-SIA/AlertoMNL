@@ -35,12 +35,6 @@ export default function PreferencesScreen() {
       onToggle: toggleDarkMode,
     },
     {
-      icon: 'plus',
-      label: 'Add Widget',
-      description: 'Add quick access widgets to your home screen',
-      defaultValue: false,
-    },
-    {
       icon: 'smartphone',
       label: 'Keep screen on',
       description: 'Prevent screen from turning off while using the app',
@@ -71,7 +65,7 @@ export default function PreferencesScreen() {
       const value = await AsyncStorage.getItem('keepScreenOn');
       if (value !== null) {
         const newStates = [...switchStates];
-        newStates[2] = value === 'true';
+        newStates[1] = value === 'true';
         setSwitchStates(newStates);
         if (value === 'true') {
           await KeepAwake.activateKeepAwakeAsync();

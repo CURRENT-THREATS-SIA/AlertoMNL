@@ -34,12 +34,6 @@ export default function SettingsScreen() {
       onToggle: toggleDarkMode,
     },
     {
-      icon: 'plus',
-      label: 'Add Widget',
-      description: 'Add quick access widgets to your home screen',
-      defaultValue: false,
-    },
-    {
       icon: 'smartphone',
       label: 'Keep screen on',
       description: 'Prevent screen from turning off while using the app',
@@ -70,7 +64,7 @@ export default function SettingsScreen() {
           <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Settings</Text>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Preferences</Text>
         </View>
       </View>
 

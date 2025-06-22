@@ -5,12 +5,12 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { crimeData, StationName, totalRates } from '../../../constants/mapData';
+import { createCrimeTypeData, StationName, totalCrime, totalCrimeData, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
+import { useTheme } from '../../context/ThemeContext';
 
 interface District {
   id: number;
@@ -24,20 +24,8 @@ export type CrimeStat = {
   type?: string;
 };
 
-export type SeverityLevel = {
-  level: string;
-  color: string;
-};
+const SIDEBAR_WIDTH = 320;
 
-const severityLevels: SeverityLevel[] = [
-  { level: 'Low', color: '#65ee15' },
-  { level: 'Medium', color: '#f89900' },
-  { level: 'High', color: '#ff0000' },
-];
-
-const SIDEBAR_WIDTH = 300;
-
-// Crime types and stations data
 const crimeTypes = [
   { id: 1, label: 'Murder', value: 'Murder' },
   { id: 2, label: 'Homicide', value: 'Homicide' },
@@ -69,16 +57,14 @@ const policeStations = [
 ];
 
 const GuestCrimeMap: React.FC = () => {
+  const { theme } = useTheme();
   const [selectedCrimeType, setSelectedCrimeType] = useState('');
   const [selectedStation, setSelectedStation] = useState<StationName | null>(null);
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
   const [showCrimeTypeDropdown, setShowCrimeTypeDropdown] = useState(false);
   const [showStationDropdown, setShowStationDropdown] = useState(false);
+  const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
 
-  const { width, height } = useWindowDimensions();
-  const mapHeight = Math.min(height * 0.35, 400);
-
-  // Close other dropdown when one is opened
   const handleCrimeTypeDropdown = () => {
     setShowCrimeTypeDropdown(!showCrimeTypeDropdown);
     setShowStationDropdown(false);
@@ -89,107 +75,90 @@ const GuestCrimeMap: React.FC = () => {
     setShowCrimeTypeDropdown(false);
   };
 
-  // Function to calculate crime statistics based on filters
-  const calculateCrimeStats = () => {
-    let filteredFeatures = crimeData.features;
-    
-    // Apply crime type filter if selected
-    if (selectedCrimeType) {
-      filteredFeatures = filteredFeatures.filter(feature => 
-        feature.properties?.crimeType === selectedCrimeType
-      );
-    }
-
-    let highestCrime = { count: 0, location: '', type: '' };
-
-    // If a station is selected, show its specific rates
-    if (selectedStation) {
-      const stationRates = totalRates[selectedStation];
-      
-      // Find highest crime for the selected station
-      filteredFeatures
-        .filter(feature => feature.properties?.station === selectedStation)
-        .forEach(feature => {
-          const properties = feature.properties;
-          if (!properties) return;
-          
-          const { station, crimeType, count } = properties as { station: string; crimeType: string; count: number };
-          if (count > highestCrime.count) {
-            highestCrime = {
-              count,
-              location: station.split(' - ')[1],
-              type: crimeType
-            };
-          }
-        });
-
-      setCrimeStats([
-        { 
-          title: 'Index Total Rate', 
-          value: `${stationRates.indexRate}%`
-        },
-        { 
-          title: 'Non-index Total Rate', 
-          value: `${stationRates.nonIndexRate}%`
-        },
-        { 
-          title: 'Highest Crime', 
-          location: highestCrime.location || 'N/A', 
-          type: highestCrime.type || 'N/A', 
-          value: highestCrime.count.toString() 
-        },
-      ]);
-      return;
-    }
-
-    // If no station is selected, calculate averages of all stations
-    const stations = Object.keys(totalRates) as StationName[];
-    const avgIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].indexRate, 0) / stations.length).toFixed(2);
-    const avgNonIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].nonIndexRate, 0) / stations.length).toFixed(2);
-
-    // Find highest crime across all stations
-    filteredFeatures.forEach(feature => {
-      const properties = feature.properties;
-      if (!properties) return;
-      
-      const { station, crimeType, count } = properties as { station: string; crimeType: string; count: number };
-      if (count > highestCrime.count) {
-        highestCrime = {
-          count,
-          location: station.split(' - ')[1],
-          type: crimeType
-        };
-      }
-    });
-
-    setCrimeStats([
-      { title: 'Index Total Rate', value: `${avgIndexRate}%` },
-      { title: 'Non-index Total Rate', value: `${avgNonIndexRate}%` },
-      { 
-        title: 'Highest Crime',
-        location: highestCrime.location,
-        type: highestCrime.type,
-        value: highestCrime.count.toString()
-      },
-    ]);
+  const handleReset = () => {
+    setSelectedCrimeType('');
+    setSelectedStation(null);
   };
 
-  // Update stats when filters change
   useEffect(() => {
-    calculateCrimeStats();
+    const filterMapData = () => {
+      let dataToUse = totalCrimeData;
+      if (selectedCrimeType) {
+        dataToUse = createCrimeTypeData(selectedCrimeType);
+      }
+      
+      let filtered = dataToUse.features;
+      if (selectedStation) {
+        filtered = filtered.filter(feature => 
+          feature.properties?.station === selectedStation
+        );
+      }
+      
+      setFilteredMapData({
+        type: 'FeatureCollection',
+        features: filtered
+      });
+    };
+    filterMapData();
   }, [selectedCrimeType, selectedStation]);
 
+  useEffect(() => {
+    const calculateCrimeStats = () => {
+      let filteredFeatures = totalCrimeData.features;
+      let highestCrime = { count: 0, location: '', type: '' };
+
+      if (selectedStation) {
+        const stationRates = totalRates[selectedStation];
+        const stationCrimeData = totalCrime[selectedStation];
+        const stationFeature = filteredFeatures.find(feature => 
+          feature.properties?.station === selectedStation
+        );
+        
+        if (stationFeature?.properties) {
+          highestCrime = {
+            count: stationFeature.properties.count,
+            location: selectedStation.split(' - ')[1],
+            type: 'Total Crime'
+          };
+        }
+
+        setCrimeStats([
+          { title: 'Index Total Rate', value: `${stationRates.indexRate}%` },
+          { title: 'Non-index Total Rate', value: `${stationRates.nonIndexRate}%` },
+          { title: 'Total Crime Count', location: highestCrime.location || 'N/A', type: highestCrime.type || 'N/A', value: stationCrimeData.totalCrime.toString() },
+        ]);
+        return;
+      }
+
+      const stations = Object.keys(totalRates) as StationName[];
+      const avgIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].indexRate, 0) / stations.length).toFixed(2);
+      const avgNonIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].nonIndexRate, 0) / stations.length).toFixed(2);
+
+      filteredFeatures.forEach(feature => {
+        const { station, count } = feature.properties as { station: string; count: number };
+        if (count > highestCrime.count) {
+          highestCrime = { count, location: station.split(' - ')[1], type: 'Total Crime' };
+        }
+      });
+
+      setCrimeStats([
+        { title: 'Index Total Rate', value: `${avgIndexRate}%` },
+        { title: 'Non-index Total Rate', value: `${avgNonIndexRate}%` },
+        { title: 'Highest Crime', location: highestCrime.location, type: highestCrime.type, value: highestCrime.count.toString() },
+      ]);
+    };
+    calculateCrimeStats();
+  }, [selectedStation]);
+
+  const styles = getStyles(theme);
+
   return (
-    <View style={styles.wrapper}>
-      {/* Sidebar */}
+    <View style={styles.container}>
       <View style={styles.sidebar}>
         <ScrollView contentContainerStyle={styles.sidebarContent}>
-          {/* Logo */}
           <View style={styles.logoSticky}>
             <Image
-              source={{
-                uri: 'https://c.animaapp.com/mbqzsrccadZLwW/img/chatgpt-image-apr-25--2025--11-37-20-pm-2.png',
-              }}
+              source={{ uri: 'https://c.animaapp.com/mbqzsrccadZLwW/img/chatgpt-image-apr-25--2025--11-37-20-pm-2.png' }}
               style={styles.logo}
             />
             <View>
@@ -198,392 +167,145 @@ const GuestCrimeMap: React.FC = () => {
             </View>
           </View>
 
-          {/* Crime Type Selector */}
-          <View style={[styles.card, { zIndex: showCrimeTypeDropdown ? 3 : 1 }]}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="alert-circle-outline" size={20} color="#e02323" />
-              <Text style={styles.cardTitle}>Crime Type</Text>
+          <View style={[styles.filtersContainer, { zIndex: showCrimeTypeDropdown || showStationDropdown ? 1 : 0 }]}>
+            <View style={[styles.card, { zIndex: showCrimeTypeDropdown ? 2 : 1 }]}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="alert-circle-outline" size={20} color="#e02323" />
+                <Text style={styles.cardTitle}>Crime Type</Text>
+              </View>
+              <View style={[styles.dropdownContainer, { zIndex: showCrimeTypeDropdown ? 3 : 1 }]}>
+                <TouchableOpacity style={styles.selectBtn} activeOpacity={0.7} onPress={handleCrimeTypeDropdown}>
+                  <Text style={styles.selectTxt} numberOfLines={1}>
+                    {selectedCrimeType ? crimeTypes.find(ct => ct.value === selectedCrimeType)?.label : 'Select...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color={theme.subtitle} />
+                </TouchableOpacity>
+                {showCrimeTypeDropdown && (
+                  <View style={[styles.dropdown, { zIndex: 1000 }]}>
+                    <ScrollView>
+                      {crimeTypes.map((type) => (
+                        <TouchableOpacity key={type.id} style={[styles.dropdownOption, selectedCrimeType === type.value && styles.dropdownOptionActive]} onPress={() => { setSelectedCrimeType(type.value); setShowCrimeTypeDropdown(false); }}>
+                          <Text style={[styles.dropdownOptionText, selectedCrimeType === type.value && styles.dropdownOptionTextActive]}>{type.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
             </View>
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity
-                style={styles.selectBtn}
-                activeOpacity={0.7}
-                onPress={handleCrimeTypeDropdown}
-              >
-                <Text style={styles.selectTxt}>
-                  {selectedCrimeType ? 
-                    crimeTypes.find(ct => ct.value === selectedCrimeType)?.label || selectedCrimeType : 
-                    'Select Crime Type'}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#666" />
-              </TouchableOpacity>
-              
-              {showCrimeTypeDropdown && (
-                <View style={[styles.dropdown, { zIndex: 1000 }]}>
-                  {crimeTypes.map((type) => (
-                    <TouchableOpacity
-                      key={type.id}
-                      style={[
-                        styles.dropdownOption,
-                        selectedCrimeType === type.value && styles.dropdownOptionActive
-                      ]}
-                      onPress={() => {
-                        setSelectedCrimeType(type.value);
-                        setShowCrimeTypeDropdown(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.dropdownOptionText,
-                        selectedCrimeType === type.value && styles.dropdownOptionTextActive
-                      ]}>
-                        {type.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+
+            <View style={[styles.card, { zIndex: showStationDropdown ? 2 : 1 }]}>
+              <View style={styles.cardHeader}>
+                <Ionicons name="location-outline" size={20} color="#e02323" />
+                <Text style={styles.cardTitle}>Station</Text>
+              </View>
+              <View style={[styles.dropdownContainer, { zIndex: showStationDropdown ? 3 : 1 }]}>
+                <TouchableOpacity style={styles.selectBtn} activeOpacity={0.7} onPress={handleStationDropdown}>
+                  <Text style={styles.selectTxt} numberOfLines={1}>
+                    {selectedStation ? policeStations.find(ps => ps.value === selectedStation)?.label.replace(/MPD Station \d+ - /, '') : 'Select...'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color={theme.subtitle} />
+                </TouchableOpacity>
+                {showStationDropdown && (
+                  <View style={[styles.dropdown, { zIndex: 1000 }]}>
+                    <ScrollView>
+                      {policeStations.map((station) => (
+                        <TouchableOpacity key={station.id} style={[styles.dropdownOption, selectedStation === station.value && styles.dropdownOptionActive]} onPress={() => { setSelectedStation(station.value as StationName); setShowStationDropdown(false); }}>
+                          <Text style={[styles.dropdownOptionText, selectedStation === station.value && styles.dropdownOptionTextActive]}>{station.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
+          
+          <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+            <Ionicons name="refresh-outline" size={18} color="#e02323" />
+            <Text style={styles.resetButtonText}>Reset Filters</Text>
+          </TouchableOpacity>
 
-          {/* Station Selector */}
-          <View style={[styles.card, { zIndex: showStationDropdown ? 3 : 1 }]}>
+          <View style={styles.legendCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="location-outline" size={20} color="#e02323" />
-              <Text style={styles.cardTitle}>Station</Text>
+              <Ionicons name="map-outline" size={20} color="#e02323" />
+              <Text style={styles.cardTitle}>Map Legend</Text>
             </View>
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity
-                style={styles.selectBtn}
-                activeOpacity={0.7}
-                onPress={handleStationDropdown}
-              >
-                <Text style={styles.selectTxt}>
-                  {selectedStation ? 
-                    policeStations.find(ps => ps.value === selectedStation)?.label : 
-                    'Select Station'}
-                </Text>
-                <Ionicons name="chevron-down" size={18} color="#666" />
-              </TouchableOpacity>
-              
-              {showStationDropdown && (
-                <View style={[styles.dropdown, { zIndex: 1000 }]}>
-                  {policeStations.map((station) => (
-                    <TouchableOpacity
-                      key={station.id}
-                      style={[
-                        styles.dropdownOption,
-                        selectedStation === station.value && styles.dropdownOptionActive
-                      ]}
-                      onPress={() => {
-                        setSelectedStation(station.value as StationName);
-                        setShowStationDropdown(false);
-                      }}
-                    >
-                      <Text style={[
-                        styles.dropdownOptionText,
-                        selectedStation === station.value && styles.dropdownOptionTextActive
-                      ]}>
-                        {station.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Last Crime Info */}
-          <View style={styles.infoCard}>
-            <Ionicons name="alert-circle-outline" size={20} color="#e02323" />
-            <View style={styles.infoText}>
-              <Text style={styles.infoTitle}>Last Crime</Text>
-              <Text style={styles.infoSub}>Tondo • 1 day ago</Text>
+            <View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
+                <Text style={styles.legendLabel}>Low (0-100)</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: '#fc4e2a' }]} />
+                <Text style={styles.legendLabel}>Medium (101-799)</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
+                <Text style={styles.legendLabel}>High (800+)</Text>
+              </View>
             </View>
           </View>
         </ScrollView>
       </View>
-
-      {/* Main Content */}
-      <ScrollView style={styles.main} contentContainerStyle={styles.mainContent}>
-        <Text style={styles.mainHeader}>Welcome!</Text>
-        <Text style={styles.mainSubheader}>
-          A public crime mapping in City of Manila for safety and awareness
-        </Text>
-
-        {/* Mapbox Section */}
-        <View style={[styles.mapContainer, { height: mapHeight }]}>
-          <MapComponent
-            data={crimeData}
-            userType="guest"
-            selectedCrimeType={selectedCrimeType}
-            selectedStation={selectedStation}
-          />
-          
-          <View style={styles.legendContainer}>
-            <View style={styles.legendRow}>
-              <View style={[styles.legendColor, { backgroundColor: '#65ee15' }]} />
-              <Text style={styles.legendLabel}>Low</Text>
-            </View>
-            <View style={styles.legendRow}>
-              <View style={[styles.legendColor, { backgroundColor: '#feb24c' }]} />
-              <Text style={styles.legendLabel}>Medium</Text>
-            </View>
-            <View style={styles.legendRow}>
-              <View style={[styles.legendColor, { backgroundColor: '#e31a1c' }]} />
-              <Text style={styles.legendLabel}>High</Text>
-            </View>
-          </View>
+      <View style={styles.mainContent}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Manila Crime Hotspots</Text>
         </View>
-
-        {/* Crime Stats */}
+        <View style={styles.mapContainer}>
+          <MapComponent data={filteredMapData} userType="guest" />
+        </View>
         <View style={styles.statsContainer}>
           {crimeStats.map((stat, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.statCard,
-                { backgroundColor: index === 0 ? '#EFFBF6' : index === 1 ? '#EFF6FF' : '#FEF3F2' }
-              ]}
-            >
+            <View key={index} style={styles.statCard}>
               <Text style={styles.statTitle}>{stat.title}</Text>
-              {stat.location && (
-                <>
-                  <Text style={styles.statLocation}>{stat.location}</Text>
-                  <Text style={styles.statType}>{stat.type}</Text>
-                </>
-              )}
               <Text style={styles.statValue}>{stat.value}</Text>
+              {stat.location && <Text style={styles.statLocation}>{stat.location}</Text>}
+              {stat.type && <Text style={styles.statType}>{stat.type}</Text>}
             </View>
           ))}
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fafafa',
-  },
-  sidebar: {
-    width: SIDEBAR_WIDTH,
-    borderRightWidth: 1,
-    borderRightColor: '#eee',
-    backgroundColor: '#fff',
-  },
-  sidebarContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  logoSticky: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  logo: {
-    width: 50,
-    height: 50,
-    marginRight: 12,
-    borderRadius: 8,
-  },
-  logoTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#e02323',
-  },
-  logoSub: {
-    fontSize: 12,
-    color: '#666',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-    position: 'relative',
-    zIndex: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-    color: '#333',
-  },
-  dropdownContainer: {
-    position: 'relative',
-    zIndex: 2,
-  },
-  selectBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-  },
-  selectTxt: {
-    fontSize: 16,
-    color: '#333',
-  },
-  dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 1000,
-    maxHeight: 200,
-  },
-  dropdownOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  dropdownOptionActive: {
-    backgroundColor: '#f5f5f5',
-  },
-  dropdownOptionText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  dropdownOptionTextActive: {
-    color: '#e02323',
-    fontWeight: '600',
-  },
-  main: {
-    flex: 1,
-  },
-  mainContent: {
-    padding: 20,
-  },
-  mainHeader: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#b50000',
-  },
-  mainSubheader: {
-    fontSize: 14,
-    color: '#58578c',
-    marginBottom: 24,
-  },
-  mapContainer: {
-    width: '100%',
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginBottom: 24,
-  },
-  legendContainer: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 8,
-    padding: 8,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 6,
-  },
-  legendLabel: {
-    fontSize: 12,
-    color: '#333',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-    marginTop: 24,
-  },
-  statCard: {
-    flex: 1,
-    marginHorizontal: 6,
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: 'flex-start',
-    alignSelf: 'stretch',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 8,
-  },
-  statLocation: {
-    fontSize: 14,
-    color: '#212121',
-    marginBottom: 2,
-  },
-  statType: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#fef3f2',
-    position: 'relative',
-    zIndex: 0,
-  },
-  infoText: { 
-    marginLeft: 8 
-  },
-  infoTitle: { 
-    fontSize: 14, 
-    fontWeight: '600', 
-    color: '#e02323' 
-  },
-  infoSub: { 
-    fontSize: 12, 
-    color: '#666', 
-    marginTop: 2 
-  },
+const getStyles = (theme: any) => StyleSheet.create({
+  container: { flex: 1, flexDirection: 'row', backgroundColor: theme.background },
+  sidebar: { width: SIDEBAR_WIDTH, backgroundColor: theme.cardBackground, paddingHorizontal: 20, paddingVertical: 24, borderRightWidth: 1, borderRightColor: theme.border },
+  sidebarContent: { paddingBottom: 20, flexGrow: 1 },
+  logoSticky: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: theme.border },
+  logo: { width: 40, height: 40, marginRight: 12 },
+  logoTitle: { fontSize: 20, fontFamily: 'Poppins-Bold', color: '#e02323' },
+  logoSub: { fontSize: 12, fontFamily: 'Poppins-Regular', color: theme.subtitle },
+  mainContent: { flex: 1, padding: 24, flexDirection: 'column', gap: 20 },
+  header: {},
+  headerTitle: { fontSize: 28, fontFamily: 'Poppins-Bold', color: '#e02323' },
+  mapContainer: { flex: 1, borderRadius: 16, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  statsContainer: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
+  statCard: { flex: 1, backgroundColor: theme.cardBackground, borderRadius: 16, padding: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#999', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  statTitle: { fontSize: 14, fontFamily: 'Poppins-Medium', color: theme.subtitle, textAlign: 'center' },
+  statValue: { fontSize: 22, fontFamily: 'Poppins-Bold', color: '#e02323', marginTop: 4 },
+  statLocation: { fontSize: 12, fontFamily: 'Poppins-Regular', color: theme.text },
+  statType: { fontSize: 10, fontFamily: 'Poppins-Light', color: theme.subtitle, textTransform: 'uppercase' },
+  filtersContainer: { flexDirection: 'column', gap: 12, marginBottom: 16 },
+  card: { flex: 1, backgroundColor: theme.cardBackground, borderRadius: 16, padding: 12, shadowColor: '#999', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  cardTitle: { fontSize: 16, fontFamily: 'Poppins-Medium', color: theme.text, marginLeft: 8 },
+  dropdownContainer: { position: 'relative' },
+  selectBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingHorizontal: 12, backgroundColor: theme.background, borderRadius: 10, borderWidth: 1, borderColor: theme.border },
+  selectTxt: { fontSize: 14, fontFamily: 'Poppins-Regular', color: theme.text, flex: 1, marginRight: 4 },
+  dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: theme.cardBackground, borderRadius: 10, borderWidth: 1, borderColor: theme.border, marginTop: 6, maxHeight: 200, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 5, zIndex: 1000 },
+  dropdownOption: { padding: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
+  dropdownOptionActive: { backgroundColor: '#fff5f5' },
+  dropdownOptionText: { fontSize: 14, color: theme.text, fontFamily: 'Poppins-Regular' },
+  dropdownOptionTextActive: { color: '#d00000', fontFamily: 'Poppins-Medium' },
+  resetButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, backgroundColor: '#fff0f0', borderRadius: 12, marginBottom: 16 },
+  resetButtonText: { color: '#e02323', fontFamily: 'Poppins-Medium', fontSize: 14, marginLeft: 8 },
+  legendCard: { backgroundColor: theme.cardBackground, borderRadius: 16, padding: 16, shadowColor: '#999', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  legendColor: { width: 14, height: 14, borderRadius: 7, marginRight: 10 },
+  legendLabel: { fontSize: 14, fontFamily: 'Poppins-Regular', color: theme.text },
 });
 
 export default GuestCrimeMap;

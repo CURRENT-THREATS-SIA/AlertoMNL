@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
-import { FileSpreadsheet, LayoutDashboard, Search, Shield, Users } from 'lucide-react-native';
+import { FileSpreadsheet, LayoutDashboard, LogOut, Search, Shield, Users } from 'lucide-react-native';
 import React from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAdminAuth } from '../context/AdminAuthContext';
 
 
 interface AdminLayoutProps {
@@ -10,6 +11,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+  const { adminEmail, logout } = useAdminAuth();
   const menuItems = [
     { 
       icon: <LayoutDashboard size={24} color="#666666" />,
@@ -73,9 +75,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 />
               </View>
             </View>
-            <View style={styles.userInfoContainer}>
-              <Text style={styles.userEmail}>123@gmail.com</Text>
-              <Text style={styles.userRole}>Administrator</Text>
+            <View style={styles.rightHeaderItems}>
+              <View style={styles.userInfoContainer}>
+                <Text style={styles.userEmail} numberOfLines={1} ellipsizeMode="tail">
+                  {adminEmail}
+                </Text>
+                <Text style={styles.userRole}>Administrator</Text>
+              </View>
+              <TouchableOpacity onPress={logout} style={styles.logoutButton}>
+                <LogOut size={22} color="#666666" />
+              </TouchableOpacity>
             </View>
           </View>
           {/* Main Content */}
@@ -95,7 +104,7 @@ const styles = StyleSheet.create({
   },
   headerRightBar: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 32,
     paddingTop: 12,
@@ -133,10 +142,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
   },
+  rightHeaderItems: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
   userInfoContainer: {
     flexDirection: 'column',
     alignItems: 'flex-end',
     justifyContent: 'center',
+    maxWidth: 200,
   },
   userEmail: {
     fontSize: 14,
@@ -150,6 +165,11 @@ const styles = StyleSheet.create({
     color: '#bdbdbd',
     marginTop: -2,
     textAlign: 'right',
+  },
+  logoutButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
   },
   mainContainer: {
     flex: 1,
