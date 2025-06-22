@@ -1,4 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -7,9 +10,8 @@ import NavBottomBar from '../../../components/NavBottomBar';
 import { crimeData, StationName, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import { fonts } from '../../config/fonts';
+import { useAlerts } from '../../context/AlertContext';
 import { theme, useTheme } from '../../context/ThemeContext';
-// NOTE: All code related to expo-notifications, pop-up modals, and listeners
-// has been removed to fix the error in Expo Go.
 
 export type CrimeStat = {
   title: string;
@@ -59,6 +61,60 @@ const policeStations = [
   { id: 14, label: 'MPD Station 14 - Barbosa', value: 'MPD Station 14 - Barbosa' },
 ];
 
+const API_ACCEPT_SOS_URL = 'http://mnl911.atwebpages.com/accept-sos-alert.php'; 
+const API_GET_NOTIFICATIONS_URL = 'http://mnl911.atwebpages.com/getnotifications1.php';
+
+interface AlertNotification {
+  alert_id: number;
+  user_full_name: string;
+  location: string;
+  a_created?: string;
+  distance?: string;
+}
+
+const AlertModal: React.FC<{
+  notification: AlertNotification | null;
+  visible: boolean;
+  onAccept: (alertId: number) => void;
+  onDismiss: () => void;
+}> = ({ notification, visible, onAccept, onDismiss }) => {
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+
+  if (!notification) return null;
+
+  return (
+    <Modal
+      transparent={true}
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onDismiss}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalAlertContainer, { backgroundColor: currentTheme.cardBackground }]}>
+          <Ionicons name="warning" size={48} color="#E02323" style={{ marginBottom: 16 }} />
+          <Text style={[styles.title, { color: currentTheme.text }]}>
+            New Emergency Alert!
+          </Text>
+          <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>
+            An urgent SOS has been triggered. Please respond immediately.
+          </Text>
+          <View style={styles.acceptButtonContainer}>
+            <TouchableOpacity 
+              style={styles.acceptButton} 
+              onPress={() => {
+                onAccept(notification.alert_id);
+                onDismiss(); // Close modal immediately on accept
+              }}>
+              <Text style={styles.acceptButtonText}>Respond to Alert</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -76,6 +132,76 @@ const CrimeMap: React.FC = () => {
   const [showCrimeTypeModal, setShowCrimeTypeModal] = useState(false);
   const [showStationModal, setShowStationModal] = useState(false);
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
+  
+  // --- ALERTS ARE NOW HANDLED BY THE CONTEXT ---
+  const { notifications, acceptAlert } = useAlerts();
+
+  // --- NEW: State for the Alert Modal ---
+  const [activeAlert, setActiveAlert] = useState<AlertNotification | null>(null);
+  const seenAlertIds = useRef(new Set<number>());
+
+  useEffect(() => {
+    // When notifications update, check for a new one to display in the modal
+    if (notifications.length > 0) {
+      const latestAlert = notifications[0]; // Assuming the latest is first
+      if (!seenAlertIds.current.has(latestAlert.alert_id)) {
+        setActiveAlert(latestAlert);
+      }
+    }
+  }, [notifications]);
+
+  useEffect(() => {
+    const registerForPushNotificationsAsync = async () => {
+        let token;
+        if (Platform.OS === 'android') {
+            await Notifications.setNotificationChannelAsync('default', {
+                name: 'default',
+                importance: Notifications.AndroidImportance.MAX,
+                vibrationPattern: [0, 250, 250, 250],
+                lightColor: '#FF231F7C',
+            });
+        }
+
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+        if (finalStatus !== 'granted') {
+            alert('Failed to get push token for push notification!');
+            return;
+        }
+        
+        try {
+            const expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
+            console.log("Expo Push Token:", expoPushToken);
+
+            if (expoPushToken) {
+                const policeId = await AsyncStorage.getItem('police_id');
+                if (policeId) {
+                    const formData = new FormData();
+                    formData.append('police_id', policeId);
+                    formData.append('expo_push_token', expoPushToken);
+
+                    const response = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    const responseData = await response.json();
+                    console.log('Token registration response:', responseData);
+                    if (!responseData.success) {
+                        console.error("Failed to register token:", responseData.error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error getting or registering push token", error);
+        }
+    };
+
+    registerForPushNotificationsAsync();
+  }, []);
 
   // Add reset function
   const handleReset = () => {
@@ -205,6 +331,17 @@ const CrimeMap: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
+      <AlertModal 
+        visible={!!activeAlert}
+        notification={activeAlert}
+        onAccept={acceptAlert}
+        onDismiss={() => {
+          if (activeAlert) {
+            seenAlertIds.current.add(activeAlert.alert_id);
+          }
+          setActiveAlert(null);
+        }}
+      />
       <Header />
       
       <ScrollView 
@@ -675,7 +812,9 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContent: {
     borderTopLeftRadius: 20,
@@ -781,6 +920,94 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontSize: 12,
     fontFamily: fonts.poppins.regular,
+  },
+  alertsContainer: {
+    marginBottom: 16,
+  },
+  alertsTitle: {
+    fontSize: 22,
+    fontFamily: fonts.poppins.bold,
+    color: '#E02323',
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  card: {
+    width: 320,
+    marginRight: 12,
+    borderRadius: 16,
+    padding: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1,
+    borderColor: '#E02323',
+  },
+  urgentCard: {
+    backgroundColor: '#fff0f0',
+  },
+  title: {
+    fontSize: 24,
+    fontFamily: fonts.poppins.bold,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontFamily: fonts.poppins.regular,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  detailsContainer: {
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  detailLabel: {
+    fontFamily: fonts.poppins.semiBold,
+    fontSize: 14,
+  },
+  detailText: {
+    fontFamily: fonts.poppins.regular,
+    fontSize: 14,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  acceptButton: {
+    backgroundColor: '#E02323',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    width: '100%',
+  },
+  urgentAcceptButton: {
+    backgroundColor: '#ff4444',
+  },
+  acceptButtonText: {
+    color: '#fff',
+    fontFamily: fonts.poppins.bold,
+    fontSize: 16,
+  },
+  modalAlertContainer: {
+    width: '90%',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  acceptButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });
 

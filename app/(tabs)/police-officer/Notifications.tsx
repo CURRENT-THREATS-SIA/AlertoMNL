@@ -1,221 +1,109 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Audio } from 'expo-av';
-import { useRouter } from 'expo-router';
+import { FlashList } from '@shopify/flash-list';
 import React from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
-// --- PATHS CORRECTED BELOW ---
-import * as Location from 'expo-location';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Header from '../../../components/Header';
 import { fonts } from '../../config/fonts';
-import { useAlert } from '../../context/AlertContext';
+import { AlertNotification, useAlerts } from '../../context/AlertContext';
 import { theme, useTheme } from '../../context/ThemeContext';
 
-// --- API URLs ---
-const API_ACCEPT_SOS_URL = 'http://mnl911.atwebpages.com/accept-sos-alert.php'; 
-const API_GET_NOTIFICATIONS_URL = 'http://mnl911.atwebpages.com/getnotifications1.php';
-
-// The data structure for a single alert from your backend
-interface AlertNotification {
-  alert_id: number;
-  user_full_name: string;
-  location: string;
-}
-
+// Keep the AlertCard component here as it's the primary view for this screen
 const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId: number) => void }> = ({ notification, onAccept }) => {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
 
+  const getTimeSinceAlert = () => {
+    if (!notification.a_created) return 'Just now';
+    const alertTime = new Date(notification.a_created);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    const hours = Math.floor(diffInMinutes / 60);
+    return `${hours}h ${diffInMinutes % 60}m ago`;
+  };
+
+  const isUrgent = () => {
+    if (!notification.a_created) return true;
+    const alertTime = new Date(notification.a_created);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
+    return diffInMinutes < 5;
+  };
+
   return (
-    <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }]}>
-      <Ionicons name="alert-circle" size={48} color="#e02323" style={{ marginBottom: 12 }} />
-      <Text style={styles.title}>Someone needs your help!</Text>
+    <View style={[styles.card, { backgroundColor: currentTheme.cardBackground }, isUrgent() && styles.urgentCard]}>
+      <Ionicons name="alert-circle" size={48} color={isUrgent() ? "#ff4444" : "#e02323"} style={{ marginBottom: 12 }} />
+      <Text style={[styles.title, { color: currentTheme.text }]}>
+        {isUrgent() ? '🚨 URGENT: Response Required!' : 'Response Required'}
+      </Text>
       
       <View style={styles.detailsContainer}>
-        <Text style={[styles.detailText, { color: currentTheme.text }]}>
-          <Text style={[styles.detailLabel, { color: currentTheme.text }]}>From:</Text> {notification.user_full_name}
-        </Text>
-        <Text style={[styles.detailText, { color: currentTheme.text }]}>
-          <Text style={[styles.detailLabel, { color: currentTheme.text }]}>Alert ID:</Text> {notification.alert_id}
-        </Text>
-        <Text style={[styles.detailText, { color: currentTheme.text }]}>
-          <Text style={[styles.detailLabel, { color: currentTheme.text }]}>Location:</Text> {notification.location}
-        </Text>
+        <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>From:</Text><Text style={[styles.detailText, {color: currentTheme.text}]}>{notification.user_full_name}</Text></View>
+        <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>Alert ID:</Text><Text style={[styles.detailText, {color: currentTheme.text}]}>{notification.alert_id}</Text></View>
+        <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>Location:</Text><Text style={[styles.detailText, {color: currentTheme.text}]} numberOfLines={2}>{notification.location}</Text></View>
+        <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>Time:</Text><Text style={[styles.detailText, {color: currentTheme.text}]}>{getTimeSinceAlert()}</Text></View>
+        {notification.distance && (
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, {color: currentTheme.text}]}>Distance:</Text>
+            <Text style={[styles.detailText, {color: currentTheme.text}]}>{`${notification.distance} km`}</Text>
+          </View>
+        )}
       </View>
 
-      <TouchableOpacity 
-        style={styles.acceptButton}
-        onPress={() => onAccept(notification.alert_id)}
-      >
-        <Text style={styles.acceptButtonText}>Accept</Text>
+      <TouchableOpacity style={[styles.acceptButton, isUrgent() && styles.urgentAcceptButton]} onPress={() => onAccept(notification.alert_id)}>
+        <Text style={styles.acceptButtonText}>{isUrgent() ? '🚨 ACCEPT URGENT' : 'Accept'}</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-// The main screen component
-const Notifications: React.FC = () => {
-  const router = useRouter();
-  const alertContext = useAlert();
-  if (!alertContext) throw new Error('AlertContext must be used within AlertProvider');
-  const { showAlert } = alertContext;
+const NotificationsScreen = () => {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
-  const [notifications, setNotifications] = React.useState<AlertNotification[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
+  
+  // --- ALERTS ARE NOW HANDLED BY THE CONTEXT ---
+  const { notifications, isLoading, acceptAlert, refreshAlerts } = useAlerts();
 
-  const playAlertSound = async () => {
-    console.log('New alert detected. Playing sound...');
-    try {
-      // --- PATH CORRECTED BELOW --- (Assuming assets is in the root, outside 'app')
-      const { sound } = await Audio.Sound.createAsync(
-        require('../../../assets/sounds/EMERGENCY.mp3') 
-      );
-      await sound.playAsync();
-    } catch (error) {
-      console.error("Failed to play sound. Check file path and name.", error);
-    }
-  };
-
-  const fetchNotifications = React.useCallback(async () => {
-    try {
-      const policeId = await AsyncStorage.getItem('police_id');
-      if (!policeId) return;
-
-      // Get current location
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Location permission denied');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.BestForNavigation
-      });
-
-      const response = await fetch(
-        `${API_GET_NOTIFICATIONS_URL}?police_id=${policeId}&latitude=${location.coords.latitude}&longitude=${location.coords.longitude}`
-      );
-      const data = await response.json();
-      
-      if (data.success) {
-        setNotifications((prevNotifications: AlertNotification[]) => {
-          const prevIds = new Set(prevNotifications.map((n: AlertNotification) => n.alert_id));
-          const hasNewAlert = data.notifications.some((newNotification: AlertNotification) => !prevIds.has(newNotification.alert_id));
-          
-          if (hasNewAlert && prevNotifications.length > 0) {
-            playAlertSound();
-            showAlert(data.notifications[0].alert_id);
-          }
-          
-          return data.notifications;
-        });
-      } else {
-        throw new Error(data.message || "Failed to fetch notifications");
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [showAlert]); 
-
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    fetchNotifications();
-  }, [fetchNotifications]);
-
-  React.useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
-
-  const handleAccept = async (alertId: number) => {
-    const policeId = await AsyncStorage.getItem('police_id');
-    if (!policeId) {
-      Alert.alert("Authentication Error", "Could not find your Police ID. Please log in again.");
-      return;
-    }
-    setNotifications((prev: AlertNotification[]) => prev.filter((n: AlertNotification) => n.alert_id !== alertId));
-    try {
-      const formData = new FormData();
-      formData.append('alert_id', alertId.toString());
-      formData.append('police_id', policeId);
-      const response = await fetch(API_ACCEPT_SOS_URL, { method: 'POST', body: formData });
-      const result = await response.json();
-      if (result.success) {
-        Alert.alert("Alert Accepted", "You have been assigned to the case.", [
-          {
-            text: "Proceed",
-            onPress: () => router.push(`/police-officer/incident-response?alert_id=${alertId}`)
-          }
-        ]);
-      } else {
-        throw new Error(result.message || "Failed to accept alert.");
-      }
-    } catch (error: any) {
-      Alert.alert("Error", error.message);
-      fetchNotifications();
-    }
-  };
+  // The local `handleAccept`, `fetchNotifications`, `useEffect`, and `useState` for alerts are now removed.
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={currentTheme.background} />
-      <View style={[styles.header, { backgroundColor: currentTheme.cardBackground, borderBottomColor: currentTheme.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Pending Alerts</Text>
-      </View>
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollViewContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#e02323"]} />}
+    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
+      <Header />
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refreshAlerts}
+            tintColor={currentTheme.text}
+          />
+        }
       >
-        {/* JSX content remains the same */}
-        {loading ? (
-          <ActivityIndicator size="large" color="#e02323" style={{ marginTop: 50 }} />
-        ) : notifications.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: currentTheme.subtitle }]}>No pending alerts at the moment.</Text>
-            <Text style={[styles.pullDownText, { color: currentTheme.subtitle }]}>Pull down to refresh.</Text>
-          </View>
+        <Text style={[styles.header, { color: currentTheme.text }]}>Pending SOS Alerts</Text>
+        {isLoading && notifications.length === 0 ? (
+          <Text style={{ color: currentTheme.text, textAlign: 'center', marginTop: 20 }}>Fetching alerts...</Text>
+        ) : notifications.length > 0 ? (
+          <FlashList
+            data={notifications}
+            renderItem={({ item }) => <AlertCard notification={item} onAccept={acceptAlert} />}
+            keyExtractor={(item) => item.alert_id.toString()}
+            estimatedItemSize={280} // Adjusted for larger card
+            contentContainerStyle={styles.listContainer}
+          />
         ) : (
-          notifications.map((notification: AlertNotification) => (
-            <AlertCard 
-              key={notification.alert_id} 
-              notification={notification}
-              onAccept={handleAccept} 
-            />
-          ))
+          <Text style={[styles.emptyText, { color: currentTheme.text }]}>No pending alerts at the moment.</Text>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
-// Styles remain the same
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
-  backButton: { padding: 8 },
-  headerTitle: { marginLeft: 16, fontSize: 20, fontFamily: fonts.poppins.bold },
-  scrollView: { flex: 1 },
-  scrollViewContent: { padding: 16, flexGrow: 1 },
+  scrollContainer: { padding: 16, flexGrow: 1 },
+  header: { fontSize: 20, fontFamily: fonts.poppins.bold, marginBottom: 16 },
   card: { 
     borderRadius: 20, 
     marginBottom: 16,
@@ -239,31 +127,55 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     alignItems: 'flex-start',
   },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
+  },
   detailText: {
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
-    marginBottom: 8,
+    textAlign: 'right',
+    flexShrink: 1,
   },
   detailLabel: {
     fontFamily: fonts.poppins.bold,
+    fontSize: 16,
+    marginRight: 8,
   },
   acceptButton: { 
-    backgroundColor: '#10C86E', 
+    backgroundColor: '#e02323',
+    borderRadius: 12,
     paddingVertical: 14,
-    borderRadius: 30,
-    justifyContent: 'center', 
+    paddingHorizontal: 24,
+    marginTop: 16,
+    alignSelf: 'stretch',
     alignItems: 'center',
-    alignSelf: 'stretch', 
-    marginTop: 10,
   },
-  acceptButtonText: { 
-    color: 'white', 
+  acceptButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: fonts.poppins.bold,
+  },
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  urgentCard: {
+    borderWidth: 2,
+    borderColor: '#ff4444',
+    backgroundColor: '#fff5f5',
+  },
+  urgentAcceptButton: {
+    backgroundColor: '#ff4444',
+  },
+  emptyText: {
     fontSize: 18,
-    fontFamily: fonts.poppins.bold 
+    fontFamily: fonts.poppins.regular,
+    textAlign: 'center',
+    marginBottom: 8,
   },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 50 },
-  emptyText: { fontSize: 16, fontFamily: fonts.poppins.regular },
-  pullDownText: { fontSize: 14, marginTop: 8, fontFamily: fonts.poppins.regular },
 });
 
-export default Notifications;
+export default NotificationsScreen;

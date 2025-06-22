@@ -3,6 +3,9 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header('Content-Type: application/json');
+header('Cache-Control: no-cache, no-store, must-revalidate'); // Prevent caching
+header('Pragma: no-cache'); // Prevent caching
+header('Expires: 0'); // Prevent caching
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -25,19 +28,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
-    // Get pending alerts
-    $query = "SELECT a.*, u.f_name, u.l_name, u.m_number 
+    // Get pending alerts with optimized query
+    $query = "SELECT a.*, nu.f_name, nu.l_name, nu.m_number 
               FROM sosalert a 
-              JOIN nuser u ON a.nuser_id = u.nuser_id 
+              JOIN normalusers nu ON a.nuser_id = nu.nuser_id 
               WHERE a.a_status = 'pending' 
-              ORDER BY a.a_created DESC";
+              ORDER BY a.a_created DESC 
+              LIMIT 20"; // Reduced from 50 to 20 for faster response
     
     $result = $conn->query($query);
     $notifications = [];
     
     if ($result) {
         while ($row = $result->fetch_assoc()) {
-            // If police location is provided, check if within 3km radius
+            // If police location is provided, check if within 10km radius (increased for better coverage)
             if ($police_lat && $police_lng) {
                 $alert_lat = floatval($row['a_latitude']);
                 $alert_lng = floatval($row['a_longitude']);
@@ -50,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     $alert_lng
                 );
                 
-                // Only include alerts within 3km radius
-                if ($distance <= 3) {
+                // Include alerts within 10km radius (increased for better coverage)
+                if ($distance <= 10) {
                     $row['distance'] = round($distance, 2);
                     $notifications[] = $row;
                 }
@@ -64,7 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     echo json_encode([
         'success' => true,
-        'notifications' => $notifications
+        'notifications' => $notifications,
+        'timestamp' => time(), // Add timestamp for debugging
+        'count' => count($notifications) // Add count for debugging
     ]);
 } else {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);

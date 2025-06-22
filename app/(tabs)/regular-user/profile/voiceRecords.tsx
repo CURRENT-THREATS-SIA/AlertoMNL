@@ -1,9 +1,10 @@
+import { MaterialIcons } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 import { useTheme } from '../../../context/ThemeContext';
 
@@ -91,24 +92,20 @@ const VoiceRecords: React.FC = () => {
         </View>
       </View>
       
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          {records.length === 0 ? (
+      <View style={styles.content}>
+        <FlashList
+          data={records}
+          renderItem={({ item }) => <VoiceRecordItem record={item} />}
+          keyExtractor={(item) => item.id}
+          estimatedItemSize={80}
+          ListEmptyComponent={
             <View style={styles.emptyState}>
               <MaterialIcons name="mic-none" size={48} color={theme.subtitle} />
               <Text style={[styles.emptyStateText, { color: theme.subtitle }]}>No recordings yet</Text>
             </View>
-          ) : (
-            records.map((record) => (
-              <VoiceRecordItem key={record.id} record={record} />
-            ))
-          )}
-        </View>
-      </ScrollView>
+          }
+        />
+      </View>
     </SafeAreaView>
   );
 };
@@ -136,17 +133,20 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.semiBold,
     color: '#212121',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingVertical: 12,
-  },
   content: {
     flex: 1,
     paddingHorizontal: 16,
-    gap: 12,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontFamily: fonts.poppins.medium,
+    marginTop: 12,
   },
   recordItemContainer: {
     borderRadius: 12,
@@ -206,18 +206,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(224, 35, 35, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    marginTop: 12,
-    fontSize: 16,
-    fontFamily: fonts.poppins.medium,
-    color: '#666',
   },
 });
 

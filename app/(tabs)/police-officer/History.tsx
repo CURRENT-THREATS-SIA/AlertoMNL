@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import { theme, useTheme } from '../../context/ThemeContext';
 
@@ -93,34 +94,30 @@ const History: React.FC = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <Header />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollViewContent, { paddingBottom: 120 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          <Text style={[styles.title, { color: currentTheme.text }]}>Crime Report History</Text>
-          <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>Tap to view more details</Text>
+      <View style={styles.content}>
+        <Text style={[styles.title, { color: currentTheme.text }]}>Crime Report History</Text>
+        <Text style={[styles.subtitle, { color: currentTheme.subtitle }]}>Tap to view more details</Text>
 
-          {isLoading ? (
-            <ActivityIndicator style={{ marginTop: 30 }} size="large" color="#E02323" />
-          ) : (
-            <View style={styles.historyList}>
-              {historyItems.length > 0 ? (
-                historyItems.map((item) => (
-                  <HistoryCard
-                    key={item.history_id}
-                    item={item}
-                    onPress={() => handleHistoryItemPress(item.history_id)}
-                  />
-                ))
-              ) : (
-                <Text style={[styles.noHistoryText, { color: currentTheme.subtitle }]}>No history records found.</Text>
-              )}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+        {isLoading ? (
+          <ActivityIndicator style={{ marginTop: 30 }} size="large" color="#E02323" />
+        ) : (
+          <FlashList
+            data={historyItems}
+            renderItem={({ item }) => (
+              <HistoryCard
+                key={item.history_id}
+                item={item}
+                onPress={() => handleHistoryItemPress(item.history_id)}
+              />
+            )}
+            keyExtractor={(item) => item.history_id.toString()}
+            estimatedItemSize={80}
+            ListEmptyComponent={
+              <Text style={[styles.noHistoryText, { color: currentTheme.subtitle }]}>No history records found.</Text>
+            }
+          />
+        )}
+      </View>
 
       <NavBottomBar activeScreen="History" />
     </SafeAreaView>
@@ -131,23 +128,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
+  content: {
     flex: 1,
-  },
-  scrollViewContent: {
     padding: 20,
   },
-  content: {},
   title: {
     fontSize: 24,
     fontFamily: fonts.poppins.bold,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
     fontFamily: fonts.poppins.regular,
     marginBottom: 20,
   },
-  historyList: {},
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,

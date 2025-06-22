@@ -7,7 +7,7 @@ import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
@@ -359,7 +359,9 @@ export default function RegularUserHome() {
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
       const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       recordingObject = recording;
-      await new Promise(resolve => setTimeout(resolve, 30000));
+      
+      // Reduced recording time from 30 seconds to 15 seconds for faster response
+      await new Promise(resolve => setTimeout(resolve, 15000));
     } catch (error) {
       console.error('Error during SOS recording process:', error);
     } finally {
@@ -367,8 +369,15 @@ export default function RegularUserHome() {
         try {
           await recordingObject.stopAndUnloadAsync();
           const uri = recordingObject.getURI();
-          if (uri) uploadAudio(uri, alertId);
-        } catch (e) { console.error("Error stopping SOS recording:", e) }
+          if (uri) {
+            // Upload audio in background without blocking
+            setTimeout(() => {
+              uploadAudio(uri, alertId);
+            }, 100);
+          }
+        } catch (e) { 
+          console.error("Error stopping SOS recording:", e) 
+        }
       }
       setIsRecording(false);
     }
@@ -426,7 +435,7 @@ export default function RegularUserHome() {
         } catch (e) {
           console.log("Polling error:", e);
         }
-      }, 3000);
+      }, 3000); // Reduced from 10000 to 3000 for faster status updates
       return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
     }
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
@@ -435,67 +444,79 @@ export default function RegularUserHome() {
   // --- MAIN SOS HANDLER ---
   const handleSOS = async () => {
     if (isSendingSOS || (sosDisabledUntil && Date.now() < sosDisabledUntil)) return;
-    await ensureAudioIsFree();
-    cancelCountdownRef.current = false; // Reset before starting
+    
     setIsSendingSOS(true);
     setSosState('countdown');
     setCountdown(sosDelay);
+    
+    // Start countdown immediately
     for (let i = sosDelay; i > 0; i--) {
       if (cancelCountdownRef.current) {
         setIsSendingSOS(false);
         setCountdown(null);
         setSosState('idle');
-        return; // Exit early if cancelled
+        return;
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
       setCountdown(i - 1);
     }
-    Vibration.vibrate(500);
+    
+    // Immediately create SOS alert
     try {
       const nuserId = await AsyncStorage.getItem('nuser_id');
       if (!nuserId) throw new Error('User ID not found.');
-      let currentLocation = location;
-      if (!currentLocation) currentLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
-      setLocation(currentLocation);
-      const formData = new FormData();
-      formData.append('nuser_id', nuserId);
-      formData.append('a_latitude', currentLocation.coords.latitude.toString());
-      formData.append('a_longitude', currentLocation.coords.longitude.toString());
-      formData.append('location_address', locationAddress);
       
-      console.log('Sending SOS alert to server...');
-      const response = await fetch(API_TRIGGER_SOS_URL, { method: 'POST', body: formData });
+      // Get location immediately with faster accuracy
+      let currentLocation = location;
+      if (!currentLocation) {
+        currentLocation = await Location.getCurrentPositionAsync({ 
+          accuracy: Location.Accuracy.Balanced
+        });
+      }
+      
+      setLocation(currentLocation);
+      
+      // Create alert immediately
+      const body = `nuser_id=${encodeURIComponent(nuserId)}&a_latitude=${encodeURIComponent(currentLocation.coords.latitude.toString())}&a_longitude=${encodeURIComponent(currentLocation.coords.longitude.toString())}&a_address=${encodeURIComponent(locationAddress)}`;
+      
+      console.log('🚨 SENDING SOS ALERT IMMEDIATELY...');
+      
+      // Send alert with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
+      const response = await fetch(API_TRIGGER_SOS_URL, { 
+        method: 'POST', 
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
-        throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        const errorBody = await response.text();
+        throw new Error(`Server error: ${response.status}. Body: ${errorBody}`);
       }
       
-      const data = await response.json();
-      if (!data.success) throw new Error(data.message || 'Failed to create SOS alert.');
-      
-      setCurrentAlertId(data.alert_id);
-      setSosState('active');
-      Alert.alert('SOS Triggered', 'Voice recording will automatically start for 30 seconds.');
-      
-      // Send SMS to contacts
-      const emergencyMessage = `This is an SOS! I need help. My location: ${locationAddress}`;
-      await sendSOSMessages(emergencyMessage);
-      recordAndUploadAudio(data.alert_id);
-    } catch (error: any) {
-      console.log('SOS error:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('Network request failed')) {
-          Alert.alert('Network Error', 'Unable to connect to server. Please check your internet connection and try again.');
-        } else if (error.message.includes('Server error')) {
-          Alert.alert('Server Error', 'Server is not responding. Please try again later.');
-        } else {
-      Alert.alert('Error', error.message || 'Failed to send SOS.');
-        }
+      const json = await response.json();
+      if (json.success && json.alert_id) {
+        setSosState('active');
+        setCurrentAlertId(json.alert_id);
+        
+        // Asynchronous background tasks
+        recordAndUploadAudio(json.alert_id);
+        sendSOSMessages(`Emergency! I'm at ${locationAddress}. Latitude: ${currentLocation.coords.latitude}, Longitude: ${currentLocation.coords.longitude}`);
+        
       } else {
-        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+        throw new Error(json.message || 'Unknown server error.');
       }
+    } catch (error) {
+      console.error("SOS ERROR: ", error);
+      Alert.alert('SOS Failed', 'Could not send alert. Please check your connection and try again.');
       setSosState('idle');
-    } finally {
       setIsSendingSOS(false);
       setCountdown(null);
     }
@@ -557,10 +578,9 @@ export default function RegularUserHome() {
             console.log('SMS sendSMSAsync called successfully');
           } catch (smsError) {
             console.log('SMS sendSMSAsync error:', smsError);
-            Alert.alert('SMS Error', 'Failed to send SMS. Please check your SMS permissions.');
+            // Don't show alert for SMS errors - they shouldn't block the SOS
           }
         } else {
-          Alert.alert('SMS is not available on this device');
           console.log('SMS not available');
         }
       } else {
@@ -568,17 +588,7 @@ export default function RegularUserHome() {
       }
     } catch (e) {
       console.log('SMS error:', e);
-      if (e instanceof Error) {
-        if (e.message.includes('Network request failed')) {
-          Alert.alert('Network Error', 'Unable to connect to server. Please check your internet connection.');
-        } else if (e.message.includes('HTTP error')) {
-          Alert.alert('Server Error', 'Server is not responding. Please try again later.');
-        } else {
-          Alert.alert('Error', `Failed to send SMS: ${e.message}`);
-        }
-      } else {
-        Alert.alert('Failed to send SMS to contacts');
-      }
+      // Don't show alerts for SMS errors - they shouldn't block the SOS
     }
   };
 

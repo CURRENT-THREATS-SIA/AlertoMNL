@@ -1,21 +1,22 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { FlashList } from '@shopify/flash-list';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import * as SMS from 'expo-sms';
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, SafeAreaView, StatusBar, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { fonts } from '../../../config/fonts';
 import { useTheme } from '../../../context/ThemeContext';
 
 
 interface Permission {
   name: string;
-  iconName: string;
-  enabled: boolean;
   description: string;
+  enabled: boolean;
+  iconName: keyof typeof MaterialIcons.glyphMap;
 }
 
 // Initial permissions data with descriptions
@@ -136,48 +137,52 @@ const AppPermission: React.FC = () => {
         </Text>
       </View>
 
-      {/* Permissions List */}
-      <ScrollView contentContainerStyle={styles.permissionsList} showsVerticalScrollIndicator={false}>
-        {permissions.map((permission, index) => (
+      <View style={styles.content}>
+        <FlashList
+          data={permissions}
+          renderItem={({ item, index }) => (
           <View key={index} style={[styles.permissionCard, { backgroundColor: theme.cardBackground }]}>
             <View style={styles.permissionHeader}>
               <View style={styles.permissionInfo}>
                 <View style={[
                   styles.iconContainer,
-                  !permission.enabled && styles.iconContainerDisabled,
-                  { backgroundColor: permission.enabled ? '#fff5f5' : theme.background }
+                    !item.enabled && styles.iconContainerDisabled,
+                    { backgroundColor: item.enabled ? '#fff5f5' : theme.background }
                 ]}>
                   <MaterialIcons 
-                    name={permission.iconName} 
+                      name={item.iconName} 
                     size={24} 
-                    color={permission.enabled ? "#e02323" : theme.subtitle} 
+                      color={item.enabled ? "#e02323" : theme.subtitle} 
                   />
                 </View>
                 <Text style={[
                   styles.permissionName,
-                  { color: permission.enabled ? theme.text : theme.subtitle }
+                    { color: item.enabled ? theme.text : theme.subtitle }
                 ]}>
-                  {permission.name}
+                    {item.name}
                 </Text>
               </View>
               <Switch
-                value={permission.enabled}
+                  value={item.enabled}
                 onValueChange={() => togglePermission(index)}
                 trackColor={{ false: theme.border, true: '#ffd1d1' }}
-                thumbColor={permission.enabled ? '#e02323' : theme.subtitle}
+                  thumbColor={item.enabled ? '#e02323' : theme.subtitle}
                 ios_backgroundColor={theme.border}
                 style={styles.switch}
               />
             </View>
             <Text style={[
               styles.permissionDescription,
-              { color: permission.enabled ? theme.subtitle : theme.subtitle }
+                { color: item.enabled ? theme.subtitle : theme.subtitle }
             ]}>
-              {permission.description}
+                {item.description}
             </Text>
           </View>
-        ))}
-      </ScrollView>
+          )}
+          keyExtractor={(item, index) => index.toString()}
+          estimatedItemSize={100}
+        />
+      </View>
     </SafeAreaView>
   );
 };
@@ -221,15 +226,14 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
   },
-  permissionsList: {
-    padding: 16,
-    gap: 12,
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   permissionCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
-    gap: 8,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -241,42 +245,38 @@ const styles = StyleSheet.create({
   },
   permissionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   permissionInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flex: 1,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#fff5f5',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   iconContainerDisabled: {
-    backgroundColor: '#f5f5f5',
+    opacity: 0.5,
   },
   permissionName: {
-    fontFamily: fonts.poppins.semiBold,
     fontSize: 16,
-    color: '#212121',
-  },
-  permissionDescription: {
-    fontFamily: fonts.poppins.regular,
-    fontSize: 14,
-    color: '#666666',
-    marginLeft: 52,
-    lineHeight: 20,
-  },
-  textDisabled: {
-    color: '#999999',
+    fontFamily: fonts.poppins.medium,
+    flex: 1,
   },
   switch: {
-    transform: [{ scale: 0.9 }],
+    marginLeft: 12,
+  },
+  permissionDescription: {
+    fontSize: 14,
+    fontFamily: fonts.poppins.regular,
+    lineHeight: 20,
   },
 });
 

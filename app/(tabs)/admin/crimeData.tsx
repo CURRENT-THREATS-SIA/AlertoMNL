@@ -1,14 +1,14 @@
 import { ChevronDown, Filter, RefreshCw, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
-  Platform, // Import Platform API
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Platform, // Import Platform API
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import AdminLayout from '../../components/AdminLayout';
 
@@ -159,7 +159,15 @@ export default function CrimeData() {
             result = result.filter(item => item.severity === selectedSeverity);
         }
         
-        result = Array.from(new Map(result.map(item => [item.alertId, item])).values());
+        // Use Set for faster deduplication
+        const seen = new Set();
+        result = result.filter(item => {
+            const duplicate = seen.has(item.alertId);
+            seen.add(item.alertId);
+            return !duplicate;
+        });
+        
+        // Sort once at the end
         result.sort((a, b) => parseInt(a.alertId) - parseInt(b.alertId));
         return result;
     }, [masterCrimeData, searchQuery, selectedType, selectedSeverity]);
@@ -447,11 +455,9 @@ export default function CrimeData() {
                                                         setSelectedType(type);
                                                         setShowTypeDropdown(false);
                                                     }}
-                                                    onMouseEnter={() => setHoveredType(type)}
-                                                    onMouseLeave={() => setHoveredType(null)}
                                                     style={styles.dropdownItem}
                                                 >
-                                                    <Text style={[styles.dropdownItemText, hoveredType === type && styles.dropdownItemTextHovered, selectedType === type && styles.dropdownItemTextSelected]}>
+                                                    <Text style={[styles.dropdownItemText, selectedType === type && styles.dropdownItemTextSelected]}>
                                                         {type}
                                                     </Text>
                                                 </TouchableOpacity>
@@ -476,11 +482,9 @@ export default function CrimeData() {
                                                         setSelectedSeverity(level);
                                                         setShowSeverityDropdown(false);
                                                     }}
-                                                    onMouseEnter={() => setHoveredSeverity(level)}
-                                                    onMouseLeave={() => setHoveredSeverity(null)}
                                                     style={styles.dropdownItem}
                                                 >
-                                                    <Text style={[styles.dropdownItemText, hoveredSeverity === level && styles.dropdownItemTextHovered, selectedSeverity === level && styles.dropdownItemTextSelected]}>
+                                                    <Text style={[styles.dropdownItemText, selectedSeverity === level && styles.dropdownItemTextSelected]}>
                                                         {level}
                                                     </Text>
                                                 </TouchableOpacity>
@@ -638,9 +642,6 @@ const styles = StyleSheet.create({
     dropdownItemText: {
         fontSize: 14,
         color: '#333',
-    },
-    dropdownItemTextHovered: {
-        color: '#e02323',
     },
     dropdownItemTextSelected: {
         color: '#e02323',

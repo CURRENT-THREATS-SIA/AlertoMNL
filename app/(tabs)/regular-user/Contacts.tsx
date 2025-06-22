@@ -1,8 +1,10 @@
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { MoreVertical, Plus, RefreshCw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PersonAlertIcon from '../../components/icons/PersonAlertIcon';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -114,37 +116,47 @@ const Contacts: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-      
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-          {/* Header with Refresh */}
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>My Contacts</Text>
-            <TouchableOpacity onPress={fetchContacts}>
-              <RefreshCw size={24} color={currentTheme.subtitle} />
-            </TouchableOpacity>
-          </View>
+      <View style={[styles.header, { backgroundColor: currentTheme.cardBackground, borderBottomColor: currentTheme.border }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Emergency Contacts</Text>
+      </View>
 
-          {/* Contact List */}
-          <View style={styles.contactList}>
-            {contacts.map((contact) => (
-              <ContactCard key={contact.contact_id} contact={contact} onMorePress={handleMorePress} />
-            ))}
-          </View>
-
-          {/* Add Contact Button */}
-          <TouchableOpacity style={styles.addButton} onPress={handleAddContact}>
-            <Plus size={16} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add New Contact</Text>
+      <View style={styles.content}>
+        {/* Header with Refresh */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>My Contacts</Text>
+          <TouchableOpacity onPress={fetchContacts}>
+            <RefreshCw size={24} color={currentTheme.subtitle} />
           </TouchableOpacity>
         </View>
-      </ScrollView>
-       {/* Bottom Sheet Menu */}
-       {showMenu && (
+
+        {/* Contact List */}
+        <FlashList
+          data={contacts}
+          renderItem={({ item }) => (
+            <ContactCard contact={item} onMorePress={handleMorePress} />
+          )}
+          keyExtractor={(item) => item.contact_id.toString()}
+          estimatedItemSize={80}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: currentTheme.subtitle }]}>No contacts found</Text>
+              <Text style={[styles.emptySubText, { color: currentTheme.subtitle }]}>Add your emergency contacts</Text>
+            </View>
+          }
+        />
+
+        {/* Add Contact Button */}
+        <TouchableOpacity style={styles.addButton} onPress={handleAddContact}>
+          <Plus size={16} color="#FFFFFF" />
+          <Text style={styles.addButtonText}>Add New Contact</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Bottom Sheet Menu */}
+      {showMenu && (
         <View style={[styles.menuContainer, { 
           backgroundColor: currentTheme.cardBackground,
           borderTopColor: currentTheme.border
@@ -165,30 +177,84 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  scrollViewContent: {
-    padding: 20,
-    paddingBottom: 100,
+  backButton: {
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
   },
   content: {
     flex: 1,
-    gap: 16,
+    paddingHorizontal: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    paddingVertical: 16,
   },
   sectionTitle: {
     fontSize: 20,
     fontFamily: fonts.poppins.semiBold,
-    color: '#7d7d7d',
   },
   contactList: {
-    gap: 8,
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontFamily: fonts.poppins.medium,
+    marginBottom: 4,
+  },
+  emptySubText: {
+    fontSize: 14,
+    fontFamily: fonts.poppins.regular,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#e02323',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 16,
+    marginBottom: 20,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: fonts.poppins.semiBold,
+    marginLeft: 8,
+  },
+  menuContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopWidth: 1,
+    paddingVertical: 8,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  menuText: {
+    fontSize: 16,
+    fontFamily: fonts.poppins.medium,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -233,44 +299,6 @@ const styles = StyleSheet.create({
   },
   moreButton: {
     padding: 4,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#e33c3c',
-    borderRadius: 100,
-    padding: 10,
-    gap: 8,
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    paddingTop: 4,
-    fontSize: 14,
-    fontFamily: fonts.poppins.bold,
-  },
-  menuContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 20,
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 10,
-    borderTopWidth: 1,
-  },
-  menuItem: {
-    padding: 16,
-  },
-  menuText: {
-    fontSize: 18,
   },
 });
 

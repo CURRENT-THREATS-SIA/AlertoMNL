@@ -7,12 +7,15 @@ import { useAlert } from '../app/context/AlertContext';
 
 export const EmergencyAlertModal: React.FC = () => {
   // Get the state and hide function from our context
-  const { isAlertVisible, hideAlert } = useAlert();
+  const alertContext = useAlert();
+  const { isAlertVisible, hideAlert, currentAlertId } = alertContext || {};
   // Get the router to handle navigation
   const router = useRouter();
 
+  if (!alertContext) return null;
+
   const handleGoToNotifications = () => {
-    hideAlert(); // First, close the modal
+    if (hideAlert) hideAlert(); // First, close the modal
     // This path should now be correct:
     router.push('/(tabs)/police-officer/Notifications'); 
   };
@@ -21,8 +24,8 @@ export const EmergencyAlertModal: React.FC = () => {
     <Modal
       transparent={true}
       animationType="fade"
-      visible={isAlertVisible} // The modal's visibility is controlled by our context
-      onRequestClose={hideAlert} // Allows closing with the Android back button
+      visible={isAlertVisible || false} // The modal's visibility is controlled by our context
+      onRequestClose={() => hideAlert?.()} // Allows closing with the Android back button
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
