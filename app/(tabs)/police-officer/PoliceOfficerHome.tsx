@@ -154,11 +154,13 @@ const CrimeMap: React.FC = () => {
     const registerForPushNotificationsAsync = async () => {
         let token;
         if (Platform.OS === 'android') {
-            await Notifications.setNotificationChannelAsync('default', {
-                name: 'default',
+            // --- NEW: Create a dedicated channel for emergency alerts ---
+            await Notifications.setNotificationChannelAsync('emergency-alerts', {
+                name: 'Emergency SOS Alerts',
                 importance: Notifications.AndroidImportance.MAX,
-                vibrationPattern: [0, 250, 250, 250],
+                vibrationPattern: [0, 250, 250, 500, 250, 250, 500], // More insistent pattern
                 lightColor: '#FF231F7C',
+                sound: 'default', // Ensure it plays a sound
             });
         }
 
