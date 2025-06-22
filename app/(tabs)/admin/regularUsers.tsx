@@ -1,17 +1,18 @@
-import { ChevronDown, Edit as EditIcon, Filter, RefreshCw, Search } from 'lucide-react-native';
+import { ChevronDown, Filter, RefreshCw, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import AdminLayout from '../../components/AdminLayout';
 
-// ... (Interface, constants, etc. remain the same)
+// Updated interface
 interface RegularUser {
     id: string;
     firstName: string;
@@ -21,7 +22,14 @@ interface RegularUser {
     password: string;
     securityQuestion: string;
     securityAnswer: string;
+    account_status?: string;
+    termination_reason?: string | null;
 }
+
+const statusOptions = [
+    { label: 'Active', value: 'Active' },
+    { label: 'Terminate', value: 'Terminated' },
+];
 
 const sortOptions = [
     { label: 'Name (A-Z)', value: 'name_asc' },
@@ -59,29 +67,40 @@ const HighlightText = ({ text = '', highlight = '', style }: { text: string; hig
     );
 };
 
-
 export default function RegularUsers() {
-    // ... (State and useEffect for fetching data remain the same)
     const [usersData, setUsersData] = useState<RegularUser[]>([]);
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState('id');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const [statusModal, setStatusModal] = useState<{visible: boolean, user: RegularUser | null, newStatus: string | null}>({visible: false, user: null, newStatus: null});
+    const [terminationReason, setTerminationReason] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
 
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [hoveredSortOption, setHoveredSortOption] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchUsers = async () => {
+            setIsLoading(true);
+            setError(null);
             try {
                 const res = await fetch('http://mnl911.atwebpages.com/fetch_regular_users.php');
                 const data = await res.json();
                 if (data.success && data.users) {
                     const sorted = [...data.users].sort((a, b) => parseInt(a.id) - parseInt(b.id));
                     setUsersData(sorted);
+                } else {
+                    throw new Error(data.message || 'Failed to fetch users');
                 }
-            } catch (err) {
+            } catch (err: any) {
+                setError(err.message);
                 console.error(err);
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchUsers();
@@ -98,7 +117,6 @@ export default function RegularUsers() {
                 u.firstName.toLowerCase().includes(q) ||
                 u.lastName.toLowerCase().includes(q) ||
                 u.email.toLowerCase().includes(q) ||
-                // THE FIX: Search the formatted phone number
                 formatPhoneNumber(u.phone).includes(q)
             );
         }
@@ -121,8 +139,6 @@ export default function RegularUsers() {
     const showStart = filtered.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
     const showEnd = Math.min(currentPage * itemsPerPage, filtered.length);
 
-    // ... (The rest of the component's JSX and styles are correct and remain unchanged)
-    // ...
     return (
         <AdminLayout>
             <Pressable style={styles.container} onPress={() => setShowSortDropdown(false)}>
@@ -156,8 +172,6 @@ export default function RegularUsers() {
                                                     key={option.value}
                                                     style={styles.dropdownItem}
                                                     onPress={() => { setSortBy(option.value); setShowSortDropdown(false); }}
-                                                    onMouseEnter={() => setHoveredSortOption(option.value)}
-                                                    onMouseLeave={() => setHoveredSortOption(null)}
                                                 >
                                                     <Text style={[styles.dropdownItemText, hoveredSortOption === option.value && styles.dropdownItemTextHovered, sortBy === option.value && styles.dropdownItemTextSelected]}>
                                                         {option.label}
@@ -177,73 +191,166 @@ export default function RegularUsers() {
                     </View>
                 </View>
                 
-                <View style={styles.tableContainer}>
-                    <FlatList
-                        data={paginatedData}
-                        keyExtractor={item => item.id}
-                        ListHeaderComponent={() => (
-                            <View style={styles.tableHeader}>
-                                <Text style={[styles.headerCell, styles.idColumn]}>USER ID</Text>
-                                <Text style={[styles.headerCell, styles.firstNameColumn]}>FIRST NAME</Text>
-                                <Text style={[styles.headerCell, styles.lastNameColumn]}>LAST NAME</Text>
-                                <Text style={[styles.headerCell, styles.phoneColumn]}>PHONE</Text>
-                                <Text style={[styles.headerCell, styles.emailColumn]}>EMAIL</Text>
-                                <Text style={[styles.headerCell, styles.passwordColumn]}>PASS</Text>
-                                <Text style={[styles.headerCell, styles.secQuestionColumn]}>SEC. Q</Text>
-                                <Text style={[styles.headerCell, styles.secAnswerColumn]}>SEC. A</Text>
-                                <Text style={[styles.headerCell, styles.actionColumn]}>ACTION</Text>
-                            </View>
-                        )}
-                        renderItem={({ item }) => (
-                            <View style={styles.tableRow}>
-                                <HighlightText style={[styles.cell, styles.idColumn]} text={item.id} highlight={search} />
-                                <HighlightText style={[styles.cell, styles.firstNameColumn]} text={item.firstName} highlight={search} />
-                                <HighlightText style={[styles.cell, styles.lastNameColumn]} text={item.lastName} highlight={search} />
-                                <HighlightText style={[styles.cell, styles.phoneColumn]} text={formatPhoneNumber(item.phone)} highlight={search} />
-                                <HighlightText style={[styles.cell, styles.emailColumn]} text={item.email} highlight={search} />
-                                <Text style={[styles.cell, styles.passwordColumn]}>{item.password}</Text>
-                                <Text style={[styles.cell, styles.secQuestionColumn]}>{item.securityQuestion}</Text>
-                                <Text style={[styles.cell, styles.secAnswerColumn]}>{item.securityAnswer}</Text>
-                                <View style={[styles.cell, styles.actionColumn]}>
-                                    <TouchableOpacity style={styles.actionButton}>
-                                        <EditIcon size={20} color="#666" />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        )}
-                        ItemSeparatorComponent={() => <View style={styles.separator} />}
-                    />
-                </View>
+                {isLoading ? (
+                    <ActivityIndicator size="large" color="#e02323" style={{flex: 1}} />
+                ) : error ? (
+                    <Text style={{textAlign: 'center', color: 'red', marginTop: 20}}>{error}</Text>
+                ) : (
+                    <>
+                        <View style={styles.tableContainer}>
+                            <FlatList
+                                data={paginatedData}
+                                keyExtractor={item => item.id}
+                                ListHeaderComponent={() => (
+                                    <View style={styles.tableHeader}>
+                                        <Text style={[styles.headerCell, styles.idColumn]}>USER ID</Text>
+                                        <Text style={[styles.headerCell, styles.firstNameColumn]}>FIRST NAME</Text>
+                                        <Text style={[styles.headerCell, styles.lastNameColumn]}>LAST NAME</Text>
+                                        <Text style={[styles.headerCell, styles.phoneColumn]}>PHONE</Text>
+                                        <Text style={[styles.headerCell, styles.emailColumn]}>EMAIL</Text>
+                                        <Text style={[styles.headerCell, styles.passwordColumn]}>PASS</Text>
+                                        <Text style={[styles.headerCell, styles.secQuestionColumn]}>SEC. Q</Text>
+                                        <Text style={[styles.headerCell, styles.secAnswerColumn]}>SEC. A</Text>
+                                        <Text style={[styles.headerCell, styles.actionColumn]}>STATUS</Text>
+                                    </View>
+                                )}
+                                renderItem={({ item }) => (
+                                    <View style={styles.tableRow}>
+                                        <HighlightText style={[styles.cell, styles.idColumn]} text={item.id} highlight={search} />
+                                        <HighlightText style={[styles.cell, styles.firstNameColumn]} text={item.firstName} highlight={search} />
+                                        <HighlightText style={[styles.cell, styles.lastNameColumn]} text={item.lastName} highlight={search} />
+                                        <HighlightText style={[styles.cell, styles.phoneColumn]} text={formatPhoneNumber(item.phone)} highlight={search} />
+                                        <HighlightText style={[styles.cell, styles.emailColumn]} text={item.email} highlight={search} />
+                                        <Text style={[styles.cell, styles.passwordColumn]}>{item.password}</Text>
+                                        <Text style={[styles.cell, styles.secQuestionColumn]}>{item.securityQuestion}</Text>
+                                        <Text style={[styles.cell, styles.secAnswerColumn]}>{item.securityAnswer}</Text>
+                                        <View style={[styles.cell, styles.actionColumn]}>
+                                            <TouchableOpacity 
+                                                style={styles.actionButton}
+                                                onPress={() => setStatusModal({ visible: true, user: item, newStatus: item.account_status || 'Active' })}
+                                            >
+                                                <Text style={[styles.statusText, { color: item.account_status === 'Terminated' ? '#d63031' : '#28a745' }]}>
+                                                    {item.account_status || 'Active'}
+                                                </Text>
+                                                <ChevronDown width={16} height={16} color="#666" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )}
+                                ListFooterComponent={() => (
+                                    <View style={styles.pagination}>
+                                        <View style={styles.pageInfoContainer}>
+                                            <Text style={styles.pageInfo}>
+                                                Showing {paginatedData.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}-
+                                                {showEnd} of {filtered.length}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.paginationControls}>
+                                            <TouchableOpacity
+                                                style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
+                                                onPress={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                            >
+                                                <Text style={[styles.pageButtonText, currentPage === 1 && styles.pageButtonTextDisabled]}>Previous</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={[styles.pageButton, currentPage >= totalPages && styles.pageButtonDisabled]}
+                                                onPress={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
+                                                disabled={currentPage >= totalPages}
+                                            >
+                                                <Text style={[styles.pageButtonText, currentPage >= totalPages && styles.pageButtonTextDisabled]}>Next</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )}
+                            />
+                        </View>
+                    </>
+                )}
+            </Pressable>
 
-                <View style={{flex: 1}} />
-                
-                {paginatedData.length > 0 && (
-                     <View style={styles.pagination}>
-                        <Text style={styles.paginationText}>
-                            Showing {showStart}-{showEnd} of {filtered.length}
-                        </Text>
-                        <View style={styles.paginationControls}>
+            {/* --- Status Modal --- */}
+            {statusModal.visible && statusModal.user && (
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.modalTitle}>Change Status</Text>
+                        {statusOptions.map(opt => (
                             <TouchableOpacity
-                                style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
-                                onPress={() => currentPage > 1 && setCurrentPage(currentPage - 1)}
-                                disabled={currentPage === 1}
+                                key={opt.value}
+                                style={styles.modalOption}
+                                onPress={() => {
+                                    setStatusModal(sm => ({...sm, newStatus: opt.value}));
+                                    if (opt.value !== 'Terminated') {
+                                        setTerminationReason('');
+                                    }
+                                }}
                             >
-                                <Text style={[styles.pageButtonText, currentPage === 1 && styles.pageButtonTextDisabled]}>Previous</Text>
+                                <Text style={{fontWeight: statusModal.newStatus === opt.value ? '700' : '400' }}>{opt.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+
+                        {statusModal.newStatus === 'Terminated' && (
+                            <View style={{marginTop: 16, width: '100%'}}>
+                                <Text style={styles.reasonLabel}>Reason for Termination (Optional):</Text>
+                                <TextInput
+                                    style={styles.reasonInput}
+                                    placeholder="e.g., Violated community guidelines"
+                                    value={terminationReason}
+                                    onChangeText={setTerminationReason}
+                                />
+                            </View>
+                        )}
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.saveButton]}
+                                disabled={isUpdating}
+                                onPress={async () => {
+                                    if (!statusModal.user || !statusModal.newStatus) return;
+                                    setIsUpdating(true);
+                                    const body = {
+                                        nuser_id: parseInt(statusModal.user.id, 10),
+                                        account_status: statusModal.newStatus,
+                                        termination_reason: statusModal.newStatus === 'Terminated' ? terminationReason : null,
+                                    };
+                                    try {
+                                        const res = await fetch('http://mnl911.atwebpages.com/update_regular_user_status.php', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(body)
+                                        });
+                                        const data = await res.json();
+                                        if (data.success) {
+                                            setUsersData(prev => prev.map(u => u.id === statusModal.user?.id ? { ...u, ...body } : u));
+                                            setStatusModal({ visible: false, user: null, newStatus: null });
+                                            setTerminationReason('');
+                                        } else {
+                                            alert(data.message || 'Failed to update status.');
+                                        }
+                                    } catch (err) {
+                                        alert('Network error.');
+                                    } finally {
+                                        setIsUpdating(false);
+                                    }
+                                }}
+                            >
+                                {isUpdating ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={[styles.pageButton, currentPage >= totalPages && styles.pageButtonDisabled]}
-                                onPress={() => currentPage < totalPages && setCurrentPage(currentPage + 1)}
-                                disabled={currentPage >= totalPages}
+                                style={[styles.modalButton, styles.cancelButton]}
+                                disabled={isUpdating}
+                                onPress={() => setStatusModal({ visible: false, user: null, newStatus: null })}
                             >
-                                <Text style={[styles.pageButtonText, currentPage >= totalPages && styles.pageButtonTextDisabled]}>Next</Text>
+                                <Text>Cancel</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                )}
-            </Pressable>
+                </View>
+            )}
         </AdminLayout>
     );
 }
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8f9fa' },
     header: { 
@@ -284,8 +391,20 @@ const styles = StyleSheet.create({
     passwordColumn: { flex: 1 },
     secQuestionColumn: { flex: 3 },
     secAnswerColumn: { flex: 2 },
-    actionColumn: { width: 60, alignItems: 'center' },
-    actionButton: { padding: 8, borderRadius: 6, backgroundColor: '#f8f9fa' },
+    actionColumn: {
+        width: 130,
+        alignItems: 'center'
+    },
+    actionButton: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        backgroundColor: '#f8f9fa',
+        width: '100%',
+    },
     separator: { height: 1, backgroundColor: '#eee' },
     pagination: { 
         flexDirection: 'row', 
@@ -293,7 +412,8 @@ const styles = StyleSheet.create({
         alignItems: 'center', 
         padding: 20,
     },
-    paginationText: { fontSize: 14, color: '#666', fontWeight: '600' },
+    pageInfoContainer: { flex: 1 },
+    pageInfo: { fontSize: 14, color: '#666', fontWeight: '600' },
     paginationControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     pageButton: { backgroundColor: '#fff', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: '#e5e5e5' },
     pageButtonDisabled: { backgroundColor: '#f8f9fa', borderColor: '#f0f0f0' },
@@ -330,5 +450,69 @@ const styles = StyleSheet.create({
     },
     highlightedText: {
         backgroundColor: '#fff8b4'
-    }
+    },
+    modalOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    modalContainer: {
+        width: 320,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 24,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        textAlign: 'center',
+        marginBottom: 16,
+    },
+    modalOption: {
+        padding: 12,
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee'
+    },
+    reasonLabel: {
+        textAlign: 'center',
+        marginBottom: 8,
+        fontSize: 14,
+    },
+    reasonInput: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        borderRadius: 8,
+        padding: 10,
+        width: '100%',
+    },
+    modalActions: {
+        flexDirection: 'row',
+        marginTop: 24,
+        justifyContent: 'space-between',
+    },
+    modalButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+    },
+    saveButton: {
+        backgroundColor: '#e02323',
+    },
+    cancelButton: {
+        backgroundColor: '#eee',
+    },
+    buttonText: {
+        color: '#fff',
+        fontWeight: '700',
+    },
+    statusText: {
+        fontWeight: '600',
+    },
 });
