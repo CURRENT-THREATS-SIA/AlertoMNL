@@ -29,6 +29,15 @@ export type TotalRates = {
   [key in StationName]: StationRates;
 };
 
+// Define TotalCrime type
+export interface StationTotalCrime {
+  totalCrime: number;
+}
+
+export type TotalCrime = {
+  [key in StationName]: StationTotalCrime;
+};
+
 // Total crime rates
 export const totalRates: TotalRates = {
   'MPD Station 1 - Raxabago': { indexRate: 10.74, nonIndexRate: 67.95 },
@@ -45,6 +54,96 @@ export const totalRates: TotalRates = {
   'MPD Station 12 - Delpan': { indexRate: 4.65, nonIndexRate: 23.64 },
   'MPD Station 13 - Baseco': { indexRate: 2.82, nonIndexRate: 25.44 },
   'MPD Station 14 - Barbosa': { indexRate: 4.51, nonIndexRate: 28.70 }
+};
+
+// Total crime counts for each station
+export const totalCrime: TotalCrime = {
+  'MPD Station 1 - Raxabago': { totalCrime: 2147 },
+  'MPD Station 2 - Tondo': { totalCrime: 1478 },
+  'MPD Station 3 - Sta Cruz': { totalCrime: 1294 },
+  'MPD Station 4 - Sampaloc': { totalCrime: 1448 },
+  'MPD Station 5 - Ermita': { totalCrime: 1083 },
+  'MPD Station 6 - Sta Ana': { totalCrime: 1184 },
+  'MPD Station 7 - J. A. Santos': { totalCrime: 644 },
+  'MPD Station 8 - Sta. Mesa': { totalCrime: 724 },
+  'MPD Station 9 - Malate': { totalCrime: 588 },
+  'MPD Station 10 - Pandacan': { totalCrime: 1366 },
+  'MPD Station 11 - Meisic': { totalCrime: 728 },
+  'MPD Station 12 - Delpan': { totalCrime: 690 },
+  'MPD Station 13 - Baseco': { totalCrime: 771 },
+  'MPD Station 14 - Barbosa': { totalCrime: 906 }
+};
+
+// Function to create total crime data for map display
+export const createTotalCrimeData = (): FeatureCollection<Point> => {
+  const stationCoordinates: { [key in StationName]: [number, number] } = {
+    'MPD Station 1 - Raxabago': [120.96797525882722, 14.621037543847635],
+    'MPD Station 2 - Tondo': [120.96688091754915, 14.608600275384974],
+    'MPD Station 3 - Sta Cruz': [120.98540961742403, 14.617274254344],
+    'MPD Station 4 - Sampaloc': [121.00235581398012, 14.606285080096086],
+    'MPD Station 5 - Ermita': [120.97341477870943, 14.582103848818486],
+    'MPD Station 6 - Sta Ana': [121.01204931735994, 14.582451686991714],
+    'MPD Station 7 - J. A. Santos': [120.9828293323517, 14.624458188294804],
+    'MPD Station 8 - Sta. Mesa': [121.0121887922287, 14.60219449609711],
+    'MPD Station 9 - Malate': [120.98790407180788, 14.563267851371528],
+    'MPD Station 10 - Pandacan': [121.00356280803682, 14.59315133610341],
+    'MPD Station 11 - Meisic': [120.97320556640626, 14.604338428418819],
+    'MPD Station 12 - Delpan': [120.9644937515259, 14.599858468564348],
+    'MPD Station 13 - Baseco': [120.9613072872162, 14.591323970460065],
+    'MPD Station 14 - Barbosa': [120.98472833633424, 14.59871640162997]
+  };
+
+  const features = Object.entries(totalCrime).map(([stationName, crimeData]) => ({
+    type: 'Feature' as const,
+    geometry: {
+      type: 'Point' as const,
+      coordinates: stationCoordinates[stationName as StationName]
+    },
+    properties: {
+      station: stationName,
+      crimeType: 'Total Crime',
+      count: crimeData.totalCrime,
+      isIndexCrime: false
+    }
+  }));
+
+  return {
+    type: 'FeatureCollection',
+    features
+  };
+};
+
+// Export the total crime data for map display
+export const totalCrimeData = createTotalCrimeData();
+
+// Function to create crime data for a specific crime type
+export const createCrimeTypeData = (crimeType: string): FeatureCollection<Point> => {
+  const stationCoordinates: { [key in StationName]: [number, number] } = {
+    'MPD Station 1 - Raxabago': [120.96797525882722, 14.621037543847635],
+    'MPD Station 2 - Tondo': [120.96688091754915, 14.608600275384974],
+    'MPD Station 3 - Sta Cruz': [120.98540961742403, 14.617274254344],
+    'MPD Station 4 - Sampaloc': [121.00235581398012, 14.606285080096086],
+    'MPD Station 5 - Ermita': [120.97341477870943, 14.582103848818486],
+    'MPD Station 6 - Sta Ana': [121.01204931735994, 14.582451686991714],
+    'MPD Station 7 - J. A. Santos': [120.9828293323517, 14.624458188294804],
+    'MPD Station 8 - Sta. Mesa': [121.0121887922287, 14.60219449609711],
+    'MPD Station 9 - Malate': [120.98790407180788, 14.563267851371528],
+    'MPD Station 10 - Pandacan': [121.00356280803682, 14.59315133610341],
+    'MPD Station 11 - Meisic': [120.97320556640626, 14.604338428418819],
+    'MPD Station 12 - Delpan': [120.9644937515259, 14.599858468564348],
+    'MPD Station 13 - Baseco': [120.9613072872162, 14.591323970460065],
+    'MPD Station 14 - Barbosa': [120.98472833633424, 14.59871640162997]
+  };
+
+  // Filter the original crime data for the specific crime type
+  const features = crimeData.features.filter(feature => 
+    feature.properties && feature.properties.crimeType === crimeType
+  );
+
+  return {
+    type: 'FeatureCollection',
+    features
+  };
 };
 
 // Replace this with your actual crime data

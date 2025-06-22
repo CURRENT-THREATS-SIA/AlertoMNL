@@ -454,6 +454,28 @@ body { margin: 0; padding: 0; }
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(4); opacity: 0; }
 }
+.cluster-popup .mapboxgl-popup-content {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 8px;
+  padding: 0;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.cluster-popup .mapboxgl-popup-tip {
+  border-top-color: rgba(0, 0, 0, 0.8);
+}
+.point-popup .mapboxgl-popup-content {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  border-radius: 8px;
+  padding: 0;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.point-popup .mapboxgl-popup-tip {
+  border-top-color: rgba(0, 0, 0, 0.8);
+}
 </style>
 </head>
 <body>
@@ -611,19 +633,6 @@ map.on('load', () => {
     }
   });
 
-  // Add location dot
-  map.addLayer({
-    id: 'device-location-dot',
-    type: 'circle',
-    source: 'device-location',
-    paint: {
-      'circle-radius': 5,
-      'circle-color': '#4285F4',
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#ffffff',
-      'circle-pitch-alignment': 'map'
-    }
-  });
 });
 
 // Handle device location updates with improved accuracy
@@ -723,8 +732,17 @@ map.on('load', () => {
     type: 'geojson',
     data: originalData,
     cluster: true,
-    clusterMaxZoom: 14,
-    clusterRadius: 50
+    clusterMaxZoom: 12, // Lower max zoom for better clustering
+    clusterRadius: 80, // Larger radius to group nearby stations
+    // Custom cluster properties to aggregate crime data
+    clusterProperties: {
+      // Sum up the crime counts from all points in the cluster
+      totalCount: ['+', ['get', 'count']],
+      // Keep track of the highest crime count in the cluster
+      maxCount: ['max', ['get', 'count']],
+      // Count of stations in the cluster
+      stationCount: ['+', 1]
+    }
   });
 
   // Add a layer for the clusters
@@ -736,26 +754,22 @@ map.on('load', () => {
     paint: {
       'circle-color': [
         'case',
-        ['<=', ['get', 'point_count'], 0],
-        '#65ee15',  // Green for 0 cases
-        ['<=', ['get', 'point_count'], 75],
-        '#feb24c',  // Yellow for 1-75 cases
-        ['<=', ['get', 'point_count'], 150],
-        '#fc4e2a',  // Orange for 76-150 cases
-        '#e31a1c'   // Red for 151+ cases
+        ['<=', ['get', 'totalCount'], 100], '#65ee15', // Low (Green)
+        ['<=', ['get', 'totalCount'], 799], '#fc4e2a', // Medium (Orange)
+        '#e31a1c' // High (Red)
       ],
       'circle-radius': [
         'step',
-        ['get', 'point_count'],
-        25,    // 1-10 crimes
-        10,
-        35,    // 11-25 crimes
-        25,
-        45,    // 26-50 crimes
-        50,
-        55,    // 51-100 crimes
+        ['get', 'totalCount'],
+        25,    // 1-100 crimes
         100,
-        65     // 100+ crimes
+        35,    // 101-300 crimes
+        300,
+        45,    // 301-600 crimes
+        600,
+        55,    // 601-1000 crimes
+        1000,
+        65     // 1000+ crimes
       ],
       'circle-opacity': 0.9,
       'circle-stroke-width': 3,
@@ -764,27 +778,35 @@ map.on('load', () => {
     }
   });
 
-  // Add a layer for cluster counts
+  // Add a layer for cluster counts showing aggregated crime data
   map.addLayer({
     id: 'cluster-count',
     type: 'symbol',
     source: 'crimes',
     filter: ['has', 'point_count'],
     layout: {
-      'text-field': '{point_count_abbreviated}',
+      'text-field': [
+        'concat',
+        ['number-format', ['get', 'totalCount'], {}],
+        ['case',
+          ['>', ['get', 'stationCount'], 1],
+          ['concat', '\\n(', ['number-format', ['get', 'stationCount'], {}], ' stations)'],
+          ''
+        ]
+      ],
       'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
       'text-size': [
         'step',
-        ['get', 'point_count'],
-        14,    // Size for 1-10
-        10,
-        16,    // Size for 11-25
-        25,
-        18,    // Size for 26-50
-        50,
-        20,    // Size for 51-100
+        ['get', 'totalCount'],
+        14,    // Size for 1-100
         100,
-        24     // Size for 100+
+        16,    // Size for 101-300
+        300,
+        18,    // Size for 301-600
+        600,
+        20,    // Size for 601-1000
+        1000,
+        24     // Size for 1000+
       ]
     },
     paint: {
@@ -803,22 +825,18 @@ map.on('load', () => {
     paint: {
       'circle-color': [
         'case',
-        ['<=', ['get', 'count'], 0],
-        '#65ee15',  // Green for 0 cases
-        ['<=', ['get', 'count'], 75],
-        '#feb24c',  // Yellow for 1-75 cases
-        ['<=', ['get', 'count'], 150],
-        '#fc4e2a',  // Orange for 76-150 cases
-        '#e31a1c'   // Red for 151+ cases
+        ['<=', ['get', 'count'], 100], '#65ee15', // Low (Green)
+        ['<=', ['get', 'count'], 799], '#fc4e2a', // Medium (Orange)
+        '#e31a1c' // High (Red)
       ],
       'circle-radius': [
         'interpolate',
         ['linear'],
         ['get', 'count'],
         0, 12,      // Min size for count of 0
-        75, 16,     // Medium size for count of 75
-        150, 20,    // Large size for count of 150
-        250, 25     // Max size for count of 250+
+        100, 16,    // Medium size for count of 100
+        300, 20,    // Large size for count of 300
+        500, 25     // Max size for count of 500+
       ],
       'circle-stroke-width': 2,
       'circle-stroke-color': '#ffffff',
@@ -841,9 +859,9 @@ map.on('load', () => {
         ['linear'],
         ['get', 'count'],
         1, 12,      // Size for count of 1
-        5, 14,      // Size for count of 5
-        10, 16,     // Size for count of 10
-        20, 18      // Size for count of 20+
+        10, 14,     // Size for count of 10
+        50, 16,     // Size for count of 50
+        100, 18     // Size for count of 100+
       ]
     },
     paint: {
@@ -867,41 +885,115 @@ map.on('load', () => {
     });
   });
 
+  // Add custom popup for clusters
+  let popup = null;
+
   // Add hover effect for clusters
-  map.on('mouseenter', 'clusters', () => {
+  map.on('mouseenter', 'clusters', (e) => {
     map.getCanvas().style.cursor = 'pointer';
+    
+    // Create popup if it doesn't exist
+    if (!popup) {
+      popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        className: 'cluster-popup'
+      });
+    }
+    
+    // Get cluster properties
+    const features = map.queryRenderedFeatures(e.point, { layers: ['clusters'] });
+    const cluster = features[0];
+    const totalCount = cluster.properties.totalCount;
+    const stationCount = cluster.properties.stationCount;
+    
+    // Create popup content
+    const popupContent = \`
+      <div style="padding: 8px; font-family: Arial, sans-serif;">
+        <div style="font-weight: bold; margin-bottom: 4px;">Total Crimes: \${totalCount}</div>
+        <div style="font-size: 12px; color: #666;">\${stationCount} station\${stationCount > 1 ? 's' : ''}</div>
+      </div>
+    \`;
+    
+    popup.setLngLat(e.lngLat).setHTML(popupContent).addTo(map);
+    
     // Optional: You could add a slight size increase on hover
     map.setPaintProperty('clusters', 'circle-radius', [
       'step',
-      ['get', 'point_count'],
-      28,    // 1-10 crimes (slightly bigger on hover)
-      10,
-      38,    // 11-25 crimes
-      25,
-      48,    // 26-50 crimes
-      50,
-      58,    // 51-100 crimes
+      ['get', 'totalCount'],
+      28,    // 1-100 crimes (slightly bigger on hover)
       100,
-      68     // 100+ crimes
+      38,    // 101-300 crimes
+      300,
+      48,    // 301-600 crimes
+      600,
+      58,    // 601-1000 crimes
+      1000,
+      68     // 1000+ crimes
     ]);
   });
 
   map.on('mouseleave', 'clusters', () => {
     map.getCanvas().style.cursor = '';
+    
+    // Remove popup
+    if (popup) {
+      popup.remove();
+      popup = null;
+    }
+    
     // Reset to original size
     map.setPaintProperty('clusters', 'circle-radius', [
       'step',
-      ['get', 'point_count'],
-      25,    // 1-10 crimes
-      10,
-      35,    // 11-25 crimes
-      25,
-      45,    // 26-50 crimes
-      50,
-      55,    // 51-100 crimes
+      ['get', 'totalCount'],
+      25,    // 1-100 crimes
       100,
-      65     // 100+ crimes
+      35,    // 101-300 crimes
+      300,
+      45,    // 301-600 crimes
+      600,
+      55,    // 601-1000 crimes
+      1000,
+      65     // 1000+ crimes
     ]);
+  });
+
+  // Add hover effects for individual points
+  map.on('mouseenter', 'unclustered-point', (e) => {
+    map.getCanvas().style.cursor = 'pointer';
+    
+    // Create popup for individual points
+    if (!popup) {
+      popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        className: 'point-popup'
+      });
+    }
+    
+    const feature = e.features[0];
+    const count = feature.properties.count;
+    const station = feature.properties.station;
+    const crimeType = feature.properties.crimeType;
+    
+    const popupContent = \`
+      <div style="padding: 8px; font-family: Arial, sans-serif;">
+        <div style="font-weight: bold; margin-bottom: 4px;">\${crimeType}: \${count}</div>
+        <div style="font-size: 12px; color: #666;">\${station}</div>
+      </div>
+    \`;
+    
+    popup.setLngLat(e.lngLat).setHTML(popupContent).addTo(map);
+  });
+
+  map.on('mouseleave', 'unclustered-point', () => {
+    map.getCanvas().style.cursor = '';
+    
+    // Remove popup
+    if (popup) {
+      popup.remove();
+      popup = null;
+    }
   });
 
   // Add custom location tracking

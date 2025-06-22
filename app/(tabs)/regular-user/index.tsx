@@ -7,7 +7,7 @@ import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
@@ -70,32 +70,42 @@ export default function RegularUserHome() {
     let animation: Animated.CompositeAnimation | undefined;
     if (sosState === 'active' || sosState === 'received' || sosState === 'resolved') {
       // Looping pulse animation for each ring, staggered
+      const createPulseAnimation = (animValue: Animated.Value) =>
+        Animated.sequence([
+          Animated.timing(animValue, {
+            toValue: 1.2,
+            duration: 1000,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.in(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]);
+
       animation = Animated.loop(
-        Animated.stagger(400, [
-          Animated.sequence([
-            Animated.timing(ring1Anim, { toValue: 1.25, duration: 1200, useNativeDriver: true }),
-            Animated.timing(ring1Anim, { toValue: 1, duration: 0, useNativeDriver: true }),
-          ]),
-          Animated.sequence([
-            Animated.timing(ring2Anim, { toValue: 1.25, duration: 1200, useNativeDriver: true }),
-            Animated.timing(ring2Anim, { toValue: 1, duration: 0, useNativeDriver: true }),
-          ]),
-          Animated.sequence([
-            Animated.timing(ring3Anim, { toValue: 1.25, duration: 1200, useNativeDriver: true }),
-            Animated.timing(ring3Anim, { toValue: 1, duration: 0, useNativeDriver: true }),
-          ]),
+        Animated.stagger(300, [
+          createPulseAnimation(ring1Anim),
+          createPulseAnimation(ring2Anim),
+          createPulseAnimation(ring3Anim),
         ])
       );
       animation.start();
     } else {
-      ring1Anim.setValue(1);
-      ring2Anim.setValue(1);
-      ring3Anim.setValue(1);
+      // Gently spring back to 1 when not active
+      Animated.parallel([
+        Animated.spring(ring1Anim, { toValue: 1, useNativeDriver: true, tension: 50 }),
+        Animated.spring(ring2Anim, { toValue: 1, useNativeDriver: true, tension: 50 }),
+        Animated.spring(ring3Anim, { toValue: 1, useNativeDriver: true, tension: 50 }),
+      ]).start();
     }
     return () => {
       if (animation) animation.stop();
     };
-  }, [sosState]);
+  }, [sosState, ring1Anim, ring2Anim, ring3Anim]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -744,37 +754,37 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   sosButton: {
-    width: 317,
-    height: 317,
+    width: 250,
+    height: 250,
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 30,
+    marginVertical: 20,
   },
   sosRing1: {
     position: "absolute",
-    width: 317,
-    height: 317,
-    borderRadius: 158.5,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
     backgroundColor: "#fae8e9", // lightest red
   },
   sosRing2: {
     position: "absolute",
-    width: 293,
-    height: 293,
-    borderRadius: 146.5,
+    width: 230,
+    height: 230,
+    borderRadius: 115,
     backgroundColor: "#f9d2d2", // lighter red
   },
   sosRing3: {
     position: "absolute",
-    width: 267,
-    height: 267,
-    borderRadius: 133.5,
+    width: 210,
+    height: 210,
+    borderRadius: 105,
     backgroundColor: "#f2a6a6", // light red
   },
   sosCenter: {
-    width: 231,
-    height: 231,
-    borderRadius: 120.5,
+    width: 182,
+    height: 182,
+    borderRadius: 91,
     backgroundColor: "#e02323", // main red
     alignItems: "center",
     justifyContent: "center",
@@ -806,7 +816,7 @@ const styles = StyleSheet.create({
   },
   sosText: {
     color: "white",
-    fontSize: 40,
+    fontSize: 38,
     fontWeight: "bold",
   },
   locationInfo: {
@@ -856,7 +866,7 @@ const styles = StyleSheet.create({
   },
   countdownText: {
     color: 'white',
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: 'bold',
   },
   countdownLabel: {

@@ -33,12 +33,7 @@ export default function SettingsScreen() {
       defaultValue: isDarkMode,
       onToggle: toggleDarkMode,
     },
-    {
-      icon: 'plus',
-      label: 'Add Widget',
-      description: 'Add quick access widgets to your home screen',
-      defaultValue: false,
-    },
+
     {
       icon: 'smartphone',
       label: 'Keep screen on',

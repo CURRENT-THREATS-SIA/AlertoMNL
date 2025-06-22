@@ -14,8 +14,9 @@ export default function RegularUserLayout() {
     : 'Home';
 
   const isProfileRoute = pathname.includes('/profile') || pathname === '/regular-user/Profile';
-  const showHeader = !isProfileRoute;
-  const showTabBar = !isProfileRoute;
+  const isHistoryDetailRoute = pathname.includes('/history/');
+  const showHeader = !isProfileRoute && !isHistoryDetailRoute;
+  const showTabBar = !isProfileRoute && !isHistoryDetailRoute;
 
   return (
     <View style={styles.container}>

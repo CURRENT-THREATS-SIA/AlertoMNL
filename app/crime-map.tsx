@@ -2,7 +2,7 @@ import React from 'react';
 import { Platform, View } from 'react-native';
 import { CrimeMap } from '../components/CrimeMap';
 import { WebCrimeMap } from '../components/WebCrimeMap';
-import { crimeData } from '../constants/mapData';
+import { totalCrimeData } from '../constants/mapData';
 
 interface CrimeMapPageProps {
   userType: 'regular' | 'police' | 'guest';
@@ -21,7 +21,7 @@ export default function CrimeMapPage({ userType, selectedCrimeType, selectedStat
   return (
     <View style={{ flex: 1 }}>
       <MapComponent 
-        data={crimeData} 
+        data={totalCrimeData} 
         userType={userType} 
         selectedCrimeType={selectedCrimeType ?? null}
         selectedStation={selectedStation ?? null}
