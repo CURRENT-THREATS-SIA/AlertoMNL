@@ -70,7 +70,7 @@ const Profile: React.FC = () => {
         borderBottomWidth: 1
       }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color={theme.text} />
+          <MaterialIcons name="arrow-back" size={24} color="#FF0000" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Profile Settings</Text>
@@ -97,10 +97,10 @@ const Profile: React.FC = () => {
               >
                 <View style={styles.menuItemContent}>
                   <View style={styles.menuItemLeft}>
-                    <MaterialIcons name={item.icon as any} size={22} color={theme.text} style={styles.iconStyle} />
+                    <MaterialIcons name={item.icon as any} size={22} color="#FF0000" style={styles.iconStyle} />
                     <Text style={[styles.menuItemText, { color: theme.text }]}>{item.title}</Text>
                   </View>
-                  <MaterialIcons name="chevron-right" size={24} color={theme.text} />
+                  <MaterialIcons name="chevron-right" size={24} color="#FF0000" />
                 </View>
               </TouchableOpacity>
             ))}

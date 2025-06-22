@@ -33,7 +33,6 @@ export default function SettingsScreen() {
       defaultValue: isDarkMode,
       onToggle: toggleDarkMode,
     },
-
     {
       icon: 'smartphone',
       label: 'Keep screen on',
@@ -65,7 +64,7 @@ export default function SettingsScreen() {
           <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Settings</Text>
+          <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Preferences</Text>
         </View>
       </View>
 

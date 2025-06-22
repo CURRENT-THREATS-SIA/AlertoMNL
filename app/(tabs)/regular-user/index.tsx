@@ -563,8 +563,8 @@ export default function RegularUserHome() {
         
         if (isAvailable) {
           try {
-            await SMS.sendSMSAsync(phoneNumbers, message);
-            console.log('SMS sendSMSAsync called successfully');
+            const { result } = await SMS.sendSMSAsync(phoneNumbers, message);
+            console.log('SMS send result:', result);
           } catch (smsError) {
             console.log('SMS sendSMSAsync error:', smsError);
             Alert.alert('SMS Error', 'Failed to send SMS. Please check your SMS permissions.');
@@ -575,6 +575,11 @@ export default function RegularUserHome() {
         }
       } else {
         console.log('No contacts or fetch failed:', data);
+        if (data.success && data.contacts.length === 0) {
+          Alert.alert('No Emergency Contacts', 'You have no emergency contacts saved. Please add contacts from the "Contacts" screen to use this feature.');
+        } else if (!data.success) {
+          Alert.alert('Could Not Get Contacts', data.message || 'Failed to fetch your emergency contacts from the server.');
+        }
       }
     } catch (e) {
       console.log('SMS error:', e);
@@ -827,6 +832,7 @@ const styles = StyleSheet.create({
   },
   coordinatesText: {
     fontSize: 14,
+    paddingBottom: 12,
   },
   voiceButton: {
     backgroundColor: "#ffd8d8",
