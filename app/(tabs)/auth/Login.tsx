@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function Login() {
@@ -68,6 +69,51 @@ export default function Login() {
           await AsyncStorage.setItem('phone', data.phone);
           await AsyncStorage.setItem('badge', data.badge_number);
           await AsyncStorage.setItem('station', data.station_name);
+          
+          // Register push notification token right after storing police_id
+          try {
+            if (Platform.OS === 'android') {
+              await Notifications.setNotificationChannelAsync('emergency-alerts', {
+                name: 'Emergency SOS Alerts',
+                importance: Notifications.AndroidImportance.MAX,
+                vibrationPattern: [0, 250, 250, 500, 250, 250, 500],
+                lightColor: '#FF231F7C',
+                sound: 'default',
+              });
+            }
+
+            const { status } = await Notifications.getPermissionsAsync();
+            if (status !== 'granted') {
+              const { status: newStatus } = await Notifications.requestPermissionsAsync();
+              if (newStatus !== 'granted') {
+                console.log('Permission not granted for notifications');
+                return;
+              }
+            }
+
+            const expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
+            console.log('Got push token:', expoPushToken);
+            
+            if (expoPushToken) {
+              const formData = new FormData();
+              formData.append('police_id', data.police_id.toString());
+              formData.append('expo_push_token', expoPushToken);
+              
+              const tokenResponse = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
+                method: 'POST',
+                body: formData,
+              });
+              const tokenData = await tokenResponse.json();
+              console.log('Token registration response:', tokenData);
+              
+              if (!tokenData.success) {
+                console.error('Failed to register push token:', tokenData.error);
+              }
+            }
+          } catch (error) {
+            console.error('Error registering push token:', error);
+          }
+
           router.push("/(tabs)/police-officer/PoliceOfficerHome");
         } else if (data.user_type === "regular") {
           await AsyncStorage.setItem('nuser_id', data.nuser_id.toString());

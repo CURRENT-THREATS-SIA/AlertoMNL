@@ -1,6 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -157,56 +155,7 @@ const CrimeMap: React.FC = () => {
     }
   }, [notifications]);
 
-  useEffect(() => {
-    const registerForPushNotificationsAsync = async () => {
-      let token;
-      if (Platform.OS === 'android') {
-        // --- NEW: Create a dedicated channel for emergency alerts ---
-        await Notifications.setNotificationChannelAsync('emergency-alerts', {
-          name: 'Emergency SOS Alerts',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 500, 250, 250, 500], // More insistent pattern
-          lightColor: '#FF231F7C',
-          sound: 'default', // Ensure it plays a sound
-        });
-      }
-
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== 'granted') {
-        alert('Failed to get push token for push notification!');
-        return;
-      }
-      try {
-        const expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
-        console.log('Expo Push Token:', expoPushToken);
-        if (expoPushToken) {
-          const policeId = await AsyncStorage.getItem('police_id');
-          if (policeId) {
-            const formData = new FormData();
-            formData.append('police_id', policeId);
-            formData.append('expo_push_token', expoPushToken);
-            const response = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
-              method: 'POST',
-              body: formData,
-            });
-            const responseData = await response.json();
-            console.log('Token registration response:', responseData);
-            if (!responseData.success) {
-              console.error('Failed to register token:', responseData.error);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error getting or registering push token', error);
-      }
-    };
-    registerForPushNotificationsAsync();
-  }, []);
+  // Token registration is now handled in the login flow
 
   // Add reset function
   const handleReset = () => {
