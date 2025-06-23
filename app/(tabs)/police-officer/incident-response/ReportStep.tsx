@@ -2,20 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity, // <-- Import Modal
-  TouchableWithoutFeedback // <-- Import TouchableWithoutFeedback
-  ,
-  View
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity, // <-- Import Modal
+    TouchableWithoutFeedback // <-- Import TouchableWithoutFeedback
+    ,
+
+
+
+
+
+    View
 } from 'react-native';
 import { Path, Svg } from 'react-native-svg'; // <-- Import Svg for the dropdown arrow
 import Header from '../../../../components/Header';
+import { theme, useTheme } from '../../../context/ThemeContext';
 
 const incidentTypes = [
   'Theft', 'Robbery', 'Assault', 'Homicide', 'Vandalism', 'Drugs', 'Other'
@@ -31,6 +37,9 @@ const DropdownArrowIcon = () => (
 export default function ReportStep() {
   const { alert_id } = useLocalSearchParams();
   const router = useRouter();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+  const buttonColor = isDarkMode ? currentTheme.iconBackground : '#E02323';
   const [incidentType, setIncidentType] = useState('');
   const [severity, setSeverity] = useState('Medium');
   const [description, setDescription] = useState('');
@@ -74,9 +83,9 @@ export default function ReportStep() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       {/* Centered Header is preserved */}
-      <View style={styles.centeredHeaderWrapper}>
+      <View style={[styles.centeredHeaderWrapper, { backgroundColor: currentTheme.cardBackground, borderBottomColor: currentTheme.border }]}>
         <Header showNotification={false} />
       </View>
 
@@ -88,19 +97,19 @@ export default function ReportStep() {
             contentContainerStyle={styles.scrollContent} 
             keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Incident data</Text>
-          <Text style={styles.subtitle}>Provide details exactly as you observed at the scene</Text>
+          <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident data</Text>
+          <Text style={[styles.subtitle, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Provide details exactly as you observed at the scene</Text>
           
           {/* --- This is the new Dropdown UI --- */}
-          <Text style={styles.label}>Incident Type</Text>
-          <TouchableOpacity style={styles.dropdownPicker} onPress={() => setIsDropdownOpen(true)}>
-              <Text style={[styles.dropdownPickerText, incidentType ? styles.dropdownPickerTextSelected : {}]}>
+          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Type</Text>
+          <TouchableOpacity style={[styles.dropdownPicker, { borderBottomColor: currentTheme.border }]} onPress={() => setIsDropdownOpen(true)}>
+              <Text style={[styles.dropdownPickerText, incidentType ? { color: isDarkMode ? '#fff' : '#222' } : { color: isDarkMode ? currentTheme.subtitle : '#888' }]}>
                   {incidentType || 'Choose Incident Type'}
               </Text>
               <DropdownArrowIcon />
           </TouchableOpacity>
 
-          <Text style={styles.label}>Severity Level</Text>
+          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Severity Level</Text>
           <View style={styles.radioGroupVertical}>
             {['Low', 'Medium', 'High'].map(level => (
               <TouchableOpacity
@@ -108,24 +117,22 @@ export default function ReportStep() {
                 style={styles.radioItemVertical}
                 onPress={() => setSeverity(level)}
               >
-                <View style={[styles.radioCircle, severity === level && styles.radioCircleSelected]}>
-                    {/* This inner view is only used for the non-solid circle style */}
-                    {/* For the solid style, we only need the background color on the parent */}
-                </View>
-                <Text style={styles.radioLabel}>{level}</Text>
+                <View style={[styles.radioCircle, { borderColor: currentTheme.iconBackground }, severity === level && { backgroundColor: currentTheme.iconBackground, borderWidth: 0 }]} />
+                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222' }]}>{level}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.label}>Description</Text>
+          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Description</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground }]}
             placeholder="Add additional information"
+            placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
             value={description}
             onChangeText={setDescription}
             multiline
           />
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <Text style={styles.buttonText}>Submit Details</Text>
+          <TouchableOpacity style={[styles.button, { backgroundColor: buttonColor }]} onPress={handleSubmit}>
+            <Text style={[styles.buttonText, { color: '#fff' }]}>Submit Details</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -138,14 +145,14 @@ export default function ReportStep() {
             onRequestClose={() => setIsDropdownOpen(false)}
         >
             <TouchableWithoutFeedback onPress={() => setIsDropdownOpen(false)}>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+                <View style={[styles.modalOverlay, { backgroundColor: currentTheme.modalOverlay }]}> 
+                    <View style={[styles.modalContent, { backgroundColor: currentTheme.cardBackground }]}> 
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Incident Type</Text>
+                            <Text style={[styles.modalTitle, { color: currentTheme.headerText }]}>Select Incident Type</Text>
                         </View>
                         {incidentTypes.map(type => (
                             <TouchableOpacity key={type} style={styles.modalItem} onPress={() => handleSelectIncidentType(type)}>
-                                <Text style={styles.modalItemText}>{type}</Text>
+                                <Text style={[styles.modalItemText, { color: currentTheme.text }]}>{type}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -157,14 +164,12 @@ export default function ReportStep() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   centeredHeaderWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -173,13 +178,12 @@ const styles = StyleSheet.create({
   title: { 
     fontSize: 24, 
     fontWeight: 'bold', 
-    color: '#111', 
     marginBottom: 4, 
     marginTop: 24, 
     textAlign: 'left' 
   },
-  subtitle: { color: '#888', fontSize: 16, marginBottom: 24, textAlign: 'left' },
-  label: { color: '#333', fontSize: 16, fontWeight: '500', marginBottom: 12 },
+  subtitle: { fontSize: 16, marginBottom: 24, textAlign: 'left' },
+  label: { fontSize: 16, fontWeight: '500', marginBottom: 12 },
   
   // New Dropdown Styles
   dropdownPicker: {
@@ -187,18 +191,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
     paddingVertical: 12,
     marginBottom: 24,
   },
   dropdownPickerText: {
-    color: '#888',
     fontSize: 16,
   },
-  dropdownPickerTextSelected: {
-    color: '#111',
-  },
-
   radioGroupVertical: {
     flexDirection: 'column',
     marginBottom: 12,
@@ -213,19 +211,13 @@ const styles = StyleSheet.create({
     height: 22, 
     borderRadius: 11, 
     borderWidth: 2, 
-    borderColor: '#E02323', // <-- Color restored to red
     marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center'
   },
-  radioCircleSelected: { 
-      backgroundColor: '#E02323', // <-- This now fills the entire circle
-      borderWidth: 0, // No border needed when filled
-  },
-  radioLabel: { color: '#333', fontSize: 16 },
+  radioLabel: { fontSize: 16 },
   input: { 
       borderWidth: 1, 
-      borderColor: '#ccc', 
       borderRadius: 8, 
       padding: 12, 
       minHeight: 120, 
@@ -236,44 +228,39 @@ const styles = StyleSheet.create({
   },
   button: { 
     marginTop: 16, 
-    backgroundColor: '#E02323', 
     borderRadius: 12, 
     paddingVertical: 18, 
     alignItems: 'center', 
     justifyContent: 'center' 
   },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-
-  // --- Styles updated for slide-up animation ---
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end', // Aligns modal to the bottom
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 16, // Rounded corners for the slide-up panel
-    borderTopRightRadius: 16,
     width: '100%',
-    paddingBottom: 20, // Padding at the bottom of the list
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    elevation: 8,
   },
   modalHeader: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    textAlign: 'center',
+    marginBottom: 8,
   },
   modalItem: {
-    padding: 16,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#eee',
   },
   modalItemText: {
     fontSize: 16,
-    textAlign: 'center',
-  }
+  },
 });

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Circle, Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
+import { theme, useTheme } from '../../../context/ThemeContext';
 
 // --- SVG Icon Components ---
 
@@ -36,6 +37,9 @@ interface AlertDetails {
 export default function ArrivedStep() {
   const router = useRouter();
   const { alert_id } = useLocalSearchParams();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+  const buttonColor = isDarkMode ? currentTheme.iconBackground : '#E02323';
 
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,23 +107,23 @@ export default function ArrivedStep() {
 
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#E02323" />
-        <Text>Loading Details...</Text>
+      <View style={[styles.centered, { backgroundColor: currentTheme.background }]}> 
+        <ActivityIndicator size="large" color={currentTheme.iconBackground || '#E02323'} />
+        <Text style={{ color: currentTheme.text }}>Loading Details...</Text>
       </View>
     );
   }
 
   if (error || !alertDetails) {
     return (
-        <View style={styles.centered}>
-            <Text style={styles.errorText}>{error || "Could not load alert details."}</Text>
+        <View style={[styles.centered, { backgroundColor: currentTheme.background }]}> 
+            <Text style={[styles.errorText, { color: currentTheme.statusResolved }]}>{error || "Could not load alert details."}</Text>
         </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentTheme.background }]}> 
       <View style={{ flex: 1, minHeight: 300 }}>
         <MapComponent
           selectedCrimeType={''}
@@ -131,38 +135,38 @@ export default function ArrivedStep() {
         />
       </View>
       
-      <View style={styles.infoCard}>
+      <View style={[styles.infoCard, { backgroundColor: currentTheme.cardBackground }]}> 
         <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.title}>You've Arrived!</Text>
-            <Text style={styles.instructions}>
-                <Text style={styles.highlightText}>Secure your safety</Text>
+            <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]} >You've Arrived!</Text>
+            <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>
+                <Text style={[styles.highlightText, { color: buttonColor } ]}>Secure your safety</Text>
                 <Text>, park at a clear angle, and scan for any hazards. Then immediately locate the victim, assess their condition, and </Text>
-                <Text style={styles.highlightText}>render aid or protection.</Text>
+                <Text style={[styles.highlightText, { color: buttonColor } ]}>render aid or protection.</Text>
             </Text>
 
             <View style={styles.infoRow}>
                 <ReportedIcon />
                 <View style={styles.infoTextContainer}>
-                    <Text style={styles.label}>Reported</Text>
-                    <Text style={styles.value}>{getFormattedTime(alertDetails.a_created)}</Text>
+                    <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' } ]}>Reported</Text>
+                    <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' } ]}>{getFormattedTime(alertDetails.a_created)}</Text>
                 </View>
             </View>
 
             <View style={styles.infoRow}>
                 <VictimIcon />
                 <View style={styles.infoTextContainer}>
-                    <Text style={styles.label}>Victim's Information</Text>
-                    <Text style={styles.value}>
+                    <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' } ]}>Victim's Information</Text>
+                    <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' } ]}>
                         {`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}
                     </Text>
                 </View>
             </View>
             
-            <TouchableOpacity style={styles.button} onPress={() => router.push(`/police-officer/incident-response/ReportStep?alert_id=${alert_id}`)}>
-              <Text style={styles.buttonText}>Crime Resolved</Text>
+            <TouchableOpacity style={[styles.button, { backgroundColor: buttonColor }]} onPress={() => router.push(`/police-officer/incident-response/ReportStep?alert_id=${alert_id}`)}>
+              <Text style={[styles.buttonText, { color: '#fff' }]}>Crime Resolved</Text>
             </TouchableOpacity>
 
-            <Text style={styles.footerText}>
+            <Text style={[styles.footerText, { color: isDarkMode ? currentTheme.subtitle : '#444' } ]}>
                 Your priority is the victim's safety—act swiftly and stay secure.
             </Text>
         </ScrollView>
@@ -174,7 +178,6 @@ export default function ArrivedStep() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#fff' 
   },
   centered: { 
     flex: 1, 
@@ -183,30 +186,25 @@ const styles = StyleSheet.create({
     padding: 20 
   },
   errorText: { 
-    color: '#E02323', 
     fontSize: 16, 
     textAlign: 'center' 
   },
   mapPlaceholder: { 
     flex: 1, // This makes the map take up the remaining space
-    backgroundColor: '#e5e5e5', 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
-  mapText: { color: '#666' },
+  mapText: {},
   infoCard: { 
-    // The card's height is now flexible, determined by its content.
-    // The map's 'flex: 1' ensures it gets priority for screen space.
     paddingHorizontal: 24, 
-    backgroundColor: '#fff', 
     borderTopLeftRadius: 24, 
     borderTopRightRadius: 24, 
     elevation: 8, 
     paddingTop: 32,
   },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, color: '#111' },
-  instructions: { color: '#666', fontSize: 14, marginBottom: 24, lineHeight: 20 },
-  highlightText: { color: '#E02323' },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, color: '#222' },
+  instructions: { fontSize: 14, marginBottom: 24, lineHeight: 20, color: '#333' },
+  highlightText: {},
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -215,15 +213,14 @@ const styles = StyleSheet.create({
   infoTextContainer: {
       marginLeft: 16,
   },
-  label: { color: '#111', fontSize: 16, fontWeight: 'bold', marginBottom: 2 },
-  value: { color: '#666', fontSize: 14, },
-  button: { marginTop: 16, backgroundColor: '#E02323', borderRadius: 12, paddingVertical: 18, alignItems: 'center' },
+  label: { fontSize: 16, fontWeight: 'bold', marginBottom: 2, color: '#222' },
+  value: { fontSize: 14, color: '#444' },
+  button: { marginTop: 16, borderRadius: 12, paddingVertical: 18, alignItems: 'center' },
   buttonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   footerText: {
       marginTop: 16,
       paddingBottom: 24,
       textAlign: 'center',
-      color: '#666',
       fontSize: 12,
   },
 });

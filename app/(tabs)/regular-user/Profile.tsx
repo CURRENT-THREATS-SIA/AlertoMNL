@@ -17,7 +17,7 @@ interface SettingsMenuItem {
 const Profile: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
 
   const settingsMenuItems: SettingsMenuItem[] = [
     { title: "Account Details", icon: "manage-accounts", route: "/regular-user/profile/accountDetails/" },
@@ -70,7 +70,7 @@ const Profile: React.FC = () => {
         borderBottomWidth: 1
       }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <MaterialIcons name="arrow-back" size={24} color="#FF0000" />
+          <MaterialIcons name="arrow-back" size={24} color={isDarkMode ? '#fff' : '#000'} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
           <Text style={[styles.headerTitle, { color: theme.text }]}>Profile Settings</Text>
