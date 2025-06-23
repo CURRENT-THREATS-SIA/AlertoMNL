@@ -7,7 +7,7 @@ import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
@@ -66,6 +66,13 @@ export default function RegularUserHome() {
   const ring1Anim = useRef(new Animated.Value(1)).current;
   const ring2Anim = useRef(new Animated.Value(1)).current;
   const ring3Anim = useRef(new Animated.Value(1)).current;
+
+  const screenWidth = Dimensions.get('window').width;
+  const sosButtonSize = Math.min(screenWidth * 0.7, 300); // 70% of width, max 300px
+  const ring1Size = sosButtonSize + 20;
+  const ring2Size = sosButtonSize;
+  const ring3Size = sosButtonSize - 15;
+  const sosCenterSize = sosButtonSize - 40;
 
   useEffect(() => {
     let animation: Animated.CompositeAnimation | undefined;
@@ -687,15 +694,15 @@ export default function RegularUserHome() {
 
   // --- JSX / RENDER ---
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <View style={styles.mainContent}>
         <View style={styles.sosSection}>
           <View style={styles.helpText}>
-            <Text style={[styles.helpTextPrimary, { color: currentTheme.text }]}>Help is just a click away!</Text>
-            <Text style={[styles.helpTextSecondary, { color: currentTheme.text }]}>Click <Text style={styles.redText}>SOS button</Text> to call for help.</Text>
+            <Text style={[styles.helpTextPrimary, { color: currentTheme.text }]} adjustsFontSizeToFit numberOfLines={1}>Help is just a click away!</Text>
+            <Text style={[styles.helpTextSecondary, { color: currentTheme.text }]} adjustsFontSizeToFit numberOfLines={1}>Click <Text style={styles.redText}>SOS button</Text> to call for help.</Text>
           </View>
           <TouchableOpacity
-            style={styles.sosButton}
+            style={[styles.sosButton, { width: sosButtonSize, height: sosButtonSize, marginVertical: sosButtonSize * 0.08 }]}
             onPress={
               sosState === 'active' ? handleStop :
               sosState === 'countdown' ? undefined :
@@ -706,6 +713,7 @@ export default function RegularUserHome() {
             <Animated.View
               style={[
                 styles.sosRing1,
+                { width: ring1Size, height: ring1Size, borderRadius: ring1Size / 2 },
                 sosState === 'received' && styles.greenRing1,
                 sosState === 'resolved' && styles.blueRing1,
                 { transform: [{ scale: ring1Anim }] }
@@ -714,6 +722,7 @@ export default function RegularUserHome() {
             <Animated.View
               style={[
                 styles.sosRing2,
+                { width: ring2Size, height: ring2Size, borderRadius: ring2Size / 2 },
                 sosState === 'received' && styles.greenRing2,
                 sosState === 'resolved' && styles.blueRing2,
                 { transform: [{ scale: ring2Anim }] }
@@ -722,6 +731,7 @@ export default function RegularUserHome() {
             <Animated.View
               style={[
                 styles.sosRing3,
+                { width: ring3Size, height: ring3Size, borderRadius: ring3Size / 2 },
                 sosState === 'received' && styles.greenRing3,
                 sosState === 'resolved' && styles.blueRing3,
                 { transform: [{ scale: ring3Anim }] }
@@ -729,6 +739,7 @@ export default function RegularUserHome() {
             />
             <View style={[
               styles.sosCenter,
+              { width: sosCenterSize, height: sosCenterSize, borderRadius: sosCenterSize / 2 },
               sosState === 'received' && styles.greenCenter,
               sosState === 'resolved' && styles.blueCenter,
               (!location && !isSendingSOS) && styles.sosCenterDisabled
@@ -759,10 +770,10 @@ export default function RegularUserHome() {
             </View>
           </TouchableOpacity>
           <View style={styles.locationInfo}>
-            <Text style={[styles.locationText, { color: currentTheme.text }]}>{locationAddress}</Text>
-            <Text style={[styles.coordinatesText, { color: currentTheme.text }]}>
-              <Text style={styles.redText}>Latitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.latitude.toFixed(4) || '---'}</Text>
-              <Text style={styles.redText}>  Longitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.longitude.toFixed(4) || '---'}</Text>
+            <Text style={[styles.locationText, { color: currentTheme.text }]} numberOfLines={1} adjustsFontSizeToFit>{locationAddress}</Text>
+            <Text style={[styles.coordinatesText, { color: currentTheme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={styles.redText}>Latitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.latitude?.toFixed(4) || '---'}</Text>
+              <Text style={styles.redText}>  Longitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.longitude?.toFixed(4) || '---'}</Text>
             </Text>
           </View>
         </View>
@@ -770,7 +781,7 @@ export default function RegularUserHome() {
           style={[
             styles.voiceButton, 
             isRecording && styles.voiceButtonRecording,
-            { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8' }
+            { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', width: '100%', maxWidth: 500, alignSelf: 'center' }
           ]} 
           onPress={manualRecording ? stopManualRecording : startManualRecording} 
           disabled={isSendingSOS || isRecording}
@@ -793,7 +804,7 @@ export default function RegularUserHome() {
           <TouchableOpacity
             style={[
               styles.voiceButton,
-              { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', marginTop: 12 }
+              { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', marginTop: 12, width: '100%', maxWidth: 500, alignSelf: 'center' }
             ]}
             onPress={() => {
               cancelCountdownRef.current = true;
@@ -812,7 +823,7 @@ export default function RegularUserHome() {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -825,16 +836,23 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     paddingTop: 24,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   sosSection: {
     alignItems: "center",
+    width: '100%',
   },
   helpText: {
     alignItems: "center",
     gap: 4,
+    marginBottom: 8,
+    width: '100%',
   },
   helpTextPrimary: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   helpTextSecondary: {
     fontSize: 14,
@@ -848,40 +866,26 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   sosButton: {
-    width: 250,
-    height: 250,
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 20,
   },
   sosRing1: {
     position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
     backgroundColor: "#fae8e9", // lightest red
   },
   sosRing2: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
     backgroundColor: "#f9d2d2", // lighter red
   },
   sosRing3: {
     position: "absolute",
-    width: 225,
-    height: 225,
-    borderRadius: 110,
     backgroundColor: "#f2a6a6", // light red
   },
   sosCenter: {
-    width: 210,
-    height: 210,
-    borderRadius: 110,
-    backgroundColor: "#e02323", // main red
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#e02323", // main red
+    position: 'relative',
   },
   // Green palette for RECEIVED state
   greenRing1: {
@@ -915,13 +919,20 @@ const styles = StyleSheet.create({
   },
   locationInfo: {
     alignItems: "center",
+    marginTop: 8,
+    marginBottom: 8,
+    width: '100%',
   },
   locationText: {
     fontSize: 14,
+    width: '100%',
+    textAlign: 'center',
   },
   coordinatesText: {
     fontSize: 14,
     paddingBottom: 12,
+    width: '100%',
+    textAlign: 'center',
   },
   voiceButton: {
     backgroundColor: "#ffd8d8",
