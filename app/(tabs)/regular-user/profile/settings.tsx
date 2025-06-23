@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -50,6 +51,18 @@ export default function SettingsScreen() {
   const [switchStates, setSwitchStates] = React.useState(
     settingItems.map(item => item.defaultValue || false)
   );
+
+  // Load Test Mode state from AsyncStorage on mount
+  React.useEffect(() => {
+    AsyncStorage.getItem('testModeEnabled').then(val => {
+      if (val !== null) {
+        const newStates = [...switchStates];
+        // Test Mode is the third item (index 2)
+        newStates[2] = val === 'true';
+        setSwitchStates(newStates);
+      }
+    });
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
@@ -117,6 +130,9 @@ export default function SettingsScreen() {
                       deactivateKeepAwake();
                       Alert.alert('Keep Screen On', 'Your screen will now turn off as usual.');
                     }
+                  }
+                  if (item.label === 'Test Mode') {
+                    AsyncStorage.setItem('testModeEnabled', newValue ? 'true' : 'false');
                   }
                 }}
               />

@@ -47,12 +47,6 @@ export default function PreferencesScreen() {
         }
       },
     },
-    {
-      icon: 'settings',
-      label: 'Test Mode',
-      description: 'Enable testing features for development',
-      defaultValue: false,
-    },
   ];
 
   const [switchStates, setSwitchStates] = React.useState(

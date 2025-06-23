@@ -7,7 +7,7 @@ import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
@@ -60,6 +60,7 @@ export default function RegularUserHome() {
   const [hideSOS, setHideSOS] = useState(false);
   const [sosDelay, setSosDelay] = useState(3); // default to 3 seconds
   const cancelCountdownRef = useRef(false);
+  const [testModeEnabled, setTestModeEnabled] = useState(false);
 
   // Animated values for rings
   const ring1Anim = useRef(new Animated.Value(1)).current;
@@ -116,6 +117,9 @@ export default function RegularUserHome() {
       AsyncStorage.getItem('sosDelay').then(val => {
         setSosDelay(val ? Number(val) : 3);
       });
+      AsyncStorage.getItem('testModeEnabled').then(val => {
+        setTestModeEnabled(val === 'true');
+      });
 
       // Reset SOS state and related UI
       setSosState('idle');
@@ -129,6 +133,42 @@ export default function RegularUserHome() {
       // Optionally reset other state if needed
     }, [])
   );
+
+  useEffect(() => {
+    if (!testModeEnabled || sosState === 'idle' || sosState === 'countdown') {
+        return;
+    }
+
+    // This effect handles the simulation flow after countdown
+    let timer: ReturnType<typeof setTimeout>;
+    if (sosState === 'active') {
+        console.log("Test Mode: SOS Active, transitioning to received in 5s");
+        timer = setTimeout(() => setSosState('received'), 5000);
+    } else if (sosState === 'received') {
+        console.log("Test Mode: Police Received, transitioning to resolved in 5s");
+        timer = setTimeout(() => setSosState('resolved'), 5000);
+    } else if (sosState === 'resolved') {
+        console.log("Test Mode: Incident Resolved, transitioning to idle in 3s");
+        timer = setTimeout(() => {
+            setSosState('idle');
+            setIsSendingSOS(false);
+        }, 3000);
+    }
+
+    return () => clearTimeout(timer); // Cleanup on unmount or if sosState changes
+
+  }, [sosState, testModeEnabled]);
+
+  // --- NEW: Auto-reset SOS button after resolved in real mode ---
+  useEffect(() => {
+    if (!testModeEnabled && sosState === 'resolved') {
+      const timer = setTimeout(() => {
+        setSosState('idle');
+        setIsSendingSOS(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [sosState, testModeEnabled]);
 
   // --- AGGRESSIVE CLEANUP FUNCTION WITH FORCED PAUSE ---
   const ensureAudioIsFree = async () => {
@@ -453,6 +493,35 @@ export default function RegularUserHome() {
 
   // --- MAIN SOS HANDLER ---
   const handleSOS = async () => {
+    cancelCountdownRef.current = false;
+    if (testModeEnabled) {
+      Alert.alert(
+        'SOS Simulation',
+        'Test Mode is active.\n\nThis is a simulation of the SOS feature. No actual alert will be sent to emergency services.\n\nVoice recording will automatically start for 30 seconds and SOS messages will be sent to your emergency contacts (simulation only).',
+        [{ text: 'OK' }]
+      );
+
+      if (isSendingSOS) return;
+      await ensureAudioIsFree();
+      setIsSendingSOS(true);
+      setSosState('countdown');
+      setCountdown(sosDelay);
+
+      for (let i = sosDelay; i > 0; i--) {
+        if (cancelCountdownRef.current) {
+          setIsSendingSOS(false);
+          setCountdown(null);
+          setSosState('idle');
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setCountdown(i - 1);
+      }
+      Vibration.vibrate([200, 100, 200]);
+      setSosState('active'); // Kick off the simulation effect
+      return;
+    }
+
     if (isSendingSOS || (sosDisabledUntil && Date.now() < sosDisabledUntil)) return;
     
     setIsSendingSOS(true);
@@ -534,6 +603,15 @@ export default function RegularUserHome() {
 
   // --- CANCEL/STOP SOS HANDLER ---
   const handleStop = async () => {
+    if (testModeEnabled) {
+        Alert.alert('Simulation Stopped', 'You have stopped the SOS simulation.');
+        setSosState('idle');
+        setIsSendingSOS(false);
+        setCountdown(null);
+        cancelCountdownRef.current = true;
+        return;
+    }
+
     if (!currentAlertId) return;
     try {
       const formData = new FormData();
@@ -722,6 +800,7 @@ export default function RegularUserHome() {
               setSosState('idle');
               setCountdown(null);
               setIsSendingSOS(false);
+              setSosDisabledUntil(null);
             }}
           >
             <View style={styles.voiceButtonContent}>
@@ -777,29 +856,29 @@ const styles = StyleSheet.create({
   },
   sosRing1: {
     position: "absolute",
-    width: 250,
-    height: 250,
-    borderRadius: 125,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
     backgroundColor: "#fae8e9", // lightest red
   },
   sosRing2: {
     position: "absolute",
-    width: 230,
-    height: 230,
-    borderRadius: 115,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
     backgroundColor: "#f9d2d2", // lighter red
   },
   sosRing3: {
     position: "absolute",
-    width: 210,
-    height: 210,
-    borderRadius: 105,
+    width: 225,
+    height: 225,
+    borderRadius: 110,
     backgroundColor: "#f2a6a6", // light red
   },
   sosCenter: {
-    width: 182,
-    height: 182,
-    borderRadius: 91,
+    width: 210,
+    height: 210,
+    borderRadius: 110,
     backgroundColor: "#e02323", // main red
     alignItems: "center",
     justifyContent: "center",

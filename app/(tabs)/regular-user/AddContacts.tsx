@@ -4,14 +4,14 @@ import { useRouter } from 'expo-router';
 import { User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';

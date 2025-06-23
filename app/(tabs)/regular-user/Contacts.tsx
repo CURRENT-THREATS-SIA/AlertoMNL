@@ -1,10 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { MoreVertical, Plus, RefreshCw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PersonAlertIcon from '../../components/icons/PersonAlertIcon';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -45,11 +44,14 @@ const Contacts: React.FC = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [showMenu, setShowMenu] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchContacts = async () => {
+    setLoading(true);
     const nuser_id = await AsyncStorage.getItem('nuser_id');
     if (!nuser_id) {
       Alert.alert('User not found. Please log in again.');
+      setLoading(false);
       return;
     }
     try {
@@ -78,6 +80,8 @@ const Contacts: React.FC = () => {
       } else {
         Alert.alert('Error', 'Failed to fetch contacts. Please try again.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -116,19 +120,17 @@ const Contacts: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-      <View style={[styles.header, { backgroundColor: currentTheme.cardBackground, borderBottomColor: currentTheme.border }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={currentTheme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Emergency Contacts</Text>
-      </View>
 
       <View style={styles.content}>
         {/* Header with Refresh */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>My Contacts</Text>
-          <TouchableOpacity onPress={fetchContacts}>
-            <RefreshCw size={24} color={currentTheme.subtitle} />
+          <TouchableOpacity onPress={fetchContacts} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator size={24} color={currentTheme.subtitle} />
+            ) : (
+              <RefreshCw size={24} color={currentTheme.subtitle} />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -150,8 +152,10 @@ const Contacts: React.FC = () => {
 
         {/* Add Contact Button */}
         <TouchableOpacity style={styles.addButton} onPress={handleAddContact}>
-          <Plus size={16} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Add New Contact</Text>
+          <View style={styles.addButtonContent}>
+            <Plus size={16} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>Add New Contact</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -226,13 +230,17 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#e02323',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
     borderRadius: 12,
-    marginTop: 16,
-    marginBottom: 20,
+    marginBottom: 100,
+    justifyContent: 'center',
+  },
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addButtonText: {
     color: '#FFFFFF',

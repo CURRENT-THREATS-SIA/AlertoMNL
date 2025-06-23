@@ -143,13 +143,17 @@ const CrimeMap: React.FC = () => {
   // --- Map Filtering State from master ---
   const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
 
+  // Only show the modal for the latest unseen alert
   useEffect(() => {
-    // When notifications update, check for a new one to display in the modal
     if (notifications.length > 0) {
-      const latestAlert = notifications[0]; // Assuming the latest is first
-      if (!seenAlertIds.current.has(latestAlert.alert_id)) {
-        setActiveAlert(latestAlert);
+      const latestUnseen = notifications.find(alert => !seenAlertIds.current.has(alert.alert_id));
+      if (latestUnseen) {
+        setActiveAlert(latestUnseen);
+      } else {
+        setActiveAlert(null);
       }
+    } else {
+      setActiveAlert(null);
     }
   }, [notifications]);
 
@@ -328,11 +332,13 @@ const CrimeMap: React.FC = () => {
       <AlertModal 
         visible={!!activeAlert}
         notification={activeAlert}
-        onAccept={acceptAlert}
+        onAccept={alertId => {
+          acceptAlert(alertId);
+          if (activeAlert) seenAlertIds.current.add(activeAlert.alert_id);
+          setActiveAlert(null);
+        }}
         onDismiss={() => {
-          if (activeAlert) {
-            seenAlertIds.current.add(activeAlert.alert_id);
-          }
+          if (activeAlert) seenAlertIds.current.add(activeAlert.alert_id);
           setActiveAlert(null);
         }}
       />

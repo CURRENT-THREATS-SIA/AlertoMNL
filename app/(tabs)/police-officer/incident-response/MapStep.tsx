@@ -5,33 +5,38 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
+import { theme, useTheme } from '../../../context/ThemeContext';
 
 // --- SVG Icon Components for the new UI ---
 
-const LocationIcon = () => (
+const PinIcon = ({ color }: { color: string }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24">
-    <Path d="M12 2C10.34 2 8.78 2.84 7.76 4.24C6.74 5.64 6.24 7.5 6.24 9.5C6.24 11.5 6.74 13.36 7.76 14.76L12 22L16.24 14.76C17.26 13.36 17.76 11.5 17.76 9.5C17.76 7.5 17.26 5.64 16.24 4.24C15.22 2.84 13.66 2 12 2ZM12 0C13.66 0 15.22 0.84 16.24 2.24C17.26 3.64 17.76 5.5 17.76 7.5C17.76 9.5 17.26 11.36 16.24 12.76L12 20L7.76 12.76C6.74 11.36 6.24 9.5 6.24 7.5C6.24 5.5 6.74 3.64 7.76 2.24C8.78 0.84 10.34 0 12 0Z" fill="#E02323"/>
+    <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z" fill={color}/>
   </Svg>
 );
 
-const ClockIcon = () => (
+const PersonPinIcon = ({ color }: { color: string }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24">
-    <Path d="M12 2C10.34 2 8.78 2.84 7.76 4.24C6.74 5.64 6.24 7.5 6.24 9.5C6.24 11.5 6.74 13.36 7.76 14.76L12 22L16.24 14.76C17.26 13.36 17.76 11.5 17.76 9.5C17.76 7.5 17.26 5.64 16.24 4.24C15.22 2.84 13.66 2 12 2ZM12 0C13.66 0 15.22 0.84 16.24 2.24C17.26 3.64 17.76 5.5 17.76 7.5C17.76 9.5 17.26 11.36 16.24 12.76L12 20L7.76 12.76C6.74 11.36 6.24 9.5 6.24 7.5C6.24 5.5 6.74 3.64 7.76 2.24C8.78 0.84 10.34 0 12 0Z" fill="#E02323"/>
-    <Path d="M12 6V12.59L16.29 16.29L17.71 14.88L13.41 10.59V6H12Z" fill="#E02323"/>
+    <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z" fill={color}/>
+    <Path d="M12 12c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill={color} fillOpacity="0.3"/>
   </Svg>
 );
 
-const ReportedIcon = () => (
+const ClockIcon = ({ color }: { color: string }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24">
-    <Path d="M12 2C10.34 2 8.78 2.84 7.76 4.24C6.74 5.64 6.24 7.5 6.24 9.5C6.24 11.5 6.74 13.36 7.76 14.76L12 22L16.24 14.76C17.26 13.36 17.76 11.5 17.76 9.5C17.76 7.5 17.26 5.64 16.24 4.24C15.22 2.84 13.66 2 12 2ZM12 0C13.66 0 15.22 0.84 16.24 2.24C17.26 3.64 17.76 5.5 17.76 7.5C17.76 9.5 17.26 11.36 16.24 12.76L12 20L7.76 12.76C6.74 11.36 6.24 9.5 6.24 7.5C6.24 5.5 6.74 3.64 7.76 2.24C8.78 0.84 10.34 0 12 0Z" fill="#E02323"/>
-    <Path d="M12 8V12.59L15.29 15.88L16.71 14.47L13.41 11.17V8H12Z" fill="#E02323"/>
+    <Path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 14a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm.5-7V8h-1v4.25l3.5 2.08.5-.86-3-1.77z" fill={color}/>
   </Svg>
 );
 
-const VictimIcon = () => (
+const CalendarIcon = ({ color }: { color: string }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24">
-    <Path d="M12 2C10.34 2 8.78 2.84 7.76 4.24C6.74 5.64 6.24 7.5 6.24 9.5C6.24 11.5 6.74 13.36 7.76 14.76L12 22L16.24 14.76C17.26 13.36 17.76 11.5 17.76 9.5C17.76 7.5 17.26 5.64 16.24 4.24C15.22 2.84 13.66 2 12 2ZM12 0C13.66 0 15.22 0.84 16.24 2.24C17.26 3.64 17.76 5.5 17.76 7.5C17.76 9.5 17.26 11.36 16.24 12.76L12 20L7.76 12.76C6.74 11.36 6.24 9.5 6.24 7.5C6.24 5.5 6.74 3.64 7.76 2.24C8.78 0.84 10.34 0 12 0Z" fill="#E02323"/>
-    <Path d="M12 10V14.59L15.29 17.88L16.71 16.47L13.41 13.17V10H12Z" fill="#E02323"/>
+    <Path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zm0-13H5V6h14v1z" fill={color}/>
+  </Svg>
+);
+
+const UserIcon = ({ color }: { color: string }) => (
+  <Svg width="24" height="24" viewBox="0 0 24 24">
+    <Path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" fill={color}/>
   </Svg>
 );
 
@@ -70,6 +75,9 @@ export default function MapStep() {
   console.log("MapStep loaded"); // Top-level log to confirm component mount
   const router = useRouter();
   const { alert_id } = useLocalSearchParams();
+  const { isDarkMode } = useTheme();
+  const currentTheme = isDarkMode ? theme.dark : theme.light;
+  const buttonColor = isDarkMode ? currentTheme.iconBackground : '#E02323';
   console.log('MapStep alert_id:', alert_id); // <--- Add this
 
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
@@ -140,7 +148,7 @@ export default function MapStep() {
   }, [alertDetails]);
 
   useEffect(() => {
-    let locationInterval: NodeJS.Timeout;
+    let locationInterval: number;
     const fetchAndSendLocation = async () => {
       try {
         // Request permission if not already granted
@@ -337,25 +345,25 @@ export default function MapStep() {
     ) * 1000; // haversine returns km, convert to meters
   }
 
-  if (!alertDetails) {
+  if (error) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#E02323" />
-        <Text>Loading Alert Details...</Text>
+      <View style={[styles.centered, { backgroundColor: currentTheme.background }]}> 
+        <Text style={{ color: currentTheme.statusResolved }}>{error}</Text>
       </View>
     );
   }
 
-  if (shouldShowError) {
+  if (!alertDetails) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error || "Could not load alert details."}</Text>
+      <View style={[styles.centered, { backgroundColor: currentTheme.background }]}> 
+        <ActivityIndicator size="large" color={currentTheme.iconBackground} />
+        <Text style={{ color: currentTheme.text }}>Loading incident details...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <View style={{ flex: 1, minHeight: 300 }}>
         <MapComponent
           selectedCrimeType={''}
@@ -374,48 +382,42 @@ export default function MapStep() {
           }
         />
       </View>
-      <View style={styles.infoCard}>
+      <View style={[styles.infoCard, { backgroundColor: currentTheme.cardBackground }]}>
+        <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
+        <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Navigate to the incident location and follow the route for the fastest response.</Text>
         <View style={styles.infoRow}>
-          <LocationIcon />
+          <PinIcon color={currentTheme.iconBackground} />
           <View style={styles.infoTextContainer}>
-            <Text style={styles.label}>Incident Location</Text>
-            <Text style={styles.value}>{alertDetails.a_address || 'Fetching address...'}</Text>
-            {locationAccuracy !== null && locationAccuracy > 25 && (
-              <Text style={[styles.value, { color: '#E02323', fontWeight: 'bold' }]}>Warning: Your location accuracy is poor ({locationAccuracy.toFixed(1)} meters). Please enable high-accuracy mode in your device settings.</Text>
-            )}
-            {distanceToIncident !== null && (
-              <Text style={styles.value}>
-                Distance to incident: {distanceToIncident.toFixed(1)} meters
-              </Text>
-            )}
+            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Address</Text>
+            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails.a_address || 'Unknown address'}</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <LocationIcon />
+          <PersonPinIcon color={currentTheme.iconBackground} />
           <View style={styles.infoTextContainer}>
-            <Text style={styles.label}>Your Location</Text>
-            <Text style={styles.value}>{officerAddress}</Text>
+            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Your Location</Text>
+            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{officerAddress}</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <ClockIcon />
+          <ClockIcon color={currentTheme.iconBackground} />
           <View style={styles.infoTextContainer}>
-            <Text style={styles.label}>Estimated Time Arrival</Text>
-            <Text style={styles.value}>15 minutes</Text>
+            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
+            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>15 minutes</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <ReportedIcon />
+          <CalendarIcon color={currentTheme.iconBackground} />
           <View style={styles.infoTextContainer}>
-            <Text style={styles.label}>Reported</Text>
-            <Text style={styles.value}>{getFormattedTime(alertDetails.a_created)}</Text>
+            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Reported</Text>
+            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <VictimIcon />
+          <UserIcon color={currentTheme.iconBackground} />
           <View style={styles.infoTextContainer}>
-            <Text style={styles.label}>Victim</Text>
-            <Text style={styles.value}>{alertDetails.f_name} {alertDetails.l_name} ({alertDetails.m_number})</Text>
+            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Victim</Text>
+            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -427,7 +429,7 @@ export default function MapStep() {
           }}
           disabled={distanceToIncident === null || distanceToIncident > 1000000}
         >
-          <Text style={styles.buttonText}>You&apos;ve Arrived</Text>
+          <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
         </TouchableOpacity>
       </View>
       <Modal
@@ -436,15 +438,15 @@ export default function MapStep() {
         animationType="fade"
         onRequestClose={() => setShowAccuracyModal(false)}
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 24, alignItems: 'center', maxWidth: 320 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#E02323', marginBottom: 12 }}>Location Accuracy Warning</Text>
-            <Text style={{ color: '#333', fontSize: 15, marginBottom: 16, textAlign: 'center' }}>
+        <View style={{ flex: 1, backgroundColor: currentTheme.modalOverlay, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: currentTheme.cardBackground, borderRadius: 16, padding: 24, alignItems: 'center', maxWidth: 320 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 18, color: currentTheme.iconBackground, marginBottom: 12 }}>Location Accuracy Warning</Text>
+            <Text style={{ color: currentTheme.text, fontSize: 15, marginBottom: 16, textAlign: 'center' }}>
               Your current location accuracy is {locationAccuracy ? locationAccuracy.toFixed(1) : '?'} meters, which may not be sufficient for incident response.
               {'\n'}
               Please enable "High accuracy" mode in your device's location settings (Settings → Location → Mode → High accuracy) and ensure you have a clear view of the sky.
             </Text>
-            <TouchableOpacity style={{ backgroundColor: '#E02323', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 24 }} onPress={() => setShowAccuracyModal(false)}>
+            <TouchableOpacity style={{ backgroundColor: currentTheme.iconBackground, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 24 }} onPress={() => setShowAccuracyModal(false)}>
               <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>OK</Text>
             </TouchableOpacity>
           </View>
@@ -455,33 +457,11 @@ export default function MapStep() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff'
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
-  },
-  errorText: {
-    color: '#E02323',
-    fontSize: 16,
-    textAlign: 'center',
-    fontWeight: 'bold'
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 14,
-    padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 }
-  },
+  container: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  infoCard: { padding: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, elevation: 8 },
+  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
+  instructions: { fontSize: 14, marginBottom: 16 },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -490,16 +470,8 @@ const styles = StyleSheet.create({
   infoTextContainer: {
     marginLeft: 16
   },
-  label: {
-    fontWeight: 'bold',
-    color: '#333',
-    fontSize: 15,
-    marginBottom: 1
-  },
-  value: {
-    color: '#666',
-    fontSize: 14
-  },
+  label: { fontSize: 14, marginTop: 12 },
+  value: { fontSize: 16, fontWeight: 'bold' },
   button: {
     marginTop: 8,
     backgroundColor: '#E02323',
