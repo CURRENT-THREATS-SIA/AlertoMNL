@@ -195,7 +195,7 @@ export default function MapStep() {
     // Initial fetch
     fetchAndSendLocation();
     // Repeat every 10 seconds (reduced from 20 for faster updates)
-    locationInterval = setInterval(fetchAndSendLocation, 10000);
+    locationInterval = setInterval(fetchAndSendLocation, 10000) as unknown as number;
 
     return () => {
       if (locationInterval) clearInterval(locationInterval);
@@ -421,13 +421,13 @@ export default function MapStep() {
           </View>
         </View>
         <TouchableOpacity
-          style={[styles.button, distanceToIncident !== null && distanceToIncident > 100000 ? { backgroundColor: '#ccc' } : {}]}
+          style={[styles.button, distanceToIncident !== null && distanceToIncident > 200 ? { backgroundColor: '#ccc' } : {}]}
           onPress={() => {
-            if (distanceToIncident !== null && distanceToIncident <= 100000) {
+            if (distanceToIncident !== null && distanceToIncident <= 200) {
               router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
             }
           }}
-          disabled={distanceToIncident === null || distanceToIncident > 1000000}
+          disabled={distanceToIncident === null || distanceToIncident > 200}
         >
           <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
         </TouchableOpacity>
