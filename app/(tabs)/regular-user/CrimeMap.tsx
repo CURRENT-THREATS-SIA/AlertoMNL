@@ -1,17 +1,18 @@
 import { Feature, Point } from 'geojson';
 import React, { useEffect, useState } from 'react';
 import {
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from 'react-native';
 
+import * as Location from 'expo-location';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
 import { createCrimeTypeData, StationName, totalCrime, totalCrimeData, totalRates } from '../../../constants/mapData';
@@ -97,6 +98,7 @@ const CrimeMap: React.FC = () => {
   const [showStationModal, setShowStationModal] = useState(false);
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
   const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Add reset function
   const handleReset = () => {
@@ -284,6 +286,21 @@ const CrimeMap: React.FC = () => {
     }
   }, [isLegendVisible]);
 
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+      setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      // Optionally, watch position for live updates
+      const sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 10 },
+        (loc) => setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude })
+      );
+      return () => sub.remove();
+    })();
+  }, []);
+
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <ScrollView 
@@ -298,6 +315,7 @@ const CrimeMap: React.FC = () => {
               selectedStation={selectedStation}
               userType="regular"
               data={filteredMapData}
+              userLocation={userLocation ?? undefined}
             />
             
             {/* Legend Toggle Button */}

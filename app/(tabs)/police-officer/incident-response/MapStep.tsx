@@ -386,35 +386,35 @@ export default function MapStep() {
         <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
         <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Navigate to the incident location and follow the route for the fastest response.</Text>
         <View style={styles.infoRow}>
-          <PinIcon color={currentTheme.iconBackground} />
+          <PinIcon color="#E02323" />
           <View style={styles.infoTextContainer}>
             <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Address</Text>
             <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails.a_address || 'Unknown address'}</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <PersonPinIcon color={currentTheme.iconBackground} />
+          <PersonPinIcon color="#E02323" />
           <View style={styles.infoTextContainer}>
             <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Your Location</Text>
             <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{officerAddress}</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <ClockIcon color={currentTheme.iconBackground} />
+          <ClockIcon color="#E02323" />
           <View style={styles.infoTextContainer}>
             <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
             <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>15 minutes</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <CalendarIcon color={currentTheme.iconBackground} />
+          <CalendarIcon color="#E02323" />
           <View style={styles.infoTextContainer}>
             <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Reported</Text>
             <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
           </View>
         </View>
         <View style={styles.infoRow}>
-          <UserIcon color={currentTheme.iconBackground} />
+          <UserIcon color="#E02323" />
           <View style={styles.infoTextContainer}>
             <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Victim</Text>
             <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}</Text>

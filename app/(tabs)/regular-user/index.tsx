@@ -611,30 +611,32 @@ export default function RegularUserHome() {
   // --- CANCEL/STOP SOS HANDLER ---
   const handleStop = async () => {
     if (testModeEnabled) {
-        Alert.alert('Simulation Stopped', 'You have stopped the SOS simulation.');
-        setSosState('idle');
-        setIsSendingSOS(false);
-        setCountdown(null);
-        cancelCountdownRef.current = true;
-        return;
+      Alert.alert('Simulation Stopped', 'You have stopped the SOS simulation.');
+      setSosState('idle');
+      setIsSendingSOS(false);
+      setCountdown(null);
+      cancelCountdownRef.current = true;
+      return;
     }
 
-    if (!currentAlertId) return;
-    try {
-      const formData = new FormData();
-      formData.append('alert_id', currentAlertId.toString());
-      await fetch(API_CANCEL_SOS_URL, { method: 'POST', body: formData });
-      // If STOP is pressed before police accept, show alert and disable SOS for 5 minutes
-      if (sosState === 'active') {
-        Alert.alert('SOS Stopped', 'You fully stopped your SOS initialization. You will be restricted from clicking it for 5 minutes.');
-        setSosDisabledUntil(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+    if (currentAlertId) {
+      try {
+        const formData = new FormData();
+        formData.append('alert_id', currentAlertId.toString());
+        await fetch(API_CANCEL_SOS_URL, { method: 'POST', body: formData });
+        if (sosState === 'active') {
+          Alert.alert('SOS Stopped', 'You fully stopped your SOS initialization. You will be restricted from clicking it for 5 minutes.');
+          setSosDisabledUntil(Date.now() + 5 * 60 * 1000);
+        }
+      } catch (e) {
+        Alert.alert('Error', 'Failed to cancel SOS alert.');
       }
-    } catch (e) {
-      Alert.alert('Error', 'Failed to cancel SOS alert.');
     }
     setSosState('idle');
     setCurrentAlertId(null);
     if (pollingRef.current) clearInterval(pollingRef.current);
+    setIsSendingSOS(false);
+    setCountdown(null);
   };
 
   // --- Disable SOS button if restricted ---

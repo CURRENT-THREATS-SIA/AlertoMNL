@@ -92,7 +92,7 @@ const History: React.FC = () => {
   }, []);
 
   const handleHistoryItemPress = (id: number) => {
-    router.push(`/regular-user/history/${id}`);
+    router.replace(`/regular-user/history/${id}`);
   };
 
   return (
