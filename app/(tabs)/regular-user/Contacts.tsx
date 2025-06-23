@@ -3,7 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
 import { MoreVertical, Plus, RefreshCw } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PersonAlertIcon from '../../components/icons/PersonAlertIcon';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -120,12 +120,16 @@ const Contacts: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
-
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Header with Refresh */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: currentTheme.text }]}>My Contacts</Text>
-          <TouchableOpacity onPress={fetchContacts} disabled={loading}>
+          <TouchableOpacity
+            onPress={fetchContacts}
+            disabled={loading}
+            style={{ opacity: loading ? 0.5 : 1 }}
+            accessibilityLabel="Refresh contacts"
+          >
             {loading ? (
               <ActivityIndicator size={24} color={currentTheme.subtitle} />
             ) : (
@@ -148,6 +152,7 @@ const Contacts: React.FC = () => {
               <Text style={[styles.emptySubText, { color: currentTheme.subtitle }]}>Add your emergency contacts</Text>
             </View>
           }
+          scrollEnabled={false}
         />
 
         {/* Add Contact Button */}
@@ -157,20 +162,21 @@ const Contacts: React.FC = () => {
             <Text style={styles.addButtonText}>Add New Contact</Text>
           </View>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* Bottom Sheet Menu */}
       {showMenu && (
-        <View style={[styles.menuContainer, { 
-          backgroundColor: currentTheme.cardBackground,
-          borderTopColor: currentTheme.border
-        }]}>
-          <TouchableOpacity onPress={handleDelete} style={styles.menuItem}>
-            <Text style={[styles.menuText, { color: '#e33c3c' }]}>Delete</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowMenu(false)} style={styles.menuItem}>
-            <Text style={[styles.menuText, { color: currentTheme.subtitle }]}>Cancel</Text>
-          </TouchableOpacity>
+        <View style={styles.menuOverlay}>
+          <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setShowMenu(false)} />
+          <View style={[styles.menuContent, { backgroundColor: currentTheme.cardBackground, borderColor: currentTheme.border }]}> 
+            <Text style={styles.menuTitle}>{selectedContact?.contact_name}</Text>
+            <TouchableOpacity onPress={handleDelete} style={styles.menuItem}>
+              <Text style={[styles.menuText, { color: '#e33c3c' }]}>Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowMenu(false)} style={styles.menuItem}>
+              <Text style={[styles.menuText, { color: currentTheme.subtitle }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </SafeAreaView>
@@ -196,8 +202,8 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.semiBold,
   },
   content: {
-    flex: 1,
     paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -221,7 +227,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: fonts.poppins.medium,
-    marginBottom: 4,
   },
   emptySubText: {
     fontSize: 14,
@@ -234,7 +239,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 12,
-    marginBottom: 100,
+    width: '100%',
+    marginTop: 16,
+    marginBottom: 12,
     justifyContent: 'center',
   },
   addButtonContent: {
@@ -247,18 +254,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fonts.poppins.semiBold,
     marginLeft: 8,
+    textAlignVertical: 'center',
+    paddingTop: 0,
+    paddingBottom: 0,
   },
-  menuContainer: {
+  menuOverlay: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
-    borderTopWidth: 1,
-    paddingVertical: 8,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  menuContent: {
+    minWidth: 260,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontFamily: fonts.poppins.semiBold,
+    marginBottom: 16,
+    color: '#e02323',
+    textAlign: 'center',
   },
   menuItem: {
     paddingVertical: 12,
     paddingHorizontal: 16,
+    width: '100%',
+    alignItems: 'center',
+    borderRadius: 8,
+    marginBottom: 8,
   },
   menuText: {
     fontSize: 16,
