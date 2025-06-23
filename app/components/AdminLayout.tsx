@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { FileSpreadsheet, LayoutDashboard, LogOut, Search, Shield, Users } from 'lucide-react-native';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
@@ -12,6 +12,13 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const { adminEmail, logout } = useAdminAuth();
+  const [tapCount, setTapCount] = useState(0);
+  useEffect(() => {
+    if (tapCount === 3) {
+      setTapCount(0);
+      router.push('/(tabs)/admin/developersPower');
+    }
+  }, [tapCount]);
   const menuItems = [
     { 
       icon: <LayoutDashboard size={24} color="#666666" />,
@@ -40,11 +47,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Sidebar - full height with logo/title at the top */}
         <View style={styles.sideNav}>
           <View style={styles.sidebarHeader}>
-            <Image source={require('../../assets/images/ALERTOMNL-ICON.png')} style={styles.sidebarLogo} resizeMode="contain" />
-            <View>
-              <Text style={styles.sidebarTitle}>ALERTO MNL</Text>
-              <Text style={styles.sidebarSubtitle}>Response System</Text>
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                setTapCount(tapCount + 1);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
+              <Image source={require('../../assets/images/ALERTOMNL-ICON.png')} style={styles.sidebarLogo} resizeMode="contain" />
+              <View>
+                <Text style={styles.sidebarTitle}>ALERTO MNL</Text>
+                <Text style={styles.sidebarSubtitle}>Response System</Text>
+              </View>
+            </TouchableOpacity>
           </View>
           <View style={styles.sidebarMenu}>
             {menuItems.map((item, index) => (
