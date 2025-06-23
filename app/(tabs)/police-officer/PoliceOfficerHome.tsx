@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -141,6 +142,9 @@ const CrimeMap: React.FC = () => {
   // --- Map Filtering State from master ---
   const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
 
+  // --- NEW: State for the officer's location ---
+  const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | null>(null);
+
   // Only show the modal for the latest unseen alert
   useEffect(() => {
     if (notifications.length > 0) {
@@ -276,6 +280,22 @@ const CrimeMap: React.FC = () => {
     filterMapData();
   }, [selectedCrimeType, selectedStation]);
 
+  // --- NEW: Effect to get and watch the officer's location ---
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+      setOfficerLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      // Optionally, watch position for live updates
+      const sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 10 },
+        (loc) => setOfficerLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude })
+      );
+      return () => sub.remove();
+    })();
+  }, []);
+
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <AlertModal 
@@ -305,6 +325,7 @@ const CrimeMap: React.FC = () => {
               userType="police"
               selectedCrimeType={selectedCrimeType}
               selectedStation={selectedStation}
+              userLocation={officerLocation ?? undefined}
             />
             
             {/* Legend Toggle Button */}

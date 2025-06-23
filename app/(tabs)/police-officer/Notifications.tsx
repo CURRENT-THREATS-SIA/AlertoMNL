@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Header from '../../../components/Header';
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fonts } from '../../config/fonts';
 import { AlertNotification, useAlerts } from '../../context/AlertContext';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -62,6 +62,7 @@ const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId:
 const NotificationsScreen = () => {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
+  const navigation = useNavigation();
   
   // --- ALERTS ARE NOW HANDLED BY THE CONTEXT ---
   const { notifications, isLoading, acceptAlert, refreshAlerts } = useAlerts();
@@ -69,8 +70,14 @@ const NotificationsScreen = () => {
   // The local `handleAccept`, `fetchNotifications`, `useEffect`, and `useState` for alerts are now removed.
 
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
-      <Header />
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
+      {/* Custom Header with Back Button */}
+      <View style={[styles.customHeader, { backgroundColor: currentTheme.background }]}> 
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={28} color={currentTheme.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Pending SOS Alerts</Text>
+      </View>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -81,7 +88,6 @@ const NotificationsScreen = () => {
           />
         }
       >
-        <Text style={[styles.header, { color: currentTheme.text }]}>Pending SOS Alerts</Text>
         {isLoading && notifications.length === 0 ? (
           <Text style={{ color: currentTheme.text, textAlign: 'center', marginTop: 20 }}>Fetching alerts...</Text>
         ) : notifications.length > 0 ? (
@@ -96,14 +102,33 @@ const NotificationsScreen = () => {
           <Text style={[styles.emptyText, { color: currentTheme.text }]}>No pending alerts at the moment.</Text>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 36,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    zIndex: 10,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: fonts.poppins.bold,
+    flex: 1,
+    textAlign: 'left',
+  },
   scrollContainer: { padding: 16, flexGrow: 1 },
-  header: { fontSize: 20, fontFamily: fonts.poppins.bold, marginBottom: 16 },
   card: { 
     borderRadius: 20, 
     marginBottom: 16,

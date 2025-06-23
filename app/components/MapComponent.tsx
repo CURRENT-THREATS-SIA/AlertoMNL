@@ -13,6 +13,7 @@ interface MapComponentProps {
   routeCoords?: { lat: number; lng: number }[]; // For Dijkstra
   officerLocation?: { lat: number; lng: number };
   incidentLocation?: { lat: number; lng: number };
+  userLocation?: { lat: number; lng: number };
 }
 
 // Manila coordinates
@@ -22,7 +23,7 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation, userLocation }) => {
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const webViewRef = useRef<WebView>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -337,6 +338,52 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
       setClusters(dbscan(data.features, eps, minPoints));
     }
   }, [isClusterMode, data]);
+
+  // Add effect to handle officer location marker
+  useEffect(() => {
+    if (!webViewRef.current || !officerLocation) return;
+    const officerCoord = [officerLocation.lng, officerLocation.lat];
+    const markerScript = `
+      (function() {
+        if (window.officerMarker) { window.officerMarker.remove(); }
+        const el = document.createElement('div');
+        el.className = 'officer-marker';
+        el.style.background = '#4285F4';
+        el.style.border = '3px solid #fff';
+        el.style.borderRadius = '50%';
+        el.style.width = '24px';
+        el.style.height = '24px';
+        el.style.boxShadow = '0 0 0 4px rgba(66,133,244,0.2)';
+        window.officerMarker = new mapboxgl.Marker(el)
+          .setLngLat([${officerCoord[0]}, ${officerCoord[1]}])
+          .addTo(map);
+      })();
+    `;
+    webViewRef.current.injectJavaScript(markerScript);
+  }, [officerLocation]);
+
+  // Add effect to handle user location marker
+  useEffect(() => {
+    if (!webViewRef.current || !userLocation) return;
+    const userCoord = [userLocation.lng, userLocation.lat];
+    const markerScript = `
+      (function() {
+        if (window.userMarker) { window.userMarker.remove(); }
+        const el = document.createElement('div');
+        el.className = 'user-marker';
+        el.style.background = '#4285F4';
+        el.style.border = '3px solid #fff';
+        el.style.borderRadius = '50%';
+        el.style.width = '24px';
+        el.style.height = '24px';
+        el.style.boxShadow = '0 0 0 4px rgba(66,133,244,0.2)';
+        window.userMarker = new mapboxgl.Marker(el)
+          .setLngLat([${userCoord[0]}, ${userCoord[1]}])
+          .addTo(map);
+      })();
+    `;
+    webViewRef.current.injectJavaScript(markerScript);
+  }, [userLocation]);
 
   const mapboxHTML = `
 <!DOCTYPE html>
