@@ -1451,10 +1451,6 @@ map.on('load', () => {
         }}
         onLoadEnd={sendFiltersToMap}
       />
-      <View style={styles.crosshairContainer} pointerEvents="none">
-        <View style={styles.crosshair} />
-        <View style={[styles.crosshair, { transform: [{ rotate: '90deg' }] }]} />
-      </View>
     </View>
   );
 };
@@ -1463,24 +1459,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f0f0',
-  },
-  crosshairContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: 24,
-    height: 24,
-    transform: [{ translateX: -12 }, { translateY: -12 }],
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  crosshair: {
-    position: 'absolute',
-    width: 24,
-    height: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 1.5,
   },
   webView: {
     flex: 1,
