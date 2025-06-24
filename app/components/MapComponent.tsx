@@ -15,6 +15,7 @@ interface MapComponentProps {
   incidentLocation?: { lat: number; lng: number };
   userLocation?: { lat: number; lng: number };
   hideControls?: boolean; // New prop to hide UI controls
+  hideIncidentMarker?: boolean; // New prop to hide incident marker
 }
 
 // Manila coordinates
@@ -24,7 +25,7 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation, userLocation, hideControls = false }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation, userLocation, hideControls = false, hideIncidentMarker = false }) => {
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const webViewRef = useRef<WebView>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -46,11 +47,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
   const [clusters, setClusters] = useState<DBSCANCluster[]>([]);
 
   const startLocationTracking = async () => {
-    // Skip location tracking if controls are hidden
-    if (hideControls) {
-      console.log('Skipping device location tracking - controls are hidden');
-      return;
-    }
+    // Don't skip location tracking - we need it for the crosshair
     
     try {
       // Request both foreground and background permissions for better tracking
@@ -92,26 +89,24 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
             lastLocationRef.current = newLoc;
             setDeviceLocation(location);
             // Inject location into the map with additional data
-            if (Platform.OS !== 'web') {
-              const locationUpdate = {
-                type: 'updateDeviceLocation',
-                location: {
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude,
-                  accuracy: location.coords.accuracy,
-                  heading: location.coords.heading,
-                  speed: location.coords.speed,
-                  altitude: location.coords.altitude,
-                  timestamp: location.timestamp
-                }
-              };
-              webViewRef.current?.injectJavaScript(`
-                window.dispatchEvent(new MessageEvent('message', {
-                  data: '${JSON.stringify(locationUpdate)}'
-                }));
-                true;
-              `);
-            }
+            const locationUpdate = {
+              type: 'updateDeviceLocation',
+              location: {
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+                accuracy: location.coords.accuracy,
+                heading: location.coords.heading,
+                speed: location.coords.speed,
+                altitude: location.coords.altitude,
+                timestamp: location.timestamp
+              }
+            };
+            webViewRef.current?.injectJavaScript(`
+              window.dispatchEvent(new MessageEvent('message', {
+                data: '${JSON.stringify(locationUpdate)}'
+              }));
+              true;
+            `);
           }
           // else: skip update to avoid unnecessary computation/renders
         }
@@ -129,12 +124,12 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
   };
 
   const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {
-    if (nextAppState === 'active' && !hideControls) {
+    if (nextAppState === 'active') {
       startLocationTracking();
     } else {
       stopLocationTracking();
     }
-  }, [hideControls]);
+  }, []);
 
   useEffect(() => {
     startLocationTracking();
@@ -221,7 +216,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
 
   // Add effect to handle incident location marker with destination indicator
   useEffect(() => {
-    if (!webViewRef.current || !incidentLocation || hideControls) return;
+    if (!webViewRef.current || !incidentLocation || hideIncidentMarker || hideControls) return;
 
     const incidentCoord = [incidentLocation.lng, incidentLocation.lat];
     const isEndPoint = isRouteMode; // Show as end point when in route mode
@@ -309,7 +304,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
       })();
     `;
     webViewRef.current.injectJavaScript(markerScript);
-  }, [incidentLocation, isRouteMode, hideControls]);
+  }, [incidentLocation, isRouteMode, hideIncidentMarker, hideControls]);
 
   // Add effect to handle route updates
   useEffect(() => {
@@ -364,11 +359,11 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
           }
         });
 
-        // Add route markers only when hideControls is true
+        // Add route markers when hideControls is true (for MapStep)
         const shouldHideControls = ${hideControls ? 'true' : 'false'};
         const routeCoordinates = ${JSON.stringify(coordinates)};
         if (shouldHideControls && routeCoordinates.length > 1) {
-          // Clean up ALL existing markers when in hideControls mode
+          // Clean up existing markers first
           if (window.routeStartMarker) { window.routeStartMarker.remove(); window.routeStartMarker = null; }
           if (window.routeEndMarker) { window.routeEndMarker.remove(); window.routeEndMarker = null; }
           if (window.officerMarker) { window.officerMarker.remove(); window.officerMarker = null; }
@@ -378,12 +373,12 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
           const startCoord = routeCoordinates[0];
           const endCoord = routeCoordinates[routeCoordinates.length - 1];
           
-          // Create start marker (user location icon)
+          // Create start marker (user location icon) - just the icon, no label
           const startEl = document.createElement('div');
-          startEl.style.width = '40px';
-          startEl.style.height = '40px';
+          startEl.style.width = '30px';
+          startEl.style.height = '30px';
           startEl.innerHTML = \`
-            <svg viewBox="0 0 24 24" width="40" height="40">
+            <svg viewBox="0 0 24 24" width="30" height="30">
               <circle cx="12" cy="12" r="8" 
                       fill="#4285F4" 
                       stroke="#ffffff" 
@@ -399,28 +394,25 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
             .setLngLat(startCoord)
             .addTo(map);
           
-          // Create destination marker (red pin)
+          // Create destination marker (red pin) - just the icon, no label
           const endEl = document.createElement('div');
-          endEl.style.width = '40px';
-          endEl.style.height = '48px';
+          endEl.style.width = '35px';
+          endEl.style.height = '42px';
           endEl.innerHTML = \`
-            <svg viewBox="0 0 24 32" width="40" height="48">
+            <svg viewBox="0 0 24 32" width="35" height="42">
               <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12zm0 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" 
-                    fill="#DC2626" 
+                    fill="#E02323" 
                     stroke="#ffffff" 
                     stroke-width="2"/>
             </svg>
           \`;
           
-          // Create marker with proper anchor point (bottom center of pin)
           window.routeEndMarker = new mapboxgl.Marker({
             element: endEl,
-            anchor: 'bottom' // This ensures the bottom tip of the pin points to the exact location
+            anchor: 'bottom'
           })
             .setLngLat(endCoord)
             .addTo(map);
-            
-          console.log('Route markers added at:', startCoord, endCoord);
         }
 
         // Fit map to route bounds
@@ -516,7 +508,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
       })();
     `;
     webViewRef.current.injectJavaScript(markerScript);
-  }, [officerLocation, isRouteMode, hideControls]);
+  }, [officerLocation, hideControls]);
 
   // Add effect to handle user location marker
   useEffect(() => {
@@ -1012,6 +1004,13 @@ let originalData;
 map.on('load', () => {
   // Store the original data for filtering
   originalData = ${JSON.stringify(data)};
+  
+  // Only add crime data layers if we have data and features
+  const hasData = originalData && originalData.features && originalData.features.length > 0;
+  if (!hasData) {
+    console.log('No crime data to display, skipping crime layers');
+    return;
+  }
 
   // Add the source for crime data
   map.addSource('crimes', {
@@ -1291,7 +1290,7 @@ map.on('load', () => {
                         location.hostname === '127.0.0.1' ||
                         location.hostname === '0.0.0.0';
   
-  if ('geolocation' in navigator && !shouldHideControls && isSecureOrigin) {
+  if ('geolocation' in navigator && isSecureOrigin) {
     const locationLoadingEl = document.querySelector('.location-loading');
     const locationErrorEl = document.querySelector('.location-error');
     
@@ -1438,7 +1437,7 @@ map.on('load', () => {
       <WebView
         ref={webViewRef}
         source={{ html: mapboxHTML }}
-        style={styles.webview}
+        style={styles.webView}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         startInLoadingState={true}
@@ -1450,7 +1449,12 @@ map.on('load', () => {
             // Here you could send the data to your backend
           }
         }}
+        onLoadEnd={sendFiltersToMap}
       />
+      <View style={styles.crosshairContainer} pointerEvents="none">
+        <View style={styles.crosshair} />
+        <View style={[styles.crosshair, { transform: [{ rotate: '90deg' }] }]} />
+      </View>
     </View>
   );
 };
@@ -1458,10 +1462,31 @@ map.on('load', () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
   },
-  webview: {
+  crosshairContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 24,
+    height: 24,
+    transform: [{ translateX: -12 }, { translateY: -12 }],
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  crosshair: {
+    position: 'absolute',
+    width: 24,
+    height: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 1.5,
+  },
+  webView: {
     flex: 1,
+  },
+  patrolButton: {
+    position: 'absolute',
   },
 });
 

@@ -179,6 +179,7 @@ export default function ArrivedStep() {
           officerLocation={officerLocation}
           userLocation={userLocation}
           incidentLocation={alertDetails && alertDetails.a_latitude && alertDetails.a_longitude ? { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) } : undefined}
+          hideIncidentMarker={true}
         />
       </View>
       
