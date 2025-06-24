@@ -316,6 +316,7 @@ const CrimeMap: React.FC = () => {
               userType="regular"
               data={filteredMapData}
               userLocation={userLocation ?? undefined}
+              hideControls={false}
             />
             
             {/* Legend Toggle Button */}

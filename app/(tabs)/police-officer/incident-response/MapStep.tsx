@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, Modal, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
 import { theme, useTheme } from '../../../context/ThemeContext';
@@ -38,6 +38,12 @@ const UserIcon = ({ color }: { color: string }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24">
     <Path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" fill={color}/>
   </Svg>
+);
+
+const DragHandleIcon = () => (
+  <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+    <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc' }} />
+  </View>
 );
 
 interface AlertDetails {
@@ -80,6 +86,16 @@ export default function MapStep() {
   const buttonColor = isDarkMode ? currentTheme.iconBackground : '#E02323';
   console.log('MapStep alert_id:', alert_id); // <--- Add this
 
+  // Get screen dimensions
+  const { height: screenHeight } = Dimensions.get('window');
+  
+  // Bottom sheet states and animation
+  const COLLAPSED_HEIGHT = 200; // Height when collapsed
+  const EXPANDED_HEIGHT = screenHeight * 0.7; // Height when expanded (70% of screen)
+  const [isExpanded, setIsExpanded] = useState(false);
+  const animatedHeight = useRef(new Animated.Value(COLLAPSED_HEIGHT)).current;
+  const lastGestureDy = useRef(0);
+
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
   const [error, setError] = useState("");
   const [routeCoords, setRouteCoords] = useState<
@@ -91,6 +107,55 @@ export default function MapStep() {
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [showAccuracyModal, setShowAccuracyModal] = useState(false);
   const hasShownAccuracyWarning = React.useRef(false);
+
+  // Pan responder for dragging
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only respond to vertical gestures
+        return Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Calculate new height based on drag
+        const newHeight = isExpanded
+          ? EXPANDED_HEIGHT - gestureState.dy
+          : COLLAPSED_HEIGHT - gestureState.dy;
+        
+        // Clamp the height between min and max
+        const clampedHeight = Math.max(COLLAPSED_HEIGHT, Math.min(EXPANDED_HEIGHT, newHeight));
+        animatedHeight.setValue(clampedHeight);
+        lastGestureDy.current = gestureState.dy;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const velocity = gestureState.vy;
+        const currentHeight = isExpanded
+          ? EXPANDED_HEIGHT - gestureState.dy
+          : COLLAPSED_HEIGHT - gestureState.dy;
+
+        // Determine whether to expand or collapse based on position and velocity
+        let shouldExpand = false;
+        
+        if (Math.abs(velocity) > 0.5) {
+          // If swiping fast, use velocity to determine direction
+          shouldExpand = velocity < 0;
+        } else {
+          // If swiping slow, use position
+          shouldExpand = currentHeight > (EXPANDED_HEIGHT + COLLAPSED_HEIGHT) / 2;
+        }
+
+        // Animate to final position
+        Animated.spring(animatedHeight, {
+          toValue: shouldExpand ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
+          velocity: velocity,
+          useNativeDriver: false,
+        }).start();
+
+        setIsExpanded(shouldExpand);
+        lastGestureDy.current = 0;
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (!alert_id) {
@@ -380,58 +445,81 @@ export default function MapStep() {
                 }
               : undefined
           }
+          hideControls={true}
         />
       </View>
-      <View style={[styles.infoCard, { backgroundColor: currentTheme.cardBackground }]}>
-        <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
-        <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Navigate to the incident location and follow the route for the fastest response.</Text>
-        <View style={styles.infoRow}>
-          <PinIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Address</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails.a_address || 'Unknown address'}</Text>
-          </View>
+      <Animated.View 
+        style={[
+          styles.infoCard, 
+          { 
+            backgroundColor: currentTheme.cardBackground,
+            height: animatedHeight,
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }
+        ]}
+      >
+        <View {...panResponder.panHandlers}>
+          <DragHandleIcon />
         </View>
-        <View style={styles.infoRow}>
-          <PersonPinIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Your Location</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{officerAddress}</Text>
-          </View>
-        </View>
-        <View style={styles.infoRow}>
-          <ClockIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>15 minutes</Text>
-          </View>
-        </View>
-        <View style={styles.infoRow}>
-          <CalendarIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Reported</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
-          </View>
-        </View>
-        <View style={styles.infoRow}>
-          <UserIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Victim</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={[styles.button, distanceToIncident !== null && distanceToIncident > 100000 ? { backgroundColor: '#ccc' } : {}]}
-          onPress={() => {
-            if (distanceToIncident !== null && distanceToIncident <= 100000) {
-              router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
-            }
-          }}
-          disabled={distanceToIncident === null || distanceToIncident > 1000000}
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={isExpanded}
         >
-          <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
+          <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Navigate to the incident location and follow the route for the fastest response.</Text>
+          <View style={styles.infoRow}>
+            <PinIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Address</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails.a_address || 'Unknown address'}</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <PersonPinIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Your Location</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{officerAddress}</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <ClockIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>15 minutes</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <CalendarIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Reported</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <UserIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Victim</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, distanceToIncident !== null && distanceToIncident > 100000 ? { backgroundColor: '#ccc' } : {}]}
+            onPress={() => {
+              if (distanceToIncident !== null && distanceToIncident <= 100000) {
+                router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
+              }
+            }}
+            disabled={distanceToIncident === null || distanceToIncident > 1000000}
+          >
+            <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </Animated.View>
       <Modal
         visible={showAccuracyModal}
         transparent
@@ -459,7 +547,15 @@ export default function MapStep() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  infoCard: { padding: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, elevation: 8 },
+  infoCard: { 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+  },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
   instructions: { fontSize: 14, marginBottom: 16 },
   infoRow: {
