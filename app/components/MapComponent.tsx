@@ -1357,12 +1357,18 @@ map.on('load', () => {
         locationLoadingEl.style.display = 'none';
       },
       (error) => {
-        console.error('Error getting location:', error);
-        locationErrorEl.textContent = 'Could not get your location: ' + error.message;
-        locationErrorEl.style.display = 'block';
-        setTimeout(() => {
-          locationErrorEl.style.display = 'none';
-        }, 5000);
+        // Only show error for actual geolocation failures, not HTTPS requirement
+        if (error.code !== 1 || error.message.toLowerCase().includes('denied')) {
+          console.error('Error getting location:', error);
+          locationErrorEl.textContent = 'Could not get your location';
+          locationErrorEl.style.display = 'block';
+          setTimeout(() => {
+            locationErrorEl.style.display = 'none';
+          }, 5000);
+        } else {
+          // Silently fail for HTTPS-related errors
+          console.log('Geolocation requires HTTPS');
+        }
       },
       {
         enableHighAccuracy: true,
