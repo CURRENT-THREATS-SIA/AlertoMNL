@@ -1111,11 +1111,17 @@ map.on('load', () => {
       },
       (error) => {
         console.error('Error getting location:', error);
-        locationErrorEl.textContent = 'Could not get your location: ' + error.message;
-        locationErrorEl.style.display = 'block';
-        setTimeout(() => {
-          locationErrorEl.style.display = 'none';
-        }, 5000);
+        // Suppress the "only secure origins are allowed" error message
+        const isSecureOriginError = error.message && error.message.toLowerCase().includes('secure origins');
+        
+        if (!isSecureOriginError) {
+          // Only show error for actual issues, not HTTPS requirement
+          locationErrorEl.textContent = 'Could not get your location: ' + error.message;
+          locationErrorEl.style.display = 'block';
+          setTimeout(() => {
+            locationErrorEl.style.display = 'none';
+          }, 5000);
+        }
       },
       {
         enableHighAccuracy: true,
