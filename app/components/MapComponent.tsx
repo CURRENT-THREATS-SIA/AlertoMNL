@@ -14,6 +14,7 @@ interface MapComponentProps {
   officerLocation?: { lat: number; lng: number };
   incidentLocation?: { lat: number; lng: number };
   userLocation?: { lat: number; lng: number };
+  hideControls?: boolean; // New prop to hide UI controls
 }
 
 // Manila coordinates
@@ -23,11 +24,14 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation, userLocation }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation, userLocation, hideControls = false }) => {
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const webViewRef = useRef<WebView>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
   const appStateRef = useRef(AppState.currentState);
+  
+  // Debug logging
+  console.log('MapComponent props:', { hideControls, officerLocation: !!officerLocation, userLocation: !!userLocation });
   const [isPatrolMode, setIsPatrolMode] = useState(false);
   const [patrolPath, setPatrolPath] = useState<Location.LocationObject[]>([]);
   const [patrolStartTime, setPatrolStartTime] = useState<number | null>(null);
@@ -42,6 +46,12 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
   const [clusters, setClusters] = useState<DBSCANCluster[]>([]);
 
   const startLocationTracking = async () => {
+    // Skip location tracking if controls are hidden
+    if (hideControls) {
+      console.log('Skipping device location tracking - controls are hidden');
+      return;
+    }
+    
     try {
       // Request both foreground and background permissions for better tracking
       const foregroundPermission = await Location.requestForegroundPermissionsAsync();
@@ -119,12 +129,12 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
   };
 
   const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {
-    if (nextAppState === 'active') {
+    if (nextAppState === 'active' && !hideControls) {
       startLocationTracking();
     } else {
       stopLocationTracking();
     }
-  }, []);
+  }, [hideControls]);
 
   useEffect(() => {
     startLocationTracking();
@@ -209,15 +219,12 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
     }
   }, [deviceLocation, isPatrolMode]);
 
-  // Add effect to handle incident location marker
+  // Add effect to handle incident location marker with destination indicator
   useEffect(() => {
-    if (!webViewRef.current || !incidentLocation) return;
+    if (!webViewRef.current || !incidentLocation || hideControls) return;
 
     const incidentCoord = [incidentLocation.lng, incidentLocation.lat];
-    
-    const coordKey = incidentCoord.join(',');
-    if (lastIncidentCoordRef.current === coordKey) return;
-    lastIncidentCoordRef.current = coordKey;
+    const isEndPoint = isRouteMode; // Show as end point when in route mode
 
     const markerScript = `
       (function() {
@@ -232,14 +239,16 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
           style.id = 'incident-marker-style';
           style.innerHTML = \`
             .incident-marker {
-              display: block;
-              border: 3px solid #E02323;
-              border-radius: 50%;
-              width: 24px;
-              height: 24px;
-              background-color: #E02323;
+              display: block !important;
+              border: 3px solid #E02323 !important;
+              border-radius: 50% !important;
+              width: 30px !important;
+              height: 30px !important;
+              background-color: #E02323 !important;
               box-shadow: 0 0 0 rgba(224, 35, 35, 0.4);
               animation: incidentPulse 2s infinite;
+              position: relative;
+              z-index: 10;
             }
             @keyframes incidentPulse {
               0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(224, 35, 35, 0.7); }
@@ -250,18 +259,57 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
           document.head.appendChild(style);
         }
         
+        // Create container for the marker
+        const container = document.createElement('div');
+        container.style.position = 'relative';
+        
         // Create the marker element
         const el = document.createElement('div');
         el.className = 'incident-marker';
         
+        ${isEndPoint ? `
+        // Add "DESTINATION" label for route mode
+        const label = document.createElement('div');
+        label.innerText = 'DESTINATION';
+        label.style.position = 'absolute';
+        label.style.bottom = '35px';
+        label.style.left = '50%';
+        label.style.transform = 'translateX(-50%)';
+        label.style.background = '#E02323';
+        label.style.color = 'white';
+        label.style.padding = '2px 8px';
+        label.style.borderRadius = '4px';
+        label.style.fontSize = '12px';
+        label.style.fontWeight = 'bold';
+        label.style.whiteSpace = 'nowrap';
+        label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        label.style.zIndex = '15';
+        container.appendChild(label);
+        
+        // Add white center dot for destination
+        const centerDot = document.createElement('div');
+        centerDot.style.position = 'absolute';
+        centerDot.style.top = '50%';
+        centerDot.style.left = '50%';
+        centerDot.style.transform = 'translate(-50%, -50%)';
+        centerDot.style.width = '10px';
+        centerDot.style.height = '10px';
+        centerDot.style.background = 'white';
+        centerDot.style.borderRadius = '50%';
+        centerDot.style.zIndex = '2';
+        el.appendChild(centerDot);
+        ` : ''}
+        
+        container.appendChild(el);
+        
         // Add the new marker to the map
-        window.incidentMarker = new mapboxgl.Marker(el)
+        window.incidentMarker = new mapboxgl.Marker(container)
           .setLngLat([${incidentCoord[0]}, ${incidentCoord[1]}])
           .addTo(map);
       })();
     `;
     webViewRef.current.injectJavaScript(markerScript);
-  }, [incidentLocation]);
+  }, [incidentLocation, isRouteMode, hideControls]);
 
   // Add effect to handle route updates
   useEffect(() => {
@@ -316,6 +364,65 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
           }
         });
 
+        // Add route markers only when hideControls is true
+        const shouldHideControls = ${hideControls ? 'true' : 'false'};
+        const routeCoordinates = ${JSON.stringify(coordinates)};
+        if (shouldHideControls && routeCoordinates.length > 1) {
+          // Clean up ALL existing markers when in hideControls mode
+          if (window.routeStartMarker) { window.routeStartMarker.remove(); window.routeStartMarker = null; }
+          if (window.routeEndMarker) { window.routeEndMarker.remove(); window.routeEndMarker = null; }
+          if (window.officerMarker) { window.officerMarker.remove(); window.officerMarker = null; }
+          if (window.incidentMarker) { window.incidentMarker.remove(); window.incidentMarker = null; }
+          if (window.userMarker) { window.userMarker.remove(); window.userMarker = null; }
+          
+          const startCoord = routeCoordinates[0];
+          const endCoord = routeCoordinates[routeCoordinates.length - 1];
+          
+          // Create start marker (user location icon)
+          const startEl = document.createElement('div');
+          startEl.style.width = '40px';
+          startEl.style.height = '40px';
+          startEl.innerHTML = \`
+            <svg viewBox="0 0 24 24" width="40" height="40">
+              <circle cx="12" cy="12" r="8" 
+                      fill="#4285F4" 
+                      stroke="#ffffff" 
+                      stroke-width="3"/>
+              <circle cx="12" cy="12" r="3" 
+                      fill="#ffffff"/>
+            </svg>
+          \`;
+          
+          window.routeStartMarker = new mapboxgl.Marker({
+            element: startEl
+          })
+            .setLngLat(startCoord)
+            .addTo(map);
+          
+          // Create destination marker (red pin)
+          const endEl = document.createElement('div');
+          endEl.style.width = '40px';
+          endEl.style.height = '48px';
+          endEl.innerHTML = \`
+            <svg viewBox="0 0 24 32" width="40" height="48">
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12zm0 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" 
+                    fill="#DC2626" 
+                    stroke="#ffffff" 
+                    stroke-width="2"/>
+            </svg>
+          \`;
+          
+          // Create marker with proper anchor point (bottom center of pin)
+          window.routeEndMarker = new mapboxgl.Marker({
+            element: endEl,
+            anchor: 'bottom' // This ensures the bottom tip of the pin points to the exact location
+          })
+            .setLngLat(endCoord)
+            .addTo(map);
+            
+          console.log('Route markers added at:', startCoord, endCoord);
+        }
+
         // Fit map to route bounds
         const bounds = ${JSON.stringify(coordinates)}.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(${JSON.stringify(coordinates[0])}, ${JSON.stringify(coordinates[0])}));
         map.fitBounds(bounds, { 
@@ -328,7 +435,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
     `;
 
     webViewRef.current.injectJavaScript(script);
-  }, [routeCoords]);
+  }, [routeCoords, hideControls]);
 
   useEffect(() => {
     if (isClusterMode && data) {
@@ -339,32 +446,81 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
     }
   }, [isClusterMode, data]);
 
-  // Add effect to handle officer location marker
+  // Add effect to handle officer location marker with route start indicator
   useEffect(() => {
-    if (!webViewRef.current || !officerLocation) return;
+    if (!webViewRef.current || !officerLocation || hideControls) return;
     const officerCoord = [officerLocation.lng, officerLocation.lat];
+    const isStartPoint = isRouteMode; // Show as start point when in route mode
+    
     const markerScript = `
       (function() {
         if (window.officerMarker) { window.officerMarker.remove(); }
+        
+        // Create container for the marker
+        const container = document.createElement('div');
+        container.style.position = 'relative';
+        
+        // Create the main marker element
         const el = document.createElement('div');
         el.className = 'officer-marker';
         el.style.background = '#4285F4';
         el.style.border = '3px solid #fff';
         el.style.borderRadius = '50%';
-        el.style.width = '24px';
-        el.style.height = '24px';
+        el.style.width = '30px';
+        el.style.height = '30px';
         el.style.boxShadow = '0 0 0 4px rgba(66,133,244,0.2)';
-        window.officerMarker = new mapboxgl.Marker(el)
+        el.style.position = 'relative';
+        el.style.zIndex = '5';
+        
+        ${isStartPoint ? `
+        // Add "START" label for route mode
+        const label = document.createElement('div');
+        label.innerText = 'START';
+        label.style.position = 'absolute';
+        label.style.bottom = '35px';
+        label.style.left = '50%';
+        label.style.transform = 'translateX(-50%)';
+        label.style.background = '#4285F4';
+        label.style.color = 'white';
+        label.style.padding = '2px 8px';
+        label.style.borderRadius = '4px';
+        label.style.fontSize = '12px';
+        label.style.fontWeight = 'bold';
+        label.style.whiteSpace = 'nowrap';
+        label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        container.appendChild(label);
+        
+        // Add pulsing animation for start point
+        el.style.animation = 'startPulse 2s infinite';
+        
+        // Add animation styles if not already present
+        if (!document.getElementById('start-marker-style')) {
+          const style = document.createElement('style');
+          style.id = 'start-marker-style';
+          style.innerHTML = \`
+            @keyframes startPulse {
+              0% { box-shadow: 0 0 0 4px rgba(66,133,244,0.2); }
+              50% { box-shadow: 0 0 0 8px rgba(66,133,244,0.1); }
+              100% { box-shadow: 0 0 0 4px rgba(66,133,244,0.2); }
+            }
+          \`;
+          document.head.appendChild(style);
+        }
+        ` : ''}
+        
+        container.appendChild(el);
+        
+        window.officerMarker = new mapboxgl.Marker(container)
           .setLngLat([${officerCoord[0]}, ${officerCoord[1]}])
           .addTo(map);
       })();
     `;
     webViewRef.current.injectJavaScript(markerScript);
-  }, [officerLocation]);
+  }, [officerLocation, isRouteMode, hideControls]);
 
   // Add effect to handle user location marker
   useEffect(() => {
-    if (!webViewRef.current || !userLocation) return;
+    if (!webViewRef.current || !userLocation || hideControls) return;
     const userCoord = [userLocation.lng, userLocation.lat];
     const markerScript = `
       (function() {
@@ -383,7 +539,7 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
       })();
     `;
     webViewRef.current.injectJavaScript(markerScript);
-  }, [userLocation]);
+  }, [userLocation, hideControls]);
 
   const mapboxHTML = `
 <!DOCTYPE html>
@@ -501,6 +657,18 @@ body { margin: 0; padding: 0; }
   0% { transform: scale(1); opacity: 1; }
   100% { transform: scale(4); opacity: 0; }
 }
+${hideControls ? `
+/* Hide all map controls when hideControls is true */
+.mapboxgl-ctrl-top-left,
+.mapboxgl-ctrl-top-right,
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right {
+  display: none !important;
+}
+.location-button {
+  display: none !important;
+}
+` : ''}
 .cluster-popup .mapboxgl-popup-content {
   background: rgba(0, 0, 0, 0.8);
   color: white;
@@ -527,11 +695,13 @@ body { margin: 0; padding: 0; }
 </head>
 <body>
 <div id="map"></div>
+${!hideControls ? `
 <button class="location-button" id="centerLocationButton" title="Center on my location">
   <svg viewBox="0 0 24 24">
     <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
   </svg>
 </button>
+` : ''}
 <div class="location-loading">Getting your location...</div>
 <div class="location-error">Could not get your location</div>
 <script>
@@ -548,29 +718,34 @@ const map = new mapboxgl.Map({
   zoom: ${MANILA_CENTER.zoom}
 });
 
-// Add geocoder control
-const geocoder = new MapboxGeocoder({
-  accessToken: mapboxgl.accessToken,
-  mapboxgl: mapboxgl,
-  countries: 'ph',
-  bbox: [120.9547, 14.5547, 121.0272, 14.6380], // Expanded to cover all of Manila
-  placeholder: 'Search in Manila...',
-  flyTo: function(location) {
-    if (location && location.center) {
-      const [lng, lat] = location.center;
-      if (
-        lng >= 120.9547 && lng <= 121.0272 &&
-        lat >= 14.5547 && lat <= 14.6380
-      ) {
-        map.flyTo({ center: location.center, zoom: 16 });
-      } else {
-        showManilaReminder('Reminder: Please select a location within Manila.');
-        geocoder.clear();
-        // Do NOT move the map
+// Add geocoder control only if controls are not hidden
+const shouldHideControls = ${hideControls ? 'true' : 'false'};
+let geocoder = null;
+
+if (!shouldHideControls) {
+  geocoder = new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl: mapboxgl,
+    countries: 'ph',
+    bbox: [120.9547, 14.5547, 121.0272, 14.6380], // Expanded to cover all of Manila
+    placeholder: 'Search in Manila...',
+    flyTo: function(location) {
+      if (location && location.center) {
+        const [lng, lat] = location.center;
+        if (
+          lng >= 120.9547 && lng <= 121.0272 &&
+          lat >= 14.5547 && lat <= 14.6380
+        ) {
+          map.flyTo({ center: location.center, zoom: 16 });
+        } else {
+          showManilaReminder('Reminder: Please select a location within Manila.');
+          geocoder.clear();
+          // Do NOT move the map
+        }
       }
     }
-  }
-});
+  });
+}
 
 // Add a custom reminder div
 const reminderDiv = document.createElement('div');
@@ -599,87 +774,145 @@ function showManilaReminder(message) {
 }
 
 // Only allow results within Manila (for extra safety)
-geocoder.on('result', function(e) {
-  const place = e.result;
-  const [lng, lat] = place.center;
-  const inManila =
-    lng >= 120.9547 && lng <= 121.0272 &&
-    lat >= 14.5547 && lat <= 14.6380 &&
-    place.place_name.includes('Manila');
-  if (!inManila) {
-    showManilaReminder('Reminder: Please select a location within Manila.');
-    geocoder.clear();
-    // Force map back to Manila center
-    map.flyTo({ center: [120.9842, 14.5995], zoom: 12 });
-  }
-});
+if (geocoder) {
+  geocoder.on('result', function(e) {
+    const place = e.result;
+    const [lng, lat] = place.center;
+    const inManila =
+      lng >= 120.9547 && lng <= 121.0272 &&
+      lat >= 14.5547 && lat <= 14.6380 &&
+      place.place_name.includes('Manila');
+    if (!inManila) {
+      showManilaReminder('Reminder: Please select a location within Manila.');
+      geocoder.clear();
+      // Force map back to Manila center
+      map.flyTo({ center: [120.9842, 14.5995], zoom: 12 });
+    }
+  });
+}
 
-map.addControl(geocoder);
-map.addControl(new mapboxgl.NavigationControl());
+// Only add controls if not hidden
+if (!shouldHideControls && geocoder) {
+  map.addControl(geocoder);
+  map.addControl(new mapboxgl.NavigationControl());
+}
 
 // Handle location button click with smooth animation
-document.getElementById('centerLocationButton').addEventListener('click', () => {
-  if (currentLocation) {
-    map.flyTo({
-      center: [currentLocation.longitude, currentLocation.latitude],
-      zoom: 17,
-      duration: 1000,
-      pitch: 60, // Add some tilt for better perspective
-      bearing: currentLocation.heading || 0 // Align map with user's heading
-    });
-  }
-});
-
-// Initialize device location source and layers
-map.on('load', () => {
-  // Add location source
-  map.addSource('device-location', {
-    type: 'geojson',
-    data: {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [${MANILA_CENTER.lng}, ${MANILA_CENTER.lat}]
-      },
-      properties: {
-        accuracy: 0,
-        heading: 0,
-        speed: 0
+const locationButton = document.getElementById('centerLocationButton');
+if (locationButton) {
+  locationButton.addEventListener('click', () => {
+    if (currentLocation) {
+      map.flyTo({
+        center: [currentLocation.longitude, currentLocation.latitude],
+        zoom: 17,
+        duration: 1000,
+        pitch: 60, // Add some tilt for better perspective
+        bearing: currentLocation.heading || 0 // Align map with user's heading
+      });
+    } else {
+      // Try to get location when button is clicked
+      if ('geolocation' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            map.flyTo({
+              center: [position.coords.longitude, position.coords.latitude],
+              zoom: 17,
+              duration: 1000
+            });
+          },
+          (error) => {
+            // Silently handle error
+            console.log('Location not available:', error.message);
+          }
+        );
       }
     }
   });
+}
 
-  // Add accuracy circle
-  map.addLayer({
-    id: 'device-location-accuracy',
-    type: 'circle',
-    source: 'device-location',
-    paint: {
-      'circle-radius': ['/', ['get', 'accuracy'], 1],
-      'circle-color': '#4285F4',
-      'circle-opacity': 0.15,
-      'circle-pitch-alignment': 'map'
-    }
-  });
+// Initialize device location source and layers
+map.on('load', () => {
+  // Only add device location layers if controls are not hidden
+  const shouldHideControls = ${hideControls ? 'true' : 'false'};
+  
+  // Clean up any existing markers when controls are hidden
+  if (shouldHideControls) {
+    // Remove all markers except route markers
+    const markerCleanup = () => {
+      // Get all markers on the map
+      const markers = document.querySelectorAll('.mapboxgl-marker');
+      markers.forEach(marker => {
+        // Check if it's not a route marker
+        const svg = marker.querySelector('svg');
+        if (svg) {
+          const viewBox = svg.getAttribute('viewBox');
+          // Keep only route markers (viewBox="0 0 24 24" for start, "0 0 24 32" for end)
+          if (viewBox !== '0 0 24 24' && viewBox !== '0 0 24 32') {
+            marker.remove();
+          }
+        } else {
+          // Remove markers without SVG (like officer/incident markers)
+          marker.remove();
+        }
+      });
+    };
+    
+    // Initial cleanup
+    markerCleanup();
+    
+    // Set up periodic cleanup to catch any new markers
+    setInterval(markerCleanup, 1000);
+  }
+  
+  if (!shouldHideControls) {
+    // Add location source
+    map.addSource('device-location', {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [${MANILA_CENTER.lng}, ${MANILA_CENTER.lat}]
+        },
+        properties: {
+          accuracy: 0,
+          heading: 0,
+          speed: 0
+        }
+      }
+    });
 
-  // Add direction indicator
-  map.addLayer({
-    id: 'device-location-direction',
-    type: 'symbol',
-    source: 'device-location',
-    layout: {
-      'icon-image': 'triangle-15',
-      'icon-rotate': ['get', 'heading'],
-      'icon-rotation-alignment': 'map',
-      'icon-allow-overlap': true,
-      'icon-ignore-placement': true
-    },
-    paint: {
-      'icon-color': '#4285F4',
-      'icon-opacity': ['case', ['==', ['get', 'speed'], 0], 0, 0.8]
-    }
-  });
+    // Add accuracy circle
+    map.addLayer({
+      id: 'device-location-accuracy',
+      type: 'circle',
+      source: 'device-location',
+      paint: {
+        'circle-radius': ['/', ['get', 'accuracy'], 1],
+        'circle-color': '#4285F4',
+        'circle-opacity': 0.15,
+        'circle-pitch-alignment': 'map'
+      }
+    });
 
+    // Add direction indicator
+    map.addLayer({
+      id: 'device-location-direction',
+      type: 'symbol',
+      source: 'device-location',
+      layout: {
+        'icon-image': 'triangle-15',
+        'icon-rotate': ['get', 'heading'],
+        'icon-rotation-alignment': 'map',
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true
+      },
+      paint: {
+        'icon-color': '#4285F4',
+        'icon-opacity': ['case', ['==', ['get', 'speed'], 0], 0, 0.8]
+      }
+    });
+  }
 });
 
 // Handle device location updates with improved accuracy
@@ -688,6 +921,12 @@ window.addEventListener('message', (event) => {
   if (data.type === 'updateDeviceLocation') {
     const { latitude, longitude, accuracy, heading, speed, timestamp } = data.location;
     const timeSinceLastUpdate = timestamp - locationUpdateTime;
+    const shouldHideControls = ${hideControls ? 'true' : 'false'};
+    
+    // Skip device location updates when controls are hidden
+    if (shouldHideControls) {
+      return;
+    }
     
     // Update only if accuracy is good enough or if it's been a while
     if (accuracy <= 20 || timeSinceLastUpdate > 5000) {
@@ -1044,7 +1283,15 @@ map.on('load', () => {
   });
 
   // Add custom location tracking
-  if ('geolocation' in navigator) {
+  const shouldHideControls = ${hideControls ? 'true' : 'false'};
+  
+  // Check if we're on a secure origin (HTTPS or localhost)
+  const isSecureOrigin = location.protocol === 'https:' || 
+                        location.hostname === 'localhost' || 
+                        location.hostname === '127.0.0.1' ||
+                        location.hostname === '0.0.0.0';
+  
+  if ('geolocation' in navigator && !shouldHideControls && isSecureOrigin) {
     const locationLoadingEl = document.querySelector('.location-loading');
     const locationErrorEl = document.querySelector('.location-error');
     
@@ -1110,12 +1357,18 @@ map.on('load', () => {
         locationLoadingEl.style.display = 'none';
       },
       (error) => {
-        console.error('Error getting location:', error);
-        locationErrorEl.textContent = 'Could not get your location: ' + error.message;
-        locationErrorEl.style.display = 'block';
-        setTimeout(() => {
-          locationErrorEl.style.display = 'none';
-        }, 5000);
+        // Only show error for actual geolocation failures, not HTTPS requirement
+        if (error.code !== 1 || error.message.toLowerCase().includes('denied')) {
+          console.error('Error getting location:', error);
+          locationErrorEl.textContent = 'Could not get your location';
+          locationErrorEl.style.display = 'block';
+          setTimeout(() => {
+            locationErrorEl.style.display = 'none';
+          }, 5000);
+        } else {
+          // Silently fail for HTTPS-related errors
+          console.log('Geolocation requires HTTPS');
+        }
       },
       {
         enableHighAccuracy: true,
@@ -1128,6 +1381,9 @@ map.on('load', () => {
     map.on('remove', () => {
       navigator.geolocation.clearWatch(watchId);
     });
+  } else if (!isSecureOrigin && !shouldHideControls) {
+    // Log HTTPS requirement but don't show error to user
+    console.log('Geolocation requires secure origin (HTTPS)');
   }
 });
 </script>
