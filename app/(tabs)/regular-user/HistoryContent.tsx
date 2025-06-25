@@ -167,7 +167,7 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
             borderBottomColor: currentTheme.border,
           },
         ]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/regular-user/History')}>
           <MaterialIcons name="arrow-back" size={24} color={currentTheme.text} />
         </TouchableOpacity>
         <Text
