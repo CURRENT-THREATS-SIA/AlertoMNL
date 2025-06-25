@@ -40,6 +40,12 @@ const UserIcon = ({ color }: { color: string }) => (
   </Svg>
 );
 
+const DragHandleIcon = () => (
+  <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+    <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#ccc' }} />
+  </View>
+);
+
 interface AlertDetails {
   a_address: string;
   a_created: string;
@@ -80,6 +86,16 @@ export default function MapStep() {
   const buttonColor = isDarkMode ? currentTheme.iconBackground : '#E02323';
   console.log('MapStep alert_id:', alert_id); // <--- Add this
 
+  // Get screen dimensions
+  const { height: screenHeight } = Dimensions.get('window');
+  
+  // Bottom sheet states and animation
+  const COLLAPSED_HEIGHT = 200; // Height when collapsed
+  const EXPANDED_HEIGHT = screenHeight * 0.7; // Height when expanded (70% of screen)
+  const [isExpanded, setIsExpanded] = useState(false);
+  const animatedHeight = useRef(new Animated.Value(COLLAPSED_HEIGHT)).current;
+  const lastGestureDy = useRef(0);
+
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
   const [error, setError] = useState("");
   const [routeCoords, setRouteCoords] = useState<
@@ -91,6 +107,55 @@ export default function MapStep() {
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [showAccuracyModal, setShowAccuracyModal] = useState(false);
   const hasShownAccuracyWarning = React.useRef(false);
+
+  // Pan responder for dragging
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only respond to vertical gestures
+        return Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Calculate new height based on drag
+        const newHeight = isExpanded
+          ? EXPANDED_HEIGHT - gestureState.dy
+          : COLLAPSED_HEIGHT - gestureState.dy;
+        
+        // Clamp the height between min and max
+        const clampedHeight = Math.max(COLLAPSED_HEIGHT, Math.min(EXPANDED_HEIGHT, newHeight));
+        animatedHeight.setValue(clampedHeight);
+        lastGestureDy.current = gestureState.dy;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const velocity = gestureState.vy;
+        const currentHeight = isExpanded
+          ? EXPANDED_HEIGHT - gestureState.dy
+          : COLLAPSED_HEIGHT - gestureState.dy;
+
+        // Determine whether to expand or collapse based on position and velocity
+        let shouldExpand = false;
+        
+        if (Math.abs(velocity) > 0.5) {
+          // If swiping fast, use velocity to determine direction
+          shouldExpand = velocity < 0;
+        } else {
+          // If swiping slow, use position
+          shouldExpand = currentHeight > (EXPANDED_HEIGHT + COLLAPSED_HEIGHT) / 2;
+        }
+
+        // Animate to final position
+        Animated.spring(animatedHeight, {
+          toValue: shouldExpand ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT,
+          velocity: velocity,
+          useNativeDriver: false,
+        }).start();
+
+        setIsExpanded(shouldExpand);
+        lastGestureDy.current = 0;
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (!alert_id) {
@@ -380,6 +445,7 @@ export default function MapStep() {
                 }
               : undefined
           }
+          hideControls={true}
         />
       </View>
       <View style={[styles.infoCard, { backgroundColor: currentTheme.cardBackground }]}>
@@ -459,7 +525,15 @@ export default function MapStep() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  infoCard: { padding: 24, borderTopLeftRadius: 24, borderTopRightRadius: 24, elevation: 8 },
+  infoCard: { 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+  },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
   instructions: { fontSize: 14, marginBottom: 16 },
   infoRow: {
