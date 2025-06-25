@@ -431,18 +431,18 @@ const CrimeMap: React.FC = () => {
             onRequestClose={() => setShowCrimeTypeModal(false)}
           >
             <TouchableOpacity 
-              style={[styles.modalOverlay, { backgroundColor: currentTheme.modalOverlay }]} 
+              style={styles.modalOverlay} 
               activeOpacity={1} 
               onPress={() => setShowCrimeTypeModal(false)}
             >
-              <View style={[styles.modalContent, { backgroundColor: currentTheme.modalBackground }]}>
-                <View style={[styles.modalHeader, { borderBottomColor: currentTheme.cardBorder }]}>
-                  <Text style={[styles.modalTitle, { color: currentTheme.text }]}>Select Crime Type</Text>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Crime Type</Text>
                   <TouchableOpacity 
                     onPress={() => setShowCrimeTypeModal(false)}
                     style={styles.closeButton}
                   >
-                    <MaterialIcons name="close" size={24} color={currentTheme.text} />
+                    <MaterialIcons name="close" size={24} color="#000" />
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
@@ -469,14 +469,12 @@ const CrimeMap: React.FC = () => {
                       key={type.id}
                       style={[
                         styles.modalOption,
-                        { borderBottomColor: currentTheme.cardBorder },
                         selectedCrimeType === type.value && styles.modalOptionSelected
                       ]}
                       onPress={() => handleCrimeTypeSelect(type.value)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        { color: currentTheme.text },
                         selectedCrimeType === type.value && styles.modalOptionTextSelected
                       ]}>
                         {type.label}
@@ -496,18 +494,18 @@ const CrimeMap: React.FC = () => {
             onRequestClose={() => setShowStationModal(false)}
           >
             <TouchableOpacity 
-              style={[styles.modalOverlay, { backgroundColor: currentTheme.modalOverlay }]} 
+              style={styles.modalOverlay} 
               activeOpacity={1} 
               onPress={() => setShowStationModal(false)}
             >
-              <View style={[styles.modalContent, { backgroundColor: currentTheme.modalBackground }]}>
-                <View style={[styles.modalHeader, { borderBottomColor: currentTheme.cardBorder }]}>
-                  <Text style={[styles.modalTitle, { color: currentTheme.text }]}>Select Police Station</Text>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Police Station</Text>
                   <TouchableOpacity 
                     onPress={() => setShowStationModal(false)}
                     style={styles.closeButton}
                   >
-                    <MaterialIcons name="close" size={24} color={currentTheme.text} />
+                    <MaterialIcons name="close" size={24} color="#000" />
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
@@ -534,14 +532,12 @@ const CrimeMap: React.FC = () => {
                       key={station.id}
                       style={[
                         styles.modalOption,
-                        { borderBottomColor: currentTheme.cardBorder },
                         selectedStation === station.value && styles.modalOptionSelected
                       ]}
                       onPress={() => handleStationSelect(station.value as StationName)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        { color: currentTheme.text },
                         selectedStation === station.value && styles.modalOptionTextSelected
                       ]}>
                         {station.label}
@@ -778,13 +774,14 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
+    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    paddingBottom: 20,
     maxHeight: '80%',
   },
   modalHeader: {
@@ -793,10 +790,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   modalTitle: {
     fontSize: 18,
-    fontFamily: fonts.poppins.medium,
+    fontFamily: fonts.poppins.semiBold,
     color: '#E02323',
   },
   closeButton: {
@@ -805,6 +803,7 @@ const styles = StyleSheet.create({
   modalOption: {
     padding: 16,
     borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   modalOptionSelected: {
     backgroundColor: '#FFE5E5',
@@ -812,10 +811,11 @@ const styles = StyleSheet.create({
   modalOptionText: {
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
+    color: '#000',
   },
   modalOptionTextSelected: {
     color: '#E02323',
-    fontFamily: fonts.poppins.medium,
+    fontFamily: fonts.poppins.semiBold,
   },
   statsContainer: {
     flexDirection: 'row',
