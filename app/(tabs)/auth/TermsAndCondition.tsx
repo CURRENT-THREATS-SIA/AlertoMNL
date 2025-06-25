@@ -14,8 +14,8 @@ export const TermsAndConditionScreen: React.FC = () => {
                         <Text style={styles.textWrapper2}>Last Updated: April 2025</Text>
                     </View>
                     <ScrollView style={{ flex: 1 }}>
-                        <Text style={styles.acceptanceOfTerms}>
-                            <Text style={styles.span}>Acceptance of Terms{"\n"}</Text>
+                        <Text style={styles.anceOfTerms}>
+                            <Text style={styles.span}>ance of Terms{"\n"}</Text>
                             <Text style={styles.textWrapper3}> By downloading, accessing, or using the ALERTO MNL, you agree to be bound by these Terms and Conditions. If you do not agree, do not use the App.{"\n\n"}</Text>
                             <Text style={styles.span}>Account Responsibilities{"\n"}</Text>
                             <Text style={styles.textWrapper3}>You are responsible for maintaining the confidentiality of your login credentials.{"\n"}You agree to notify us immediately of any unauthorized access to your account.{"\n\n"}</Text>
@@ -30,7 +30,7 @@ export const TermsAndConditionScreen: React.FC = () => {
                             <Text style={styles.span}>Disclaimers and Limitation of Liability{"\n"}</Text>
                             <Text style={styles.textWrapper3}>The App is provided {'"'}as is,{'"'} without warranty of any kind.{"\n"}We are not liable for any direct, indirect, incidental, or consequential damages arising from App use.{"\n"}Emergency response times depend on network availability and local resources.{"\n\n"}</Text>
                             <Text style={styles.span}>Modifications and Updates</Text>
-                            <Text style={styles.textWrapper3}> We may update or modify these Terms at any time. Continued use of the App constitutes acceptance of the revised Terms.{"\n\n"}</Text>
+                            <Text style={styles.textWrapper3}> We may update or modify these Terms at any time. Continued use of the App constitutes ance of the revised Terms.{"\n\n"}</Text>
                             <Text style={styles.span}>Termination</Text>
                             <Text style={styles.textWrapper3}> We reserve the right to suspend or terminate your access for violations of these Terms or misuse of the App.{"\n\n"}</Text>
                             <Text style={styles.span}>Governing Law</Text>
@@ -41,9 +41,9 @@ export const TermsAndConditionScreen: React.FC = () => {
                     </ScrollView>
                 </View>
                 <TouchableOpacity 
-                    style={styles.acceptButton}
+                    style={styles.Button}
                     onPress={() => router.push("/auth/Login")} > 
-                    <Text style={styles.acceptButtonText}>Accept Terms and Conditions</Text>
+                    <Text style={styles.ButtonText}> Terms and Conditions</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         marginTop: -11,
     },
-    acceptanceOfTerms: {
+    anceOfTerms: {
         alignSelf: "stretch",
         color: "#000000",
         fontSize: 12,
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     textWrapper3: {
         fontWeight: "400",
     },
-    acceptButton: {
+    Button: {
         backgroundColor: "#e02323",
         paddingVertical: 12,
         borderRadius: 8,
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
         marginBottom: 35,
     },
-    acceptButtonText: {
+    ButtonText: {
         color: "#fff",
         fontWeight: "bold",
         fontSize: 14,
