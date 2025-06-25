@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import * as React from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   SafeAreaView,
   ScrollView,
@@ -34,7 +36,8 @@ const fetchProfileFromBackend = async (
   setEditableData: React.Dispatch<React.SetStateAction<UserData[]>>,
   setIsLockedOut: React.Dispatch<React.SetStateAction<boolean>>,
   setLockoutUntil: React.Dispatch<React.SetStateAction<number | null>>,
-  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>,
+  setAvatarUri?: React.Dispatch<React.SetStateAction<string | null>>
 ) => {
   const nuser_id = await AsyncStorage.getItem('nuser_id');
   if (!nuser_id) return;
@@ -54,6 +57,12 @@ const fetchProfileFromBackend = async (
         { label: "Email Address", value: data.email || "", key: "email" },
         { label: "Phone Number", value: data.phone || "", key: "phone" },
       ]);
+      if (setAvatarUri) {
+        const proxyUrl = getProxyPhotoUrl(data.photo_url);
+        setAvatarUri(proxyUrl);
+        await AsyncStorage.setItem('photo_url', proxyUrl);
+        console.log('Avatar URL set to:', proxyUrl);
+      }
       // Set lockout state
       if (data.profile_lockout_until && Date.now() < data.profile_lockout_until) {
         setIsLockedOut(true);
@@ -68,6 +77,13 @@ const fetchProfileFromBackend = async (
     // Optionally handle error
   }
 };
+
+// Helper to extract filename from a URL and build the proxy URL
+function getProxyPhotoUrl(photo_url: string | null | undefined) {
+  const safeUrl = typeof photo_url === 'string' ? photo_url : '';
+  const filename = safeUrl.split('/').pop();
+  return `http://mnl911.atwebpages.com/get_profile_photo.php?file=${filename}`;
+}
 
 const AccountDetails: React.FC = () => {
   const router = useRouter();
@@ -91,9 +107,10 @@ const AccountDetails: React.FC = () => {
   const [lockoutMessage, setLockoutMessage] = React.useState('');
   const [lockoutUntil, setLockoutUntil] = React.useState<number | null>(null);
   const [lockoutCountdown, setLockoutCountdown] = React.useState("");
+  const [avatarUri, setAvatarUri] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing);
+    fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing, setAvatarUri);
   }, []);
 
   React.useEffect(() => {
@@ -175,7 +192,7 @@ const AccountDetails: React.FC = () => {
         await AsyncStorage.setItem('phone', data.phone || "");
 
         // Refresh UI state from backend
-        fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing);
+        fetchProfileFromBackend(setOriginalData, setEditableData, setIsLockedOut, setLockoutUntil, setIsEditing, setAvatarUri);
 
         setCurrentPassword("");
         setNewPassword("");
@@ -233,6 +250,56 @@ const AccountDetails: React.FC = () => {
     setNewPassword("");
   };
 
+  // Image picker and upload
+  const pickAndUploadImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permission required!');
+      return;
+    }
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const uri = result.assets[0].uri;
+      setAvatarUri(uri);
+      const nuser_id = await AsyncStorage.getItem('nuser_id');
+      if (!nuser_id) {
+        alert('User ID not found. Please log in again.');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('nuser_id', nuser_id.toString());
+      formData.append('photo', {
+        uri: uri as string,
+        name: 'profile.jpg',
+        type: 'image/jpeg',
+      } as any);
+      try {
+        const response = await fetch('http://mnl911.atwebpages.com/upload_profile_photo1.php', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        if (data.success) {
+          const proxyUrl = getProxyPhotoUrl(data.photo_url);
+          setAvatarUri(proxyUrl);
+          await AsyncStorage.setItem('photo_url', proxyUrl);
+          console.log('Avatar URL set to:', proxyUrl);
+        } else {
+          alert(data.message || 'Upload failed');
+        }
+      } catch (e) {
+        alert('Network error');
+      }
+    }
+  };
+
+  // Add logging before rendering
+  console.log('Rendering avatarUri:', avatarUri);
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.surface} />
@@ -260,10 +327,19 @@ const AccountDetails: React.FC = () => {
           <View style={styles.avatarContainer}>
             <TouchableOpacity 
               style={[styles.avatar, { backgroundColor: theme.cardBackground }]} 
-              onPress={() => {}}
+              onPress={isEditing ? pickAndUploadImage : undefined}
               activeOpacity={0.8}
             >
-              <MaterialIcons name="person" size={40} color="#e02323" />
+              {avatarUri ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={{ width: 85, height: 85, borderRadius: 45 }}
+                  resizeMode="cover"
+                  onError={() => setAvatarUri(null)}
+                />
+              ) : (
+                <MaterialIcons name="person" size={40} color="#e02323" />
+              )}
               {isEditing && (
                 <View style={[styles.editAvatarOverlay, { borderColor: theme.background }]}>
                   <MaterialIcons name="edit" size={16} color="white" />
