@@ -211,7 +211,7 @@ export default function ArrivedStep() {
             </View>
             
             <TouchableOpacity style={[styles.button, { backgroundColor: buttonColor }]} onPress={() => router.push(`/police-officer/incident-response/ReportStep?alert_id=${alert_id}`)}>
-              <Text style={[styles.buttonText, { color: '#fff' }]}>Crime Resolved</Text>
+              <Text style={[styles.buttonText, { color: '#fff' }]}>Crime Responded</Text>
             </TouchableOpacity>
 
             <Text style={[styles.footerText, { color: isDarkMode ? currentTheme.subtitle : '#444' } ]}>

@@ -18,7 +18,7 @@ const API_UPLOAD_AUDIO_URL = 'http://mnl911.atwebpages.com/upload_audio.php';
 const API_CANCEL_SOS_URL = 'http://mnl911.atwebpages.com/cancel_sos_alert.php';
 const API_CHECK_STATUS_URL = 'http://mnl911.atwebpages.com/check_sos_status.php';
 
-type SOSState = 'idle' | 'countdown' | 'active' | 'received' | 'resolved';
+type SOSState = 'idle' | 'countdown' | 'active' | 'received' | 'arrived' | 'resolved';
 
 // Define the background location task
 TaskManager.defineTask('background-location-task', async ({ data, error }: TaskManager.TaskManagerTaskBody<{ locations: Location.LocationObject[] }>) => {
@@ -80,7 +80,7 @@ export default function RegularUserHome() {
 
   useEffect(() => {
     let animation: Animated.CompositeAnimation | undefined;
-    if (sosState === 'active' || sosState === 'received' || sosState === 'resolved') {
+    if (sosState === 'active' || sosState === 'received' || sosState === 'arrived' || sosState === 'resolved') {
       // Looping pulse animation for each ring, staggered
       const createPulseAnimation = (animValue: Animated.Value) =>
         Animated.sequence([
@@ -580,13 +580,15 @@ export default function RegularUserHome() {
 
   // Poll for police acceptance and resolution
   useEffect(() => {
-    if ((sosState === 'active' || sosState === 'received' || sosState === 'resolved') && currentAlertId) {
+    if ((sosState === 'active' || sosState === 'received' || sosState === 'arrived' || sosState === 'resolved') && currentAlertId) {
       pollingRef.current = setInterval(async () => {
         try {
           const res = await fetch(`${API_CHECK_STATUS_URL}?alert_id=${currentAlertId}`);
           const json = await res.json();
           if (json.status === 'active') {
             setSosState('received');
+          } else if (json.status === 'arrived') {
+            setSosState('arrived');
           } else if (json.status === 'resolved') {
             setSosState('resolved');
           } else if (json.status === 'cancelled') {
@@ -597,7 +599,7 @@ export default function RegularUserHome() {
         } catch (e) {
           console.log("Polling error:", e);
         }
-      }, 3000); // Reduced from 10000 to 3000 for faster status updates
+      }, 3000);
       return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
     }
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
@@ -867,6 +869,7 @@ export default function RegularUserHome() {
                 styles.sosRing1,
                 { width: ring1Size, height: ring1Size, borderRadius: ring1Size / 2 },
                 sosState === 'received' && styles.greenRing1,
+                sosState === 'arrived' && styles.arrivedRing1,
                 sosState === 'resolved' && styles.blueRing1,
                 { transform: [{ scale: ring1Anim }] }
               ]}
@@ -876,6 +879,7 @@ export default function RegularUserHome() {
                 styles.sosRing2,
                 { width: ring2Size, height: ring2Size, borderRadius: ring2Size / 2 },
                 sosState === 'received' && styles.greenRing2,
+                sosState === 'arrived' && styles.arrivedRing2,
                 sosState === 'resolved' && styles.blueRing2,
                 { transform: [{ scale: ring2Anim }] }
               ]}
@@ -885,6 +889,7 @@ export default function RegularUserHome() {
                 styles.sosRing3,
                 { width: ring3Size, height: ring3Size, borderRadius: ring3Size / 2 },
                 sosState === 'received' && styles.greenRing3,
+                sosState === 'arrived' && styles.arrivedRing3,
                 sosState === 'resolved' && styles.blueRing3,
                 { transform: [{ scale: ring3Anim }] }
               ]}
@@ -893,6 +898,7 @@ export default function RegularUserHome() {
               styles.sosCenter,
               { width: sosCenterSize, height: sosCenterSize, borderRadius: sosCenterSize / 2 },
               sosState === 'received' && styles.greenCenter,
+              sosState === 'arrived' && styles.arrivedCenter,
               sosState === 'resolved' && styles.blueCenter,
               (!location && !isSendingSOS) && styles.sosCenterDisabled
             ]}>
@@ -906,6 +912,8 @@ export default function RegularUserHome() {
                 <Text style={styles.sosText}>STOP</Text>
               ) : sosState === 'received' ? (
                 <Text style={styles.sosText}>RECEIVED</Text>
+              ) : sosState === 'arrived' ? (
+                <Text style={styles.sosText}>ARRIVED</Text>
               ) : sosState === 'resolved' ? (
                 <Text style={styles.sosText}>RESOLVED</Text>
               ) : isSendingSOS ? (
@@ -1144,5 +1152,17 @@ const styles = StyleSheet.create({
   }, // light blue
   blueCenter: {
     backgroundColor: '#2196F3' // main blue
+  },
+  arrivedRing1: {
+    backgroundColor: "#e3f2fd"
+  },
+  arrivedRing2: {
+    backgroundColor: "#90caf9"
+  },
+  arrivedRing3: {
+    backgroundColor: "#42a5f5"
+  },
+  arrivedCenter: {
+    backgroundColor: "#2196F3"
   },
 });

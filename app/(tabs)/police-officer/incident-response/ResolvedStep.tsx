@@ -16,7 +16,7 @@ export default function ResolvedStep() {
         <Text style={[styles.mapText, { color: currentTheme.subtitle }]}>[Map with incident location]</Text>
       </View>
       <View style={[styles.infoCard, { backgroundColor: currentTheme.cardBackground }]}>
-        <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Crime Resolved</Text>
+        <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Crime Responded</Text>
         <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>
           The threat has been neutralized and the scene is secure. Please collect evidence and prepare your final report.
         </Text>

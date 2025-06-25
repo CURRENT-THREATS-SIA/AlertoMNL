@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, Modal, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
 import { theme, useTheme } from '../../../context/ThemeContext';
@@ -488,8 +488,25 @@ export default function MapStep() {
         </View>
         <TouchableOpacity
           style={[styles.button, distanceToIncident !== null && distanceToIncident > 20 ? { backgroundColor: '#ccc' } : {}]}
-          onPress={() => {
+          onPress={async () => {
             if (distanceToIncident !== null && distanceToIncident <= 20) {
+              console.log('Sending arrived for alert_id:', alert_id);
+              try {
+                const response = await fetch('http://mnl911.atwebpages.com/status.php', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                  body: `action=arrived&alert_id=${alert_id}`
+                });
+                const data = await response.json();
+                console.log('Arrived response:', data);
+                if (!data.success) {
+                  alert('Failed to update status: ' + (data.error || 'Unknown error'));
+                }
+              } catch (err: any) {
+                console.error('Arrived error:', err);
+                alert('Network error: ' + err.message);
+              }
+              // 2. Then navigate to ArrivedStep
               router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
             }
           }}

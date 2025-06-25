@@ -54,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     $alert_lng
                 );
                 
-                // Include alerts within 3km radius
-                if ($distance <= 3) {
+                // Include alerts within 10km radius
+                if ($distance <= 10) {
                     $row['distance'] = round($distance, 2);
                     $notifications[] = $row;
                 }
