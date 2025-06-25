@@ -69,6 +69,39 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * c;
 }
 
+// --- ETA Calculation Utilities ---
+function getDistanceInMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371e3; // meters
+  const toRad = (deg: number) => deg * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function getRouteDistance(routeCoords: { lat: number, lng: number }[] | null) {
+  if (!routeCoords || routeCoords.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < routeCoords.length; i++) {
+    total += getDistanceInMeters(
+      routeCoords[i-1].lat, routeCoords[i-1].lng,
+      routeCoords[i].lat, routeCoords[i].lng
+    );
+  }
+  return total; // meters
+}
+
+function getETA(routeCoords: { lat: number, lng: number }[] | null, speedKmh: number = 30) {
+  const distance = getRouteDistance(routeCoords); // meters
+  const speedMs = speedKmh * 1000 / 3600; // m/s
+  if (distance === 0 || !speedMs) return null;
+  const etaSeconds = distance / speedMs;
+  return Math.round(etaSeconds / 60); // minutes
+}
+
 export default function MapStep() {
   const isMountedRef = React.useRef(true);
   React.useEffect(() => {
@@ -490,7 +523,9 @@ export default function MapStep() {
             <ClockIcon color="#E02323" />
             <View style={styles.infoTextContainer}>
               <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
-              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>15 minutes</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}> 
+                {getETA(routeCoords) !== null ? `${getETA(routeCoords)} minutes` : 'Calculating...'}
+              </Text>
             </View>
           </View>
           <View style={styles.infoRow}>
