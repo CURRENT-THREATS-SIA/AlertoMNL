@@ -784,11 +784,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingBottom: 20,
     maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
   modalHeader: {
     flexDirection: 'row',
