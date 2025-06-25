@@ -421,13 +421,13 @@ export default function MapStep() {
           </View>
         </View>
         <TouchableOpacity
-          style={[styles.button, distanceToIncident !== null && distanceToIncident > 100000 ? { backgroundColor: '#ccc' } : {}]}
+          style={[styles.button, distanceToIncident !== null && distanceToIncident > 20 ? { backgroundColor: '#ccc' } : {}]}
           onPress={() => {
-            if (distanceToIncident !== null && distanceToIncident <= 100000) {
+            if (distanceToIncident !== null && distanceToIncident <= 20) {
               router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
             }
           }}
-          disabled={distanceToIncident === null || distanceToIncident > 1000000}
+          disabled={distanceToIncident === null || distanceToIncident > 20}
         >
           <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
         </TouchableOpacity>

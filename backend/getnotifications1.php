@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     
     if ($result) {
         while ($row = $result->fetch_assoc()) {
-            // If police location is provided, check if within 10km radius (increased for better coverage)
+            // If police location is provided, check if within 3km radius
             if ($police_lat && $police_lng) {
                 $alert_lat = floatval($row['a_latitude']);
                 $alert_lng = floatval($row['a_longitude']);
@@ -54,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     $alert_lng
                 );
                 
-                // Include alerts within 10km radius (increased for better coverage)
-                if ($distance <= 10) {
+                // Include alerts within 3km radius
+                if ($distance <= 3) {
                     $row['distance'] = round($distance, 2);
                     $notifications[] = $row;
                 }
