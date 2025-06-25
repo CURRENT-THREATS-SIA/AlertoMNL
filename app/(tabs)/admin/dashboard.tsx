@@ -103,8 +103,8 @@ export default function Dashboard() {
                     
                     // 2. THE FIX: Remove duplicates by alertId, keeping the most recent entry
                     const uniqueRecords = Array.from(
-                        new Map(sortedRecords.map(record => [record.alertId, record])).values()
-                    );
+                        new Map(sortedRecords.map((record: CrimeRecord) => [record.alertId, record])).values()
+                    ) as CrimeRecord[];
                     
                     // 3. Set the state with the top 5 most recent unique crimes
                     setRecentCrimes(uniqueRecords.slice(0, 5));

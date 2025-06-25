@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Modal, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Modal, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
 import { theme, useTheme } from '../../../context/ThemeContext';
@@ -67,6 +67,39 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// --- ETA Calculation Utilities ---
+function getDistanceInMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371e3; // meters
+  const toRad = (deg: number) => deg * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function getRouteDistance(routeCoords: { lat: number, lng: number }[] | null) {
+  if (!routeCoords || routeCoords.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < routeCoords.length; i++) {
+    total += getDistanceInMeters(
+      routeCoords[i-1].lat, routeCoords[i-1].lng,
+      routeCoords[i].lat, routeCoords[i].lng
+    );
+  }
+  return total; // meters
+}
+
+function getETA(routeCoords: { lat: number, lng: number }[] | null, speedKmh: number = 30) {
+  const distance = getRouteDistance(routeCoords); // meters
+  const speedMs = speedKmh * 1000 / 3600; // m/s
+  if (distance === 0 || !speedMs) return null;
+  const etaSeconds = distance / speedMs;
+  return Math.round(etaSeconds / 60); // minutes
 }
 
 export default function MapStep() {
@@ -448,73 +481,80 @@ export default function MapStep() {
           hideControls={true}
         />
       </View>
-      <View style={[styles.infoCard, { backgroundColor: currentTheme.cardBackground }]}>
-        <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
-        <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Navigate to the incident location and follow the route for the fastest response.</Text>
-        <View style={styles.infoRow}>
-          <PinIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Address</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails.a_address || 'Unknown address'}</Text>
-          </View>
+      <Animated.View 
+        style={[
+          styles.infoCard, 
+          { 
+            backgroundColor: currentTheme.cardBackground,
+            height: animatedHeight,
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }
+        ]}
+      >
+        <View {...panResponder.panHandlers}>
+          <DragHandleIcon />
         </View>
-        <View style={styles.infoRow}>
-          <PersonPinIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Your Location</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{officerAddress}</Text>
-          </View>
-        </View>
-        <View style={styles.infoRow}>
-          <ClockIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>15 minutes</Text>
-          </View>
-        </View>
-        <View style={styles.infoRow}>
-          <CalendarIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Reported</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
-          </View>
-        </View>
-        <View style={styles.infoRow}>
-          <UserIcon color="#E02323" />
-          <View style={styles.infoTextContainer}>
-            <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Victim</Text>
-            <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={[styles.button, distanceToIncident !== null && distanceToIncident > 20 ? { backgroundColor: '#ccc' } : {}]}
-          onPress={async () => {
-            if (distanceToIncident !== null && distanceToIncident <= 20) {
-              console.log('Sending arrived for alert_id:', alert_id);
-              try {
-                const response = await fetch('http://mnl911.atwebpages.com/status.php', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                  body: `action=arrived&alert_id=${alert_id}`
-                });
-                const data = await response.json();
-                console.log('Arrived response:', data);
-                if (!data.success) {
-                  alert('Failed to update status: ' + (data.error || 'Unknown error'));
-                }
-              } catch (err: any) {
-                console.error('Arrived error:', err);
-                alert('Network error: ' + err.message);
-              }
-              // 2. Then navigate to ArrivedStep
-              router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
-            }
-          }}
-          disabled={distanceToIncident === null || distanceToIncident > 20}
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={isExpanded}
         >
-          <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
+          <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Navigate to the incident location and follow the route for the fastest response.</Text>
+          <View style={styles.infoRow}>
+            <PinIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Address</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails.a_address || 'Unknown address'}</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <PersonPinIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Your Location</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{officerAddress}</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <ClockIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}> 
+                {getETA(routeCoords) !== null ? `${getETA(routeCoords)} minutes` : 'Calculating...'}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <CalendarIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Reported</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <UserIcon color="#E02323" />
+            <View style={styles.infoTextContainer}>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Victim</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, distanceToIncident !== null && distanceToIncident > 100000 ? { backgroundColor: '#ccc' } : {}]}
+            onPress={() => {
+              if (distanceToIncident !== null && distanceToIncident <= 100000) {
+                router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
+              }
+            }}
+            disabled={distanceToIncident === null || distanceToIncident > 1000000}
+          >
+            <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </Animated.View>
       <Modal
         visible={showAccuracyModal}
         transparent
