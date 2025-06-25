@@ -63,7 +63,7 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
 
   const handleNavigation = (path: string, isCurrentTab: boolean) => {
     if (isCurrentTab && pathname.includes('/history/')) return;
-    router.push(path);
+    router.replace(path);
   };
 
   return (

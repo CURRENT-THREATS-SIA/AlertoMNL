@@ -7,7 +7,7 @@ import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
@@ -18,7 +18,7 @@ const API_UPLOAD_AUDIO_URL = 'http://mnl911.atwebpages.com/upload_audio.php';
 const API_CANCEL_SOS_URL = 'http://mnl911.atwebpages.com/cancel_sos_alert.php';
 const API_CHECK_STATUS_URL = 'http://mnl911.atwebpages.com/check_sos_status.php';
 
-type SOSState = 'idle' | 'countdown' | 'active' | 'received' | 'resolved';
+type SOSState = 'idle' | 'countdown' | 'active' | 'received' | 'arrived' | 'resolved';
 
 // Define the background location task
 TaskManager.defineTask('background-location-task', async ({ data, error }: TaskManager.TaskManagerTaskBody<{ locations: Location.LocationObject[] }>) => {
@@ -48,6 +48,7 @@ export default function RegularUserHome() {
   const [locationAddress, setLocationAddress] = useState<string>("Fetching location...");
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [hasStoppedManualRecording, setHasStoppedManualRecording] = useState(false); // ← ADD HERE
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [manualRecording, setManualRecording] = useState<Audio.Recording | null>(null);
@@ -62,14 +63,24 @@ export default function RegularUserHome() {
   const cancelCountdownRef = useRef(false);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
 
+  // --- Refs for managing the automatic SOS recording ---
+  const sosRecordingRef = useRef<Audio.Recording | null>(null);
+
   // Animated values for rings
   const ring1Anim = useRef(new Animated.Value(1)).current;
   const ring2Anim = useRef(new Animated.Value(1)).current;
   const ring3Anim = useRef(new Animated.Value(1)).current;
 
+  const screenWidth = Dimensions.get('window').width;
+  const sosButtonSize = Math.min(screenWidth * 0.7, 300); // 70% of width, max 300px
+  const ring1Size = sosButtonSize + 20;
+  const ring2Size = sosButtonSize;
+  const ring3Size = sosButtonSize - 15;
+  const sosCenterSize = sosButtonSize - 40;
+
   useEffect(() => {
     let animation: Animated.CompositeAnimation | undefined;
-    if (sosState === 'active' || sosState === 'received' || sosState === 'resolved') {
+    if (sosState === 'active' || sosState === 'received' || sosState === 'arrived' || sosState === 'resolved') {
       // Looping pulse animation for each ring, staggered
       const createPulseAnimation = (animValue: Animated.Value) =>
         Animated.sequence([
@@ -162,13 +173,47 @@ export default function RegularUserHome() {
   // --- NEW: Auto-reset SOS button after resolved in real mode ---
   useEffect(() => {
     if (!testModeEnabled && sosState === 'resolved') {
-      const timer = setTimeout(() => {
-        setSosState('idle');
-        setIsSendingSOS(false);
-      }, 5000);
-      return () => clearTimeout(timer);
+      const handleResolved = async () => {
+        // --- NEW: Stop and upload automatic recording on resolution ---
+        if (sosRecordingRef.current && currentAlertId) {
+          console.log("SOS Resolved. Stopping and uploading any active SOS recording.");
+          // This function handles stopping the recording and uploading the file.
+          await stopAndUploadSosRecording(currentAlertId);
+        }
+
+        if (manualRecording) {
+          try {
+            await manualRecording.stopAndUnloadAsync();
+            const uri = manualRecording.getURI();
+            if (uri) {
+              addRecord({
+                id: Date.now().toString(),
+                title: `Auto-Stopped Recording`,
+                duration: 'N/A',
+                date: new Date().toLocaleDateString(),
+                uri,
+              });
+            }
+          } catch (err) {
+            console.error('Error auto-stopping manual recording:', err);
+          } finally {
+            setManualRecording(null);
+            setIsRecording(false);
+            setHasStoppedManualRecording(true);
+          }
+        }
+  
+        const timer = setTimeout(() => {
+          setSosState('idle');
+          setIsSendingSOS(false);
+        }, 5000);
+  
+        return () => clearTimeout(timer);
+      };
+  
+      handleResolved();
     }
-  }, [sosState, testModeEnabled]);
+  }, [sosState, testModeEnabled, currentAlertId]);
 
   // --- AGGRESSIVE CLEANUP FUNCTION WITH FORCED PAUSE ---
   const ensureAudioIsFree = async () => {
@@ -401,6 +446,59 @@ export default function RegularUserHome() {
     }
   };
 
+  // --- NEW RECORDING LOGIC (REFACTORED) ---
+
+  // Stops the automatic recording and uploads the file.
+  // This is typically called by a timer.
+  const stopAndUploadSosRecording = async (alertId: number) => {
+    if (!sosRecordingRef.current) return;
+
+    console.log("15-second timer elapsed. Stopping and uploading SOS recording.");
+    try {
+      await sosRecordingRef.current.stopAndUnloadAsync();
+      const uri = sosRecordingRef.current.getURI();
+      if (uri) {
+        // Upload audio in background without blocking
+        setTimeout(() => {
+          uploadAudio(uri, alertId);
+        }, 100);
+      }
+    } catch (e) {
+      console.error("Error stopping and uploading SOS recording:", e);
+    } finally {
+      sosRecordingRef.current = null;
+      if (!manualRecording) { // Only turn off indicator if no other recording is active
+        setIsRecording(false);
+      }
+    }
+  };
+
+  // Starts the automatic 15-second SOS recording.
+  const startSosRecording = async (alertId: number) => {
+    if (sosRecordingRef.current) {
+      console.warn("SOS recording already in progress. Aborting new one.");
+      return;
+    }
+
+    setIsRecording(true);
+    try {
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      sosRecordingRef.current = recording;
+
+      // The recording will now continue until the SOS is resolved or stopped manually.
+      // The setTimeout has been removed.
+
+    } catch (error) {
+      console.error('Error starting SOS recording:', error);
+      setIsRecording(false); // Ensure this is reset on failure
+      if (sosRecordingRef.current) {
+        try { await sosRecordingRef.current.stopAndUnloadAsync(); } catch (e) { /* ignore */ }
+        sosRecordingRef.current = null;
+      }
+    }
+  };
+
   // --- RECORDING LOGIC ---
   const recordAndUploadAudio = async (alertId: number) => {
     setIsRecording(true);
@@ -434,6 +532,16 @@ export default function RegularUserHome() {
   };
   
   const startManualRecording = async () => {
+    if (sosState !== 'active') {
+      Alert.alert('Notice', 'Voice Recording cannot be triggered when SOS is not active.');
+      return;
+    }
+
+    if (hasStoppedManualRecording) {
+      Alert.alert('Not Allowed', 'You have already recorded. Recording again is not allowed.');
+      return;
+    }
+  
     await ensureAudioIsFree();
     try {
       setIsRecording(true);
@@ -447,6 +555,7 @@ export default function RegularUserHome() {
 
   const stopManualRecording = async () => {
     if (!manualRecording) return;
+  
     try {
       await manualRecording.stopAndUnloadAsync();
       const uri = manualRecording.getURI();
@@ -454,27 +563,32 @@ export default function RegularUserHome() {
         addRecord({
           id: Date.now().toString(),
           title: `Manual Recording ${new Date().toLocaleDateString()}`,
-          duration: 'N/A', date: new Date().toLocaleDateString(), uri,
+          duration: 'N/A',
+          date: new Date().toLocaleDateString(),
+          uri,
         });
         Alert.alert("Recording Saved");
       }
-    } catch(error) {
+    } catch (error) {
       console.error('Failed to stop manual recording', error);
     } finally {
       setManualRecording(null);
-      setIsRecording(false);
+      setHasStoppedManualRecording(true);
     }
   };
+  
 
   // Poll for police acceptance and resolution
   useEffect(() => {
-    if ((sosState === 'active' || sosState === 'received' || sosState === 'resolved') && currentAlertId) {
+    if ((sosState === 'active' || sosState === 'received' || sosState === 'arrived' || sosState === 'resolved') && currentAlertId) {
       pollingRef.current = setInterval(async () => {
         try {
           const res = await fetch(`${API_CHECK_STATUS_URL}?alert_id=${currentAlertId}`);
           const json = await res.json();
           if (json.status === 'active') {
             setSosState('received');
+          } else if (json.status === 'arrived') {
+            setSosState('arrived');
           } else if (json.status === 'resolved') {
             setSosState('resolved');
           } else if (json.status === 'cancelled') {
@@ -485,7 +599,7 @@ export default function RegularUserHome() {
         } catch (e) {
           console.log("Polling error:", e);
         }
-      }, 3000); // Reduced from 10000 to 3000 for faster status updates
+      }, 3000);
       return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
     }
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
@@ -584,9 +698,9 @@ export default function RegularUserHome() {
       if (json.success && json.alert_id) {
         setSosState('active');
         setCurrentAlertId(json.alert_id);
-        
+        setIsSendingSOS(false);
         // Asynchronous background tasks
-        recordAndUploadAudio(json.alert_id);
+        startSosRecording(json.alert_id);
         sendSOSMessages(`Emergency! I'm at ${locationAddress}. Latitude: ${currentLocation.coords.latitude}, Longitude: ${currentLocation.coords.longitude}`);
         
       } else {
@@ -604,30 +718,77 @@ export default function RegularUserHome() {
   // --- CANCEL/STOP SOS HANDLER ---
   const handleStop = async () => {
     if (testModeEnabled) {
-        Alert.alert('Simulation Stopped', 'You have stopped the SOS simulation.');
-        setSosState('idle');
-        setIsSendingSOS(false);
-        setCountdown(null);
-        cancelCountdownRef.current = true;
-        return;
+      Alert.alert('Simulation Stopped', 'You have stopped the SOS simulation.');
+      setSosState('idle');
+      setIsSendingSOS(false);
+      setCountdown(null);
+      cancelCountdownRef.current = true;
+      return;
     }
 
-    if (!currentAlertId) return;
-    try {
-      const formData = new FormData();
-      formData.append('alert_id', currentAlertId.toString());
-      await fetch(API_CANCEL_SOS_URL, { method: 'POST', body: formData });
-      // If STOP is pressed before police accept, show alert and disable SOS for 5 minutes
-      if (sosState === 'active') {
-        Alert.alert('SOS Stopped', 'You fully stopped your SOS initialization. You will be restricted from clicking it for 5 minutes.');
-        setSosDisabledUntil(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+    if (currentAlertId) {
+      try {
+        const formData = new FormData();
+        formData.append('alert_id', currentAlertId.toString());
+        await fetch(API_CANCEL_SOS_URL, { method: 'POST', body: formData });
+        if (sosState === 'active') {
+          Alert.alert(
+            'SOS Stopped',
+            'Your SOS has been cancelled. You can send another alert after 10 seconds.'
+          );
+          const restrictionTime = 10 * 1000; // 10 seconds
+          setSosDisabledUntil(Date.now() + restrictionTime);
+
+          // After 10 seconds, automatically re-enable the button by clearing the restriction.
+          // This state update will trigger a re-render and make the button pressable again.
+          setTimeout(() => {
+            setSosDisabledUntil(null);
+          }, restrictionTime);
+        }
+      } catch (e) {
+        Alert.alert('Error', 'Failed to cancel SOS alert.');
       }
-    } catch (e) {
-      Alert.alert('Error', 'Failed to cancel SOS alert.');
     }
+    if (sosRecordingRef.current) {
+      try {
+        console.log("User stopped SOS. Terminating automatic recording without upload.");
+        await sosRecordingRef.current.stopAndUnloadAsync();
+      } catch (err) {
+        console.error('Error stopping automatic SOS recording on cancel:', err);
+      } finally {
+        sosRecordingRef.current = null;
+      }
+    }
+    if (manualRecording) {
+      try {
+        await manualRecording.stopAndUnloadAsync();
+        const uri = manualRecording.getURI();
+        if (uri) {
+          addRecord({
+            id: Date.now().toString(),
+            title: `Cancelled SOS Recording`,
+            duration: 'N/A',
+            date: new Date().toLocaleDateString(),
+            uri,
+          });
+        }
+      } catch (err) {
+        console.error('Error auto-stopping recording on cancel:', err);
+      } finally {
+        setManualRecording(null);
+        setHasStoppedManualRecording(true);
+      }
+    }
+    
+    // Since both manual and automatic recordings are now terminated,
+    // we can safely turn off the recording indicator.
+    setIsRecording(false);
+
     setSosState('idle');
     setCurrentAlertId(null);
     if (pollingRef.current) clearInterval(pollingRef.current);
+    setIsSendingSOS(false);
+    setCountdown(null);
   };
 
   // --- Disable SOS button if restricted ---
@@ -687,15 +848,15 @@ export default function RegularUserHome() {
 
   // --- JSX / RENDER ---
   return (
-    <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <View style={styles.mainContent}>
         <View style={styles.sosSection}>
           <View style={styles.helpText}>
-            <Text style={[styles.helpTextPrimary, { color: currentTheme.text }]}>Help is just a click away!</Text>
-            <Text style={[styles.helpTextSecondary, { color: currentTheme.text }]}>Click <Text style={styles.redText}>SOS button</Text> to call for help.</Text>
+            <Text style={[styles.helpTextPrimary, { color: currentTheme.text }]} adjustsFontSizeToFit numberOfLines={1}>Help is just a click away!</Text>
+            <Text style={[styles.helpTextSecondary, { color: currentTheme.text }]} adjustsFontSizeToFit numberOfLines={1}>Click <Text style={styles.redText}>SOS button</Text> to call for help.</Text>
           </View>
           <TouchableOpacity
-            style={styles.sosButton}
+            style={[styles.sosButton, { width: sosButtonSize, height: sosButtonSize, marginVertical: sosButtonSize * 0.08 }]}
             onPress={
               sosState === 'active' ? handleStop :
               sosState === 'countdown' ? undefined :
@@ -706,7 +867,9 @@ export default function RegularUserHome() {
             <Animated.View
               style={[
                 styles.sosRing1,
+                { width: ring1Size, height: ring1Size, borderRadius: ring1Size / 2 },
                 sosState === 'received' && styles.greenRing1,
+                sosState === 'arrived' && styles.arrivedRing1,
                 sosState === 'resolved' && styles.blueRing1,
                 { transform: [{ scale: ring1Anim }] }
               ]}
@@ -714,7 +877,9 @@ export default function RegularUserHome() {
             <Animated.View
               style={[
                 styles.sosRing2,
+                { width: ring2Size, height: ring2Size, borderRadius: ring2Size / 2 },
                 sosState === 'received' && styles.greenRing2,
+                sosState === 'arrived' && styles.arrivedRing2,
                 sosState === 'resolved' && styles.blueRing2,
                 { transform: [{ scale: ring2Anim }] }
               ]}
@@ -722,14 +887,18 @@ export default function RegularUserHome() {
             <Animated.View
               style={[
                 styles.sosRing3,
+                { width: ring3Size, height: ring3Size, borderRadius: ring3Size / 2 },
                 sosState === 'received' && styles.greenRing3,
+                sosState === 'arrived' && styles.arrivedRing3,
                 sosState === 'resolved' && styles.blueRing3,
                 { transform: [{ scale: ring3Anim }] }
               ]}
             />
             <View style={[
               styles.sosCenter,
+              { width: sosCenterSize, height: sosCenterSize, borderRadius: sosCenterSize / 2 },
               sosState === 'received' && styles.greenCenter,
+              sosState === 'arrived' && styles.arrivedCenter,
               sosState === 'resolved' && styles.blueCenter,
               (!location && !isSendingSOS) && styles.sosCenterDisabled
             ]}>
@@ -743,6 +912,8 @@ export default function RegularUserHome() {
                 <Text style={styles.sosText}>STOP</Text>
               ) : sosState === 'received' ? (
                 <Text style={styles.sosText}>RECEIVED</Text>
+              ) : sosState === 'arrived' ? (
+                <Text style={styles.sosText}>ARRIVED</Text>
               ) : sosState === 'resolved' ? (
                 <Text style={styles.sosText}>RESOLVED</Text>
               ) : isSendingSOS ? (
@@ -759,10 +930,10 @@ export default function RegularUserHome() {
             </View>
           </TouchableOpacity>
           <View style={styles.locationInfo}>
-            <Text style={[styles.locationText, { color: currentTheme.text }]}>{locationAddress}</Text>
-            <Text style={[styles.coordinatesText, { color: currentTheme.text }]}>
-              <Text style={styles.redText}>Latitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.latitude.toFixed(4) || '---'}</Text>
-              <Text style={styles.redText}>  Longitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.longitude.toFixed(4) || '---'}</Text>
+            <Text style={[styles.locationText, { color: currentTheme.text }]} numberOfLines={1} adjustsFontSizeToFit>{locationAddress}</Text>
+            <Text style={[styles.coordinatesText, { color: currentTheme.text }]} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={styles.redText}>Latitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.latitude?.toFixed(4) || '---'}</Text>
+              <Text style={styles.redText}>  Longitude: </Text><Text style={[styles.boldText, { color: currentTheme.text }]}>{location?.coords.longitude?.toFixed(4) || '---'}</Text>
             </Text>
           </View>
         </View>
@@ -770,7 +941,7 @@ export default function RegularUserHome() {
           style={[
             styles.voiceButton, 
             isRecording && styles.voiceButtonRecording,
-            { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8' }
+            { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', width: '100%', maxWidth: 500, alignSelf: 'center' }
           ]} 
           onPress={manualRecording ? stopManualRecording : startManualRecording} 
           disabled={isSendingSOS || isRecording}
@@ -793,7 +964,7 @@ export default function RegularUserHome() {
           <TouchableOpacity
             style={[
               styles.voiceButton,
-              { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', marginTop: 12 }
+              { backgroundColor: isDarkMode ? '#2a2a2a' : '#ffd8d8', marginTop: 12, width: '100%', maxWidth: 500, alignSelf: 'center' }
             ]}
             onPress={() => {
               cancelCountdownRef.current = true;
@@ -812,7 +983,7 @@ export default function RegularUserHome() {
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -825,16 +996,23 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     paddingTop: 24,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   sosSection: {
     alignItems: "center",
+    width: '100%',
   },
   helpText: {
     alignItems: "center",
     gap: 4,
+    marginBottom: 8,
+    width: '100%',
   },
   helpTextPrimary: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   helpTextSecondary: {
     fontSize: 14,
@@ -848,40 +1026,26 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   sosButton: {
-    width: 250,
-    height: 250,
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 20,
   },
   sosRing1: {
     position: "absolute",
-    width: 260,
-    height: 260,
-    borderRadius: 130,
     backgroundColor: "#fae8e9", // lightest red
   },
   sosRing2: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
     backgroundColor: "#f9d2d2", // lighter red
   },
   sosRing3: {
     position: "absolute",
-    width: 225,
-    height: 225,
-    borderRadius: 110,
     backgroundColor: "#f2a6a6", // light red
   },
   sosCenter: {
-    width: 210,
-    height: 210,
-    borderRadius: 110,
-    backgroundColor: "#e02323", // main red
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#e02323", // main red
+    position: 'relative',
   },
   // Green palette for RECEIVED state
   greenRing1: {
@@ -915,13 +1079,20 @@ const styles = StyleSheet.create({
   },
   locationInfo: {
     alignItems: "center",
+    marginTop: 8,
+    marginBottom: 8,
+    width: '100%',
   },
   locationText: {
     fontSize: 14,
+    width: '100%',
+    textAlign: 'center',
   },
   coordinatesText: {
     fontSize: 14,
     paddingBottom: 12,
+    width: '100%',
+    textAlign: 'center',
   },
   voiceButton: {
     backgroundColor: "#ffd8d8",
@@ -981,5 +1152,17 @@ const styles = StyleSheet.create({
   }, // light blue
   blueCenter: {
     backgroundColor: '#2196F3' // main blue
+  },
+  arrivedRing1: {
+    backgroundColor: "#e3f2fd"
+  },
+  arrivedRing2: {
+    backgroundColor: "#90caf9"
+  },
+  arrivedRing3: {
+    backgroundColor: "#42a5f5"
+  },
+  arrivedCenter: {
+    backgroundColor: "#2196F3"
   },
 });

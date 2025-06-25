@@ -2,22 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity, // <-- Import Modal
-    TouchableWithoutFeedback // <-- Import TouchableWithoutFeedback
-    ,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity, // <-- Import Modal
+  TouchableWithoutFeedback // <-- Import TouchableWithoutFeedback
+  ,
 
 
 
 
 
-    View
+
+
+
+
+  View
 } from 'react-native';
 import { Path, Svg } from 'react-native-svg'; // <-- Import Svg for the dropdown arrow
 import Header from '../../../../components/Header';
@@ -63,8 +67,9 @@ export default function ReportStep() {
     formData.append('incident_type', incidentType);
     formData.append('severity', severity);
     formData.append('description', description);
+    formData.append('action', 'resolve');
 
-    const response = await fetch('http://mnl911.atwebpages.com/resolve_sos_alert.php', {
+    const response = await fetch('http://mnl911.atwebpages.com/status.php', {
       method: 'POST',
       body: formData,
     });

@@ -46,7 +46,7 @@ const NavBottomBar: React.FC<NavBottomBarProps> = ({ activeScreen }) => {
   ];
 
   const handleNavigation = (screen: string) => {
-    router.push(screen);
+    router.replace(screen);
   };
 
   return (

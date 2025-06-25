@@ -2,20 +2,21 @@ import { Feature, Point } from 'geojson';
 import React, { useEffect, useState } from 'react';
 import {
   Animated,
-  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
-  View,
+  View
 } from 'react-native';
 
+import * as Location from 'expo-location';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
 import { createCrimeTypeData, StationName, totalCrime, totalCrimeData, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
+import SelectionModal from '../../components/SelectionModal';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
 
@@ -97,6 +98,7 @@ const CrimeMap: React.FC = () => {
   const [showStationModal, setShowStationModal] = useState(false);
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
   const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Add reset function
   const handleReset = () => {
@@ -284,6 +286,21 @@ const CrimeMap: React.FC = () => {
     }
   }, [isLegendVisible]);
 
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+      setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      // Optionally, watch position for live updates
+      const sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 10 },
+        (loc) => setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude })
+      );
+      return () => sub.remove();
+    })();
+  }, []);
+
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <ScrollView 
@@ -298,6 +315,8 @@ const CrimeMap: React.FC = () => {
               selectedStation={selectedStation}
               userType="regular"
               data={filteredMapData}
+              userLocation={userLocation ?? undefined}
+              hideControls={false}
             />
             
             {/* Legend Toggle Button */}
@@ -398,130 +417,35 @@ const CrimeMap: React.FC = () => {
           </TouchableOpacity>
 
           {/* Crime Type Modal */}
-          <Modal
+          <SelectionModal
             visible={showCrimeTypeModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowCrimeTypeModal(false)}
-          >
-            <TouchableOpacity 
-              style={styles.modalOverlay} 
-              activeOpacity={1} 
-              onPress={() => setShowCrimeTypeModal(false)}
-            >
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Crime Type</Text>
-                  <TouchableOpacity 
-                    onPress={() => setShowCrimeTypeModal(false)}
-                    style={styles.closeButton}
-                  >
-                    <MaterialIcons name="close" size={24} color="#000" />
-                  </TouchableOpacity>
-                </View>
-                <ScrollView>
-                  {/* Reset Option for Crime Type */}
-                  <TouchableOpacity
-                    style={[
-                      styles.modalOption,
-                      { borderBottomColor: currentTheme.cardBorder }
-                    ]}
-                    onPress={() => {
-                      setSelectedCrimeType('');
-                      setShowCrimeTypeModal(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.modalOptionText,
-                      { color: '#E02323', fontFamily: fonts.poppins.semiBold }
-                    ]}>
-                      Show All Crime Types
-                    </Text>
-                  </TouchableOpacity>
-                  {crimeTypes.map((type) => (
-                    <TouchableOpacity
-                      key={type.id}
-                      style={[
-                        styles.modalOption,
-                        selectedCrimeType === type.value && styles.modalOptionSelected
-                      ]}
-                      onPress={() => handleCrimeTypeSelect(type.value)}
-                    >
-                      <Text style={[
-                        styles.modalOptionText,
-                        selectedCrimeType === type.value && styles.modalOptionTextSelected
-                      ]}>
-                        {type.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </TouchableOpacity>
-          </Modal>
-
+            onClose={() => setShowCrimeTypeModal(false)}
+            title="Select Crime Type"
+            options={crimeTypes}
+            selectedValue={selectedCrimeType}
+            onSelect={handleCrimeTypeSelect}
+            resetLabel="Show All Crime Types"
+            onReset={() => {
+              setSelectedCrimeType('');
+              setShowCrimeTypeModal(false);
+            }}
+            cardBorderColor={currentTheme.cardBorder}
+          />
           {/* Station Modal */}
-          <Modal
+          <SelectionModal
             visible={showStationModal}
-            transparent={true}
-            animationType="slide"
-            onRequestClose={() => setShowStationModal(false)}
-          >
-            <TouchableOpacity 
-              style={styles.modalOverlay} 
-              activeOpacity={1} 
-              onPress={() => setShowStationModal(false)}
-            >
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Police Station</Text>
-                  <TouchableOpacity 
-                    onPress={() => setShowStationModal(false)}
-                    style={styles.closeButton}
-                  >
-                    <MaterialIcons name="close" size={24} color="#000" />
-                  </TouchableOpacity>
-                </View>
-                <ScrollView>
-                  {/* Reset Option for Station */}
-                  <TouchableOpacity
-                    style={[
-                      styles.modalOption,
-                      { borderBottomColor: currentTheme.cardBorder }
-                    ]}
-                    onPress={() => {
-                      setSelectedStation(null);
-                      setShowStationModal(false);
-                    }}
-                  >
-                    <Text style={[
-                      styles.modalOptionText,
-                      { color: '#E02323', fontFamily: fonts.poppins.semiBold }
-                    ]}>
-                      Show All Stations
-                    </Text>
-                  </TouchableOpacity>
-                  {policeStations.map((station) => (
-                    <TouchableOpacity
-                      key={station.id}
-                      style={[
-                        styles.modalOption,
-                        selectedStation === station.value && styles.modalOptionSelected
-                      ]}
-                      onPress={() => handleStationSelect(station.value)}
-                    >
-                      <Text style={[
-                        styles.modalOptionText,
-                        selectedStation === station.value && styles.modalOptionTextSelected
-                      ]}>
-                        {station.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            </TouchableOpacity>
-          </Modal>
+            onClose={() => setShowStationModal(false)}
+            title="Select Police Station"
+            options={policeStations}
+            selectedValue={selectedStation}
+            onSelect={handleStationSelect}
+            resetLabel="Show All Stations"
+            onReset={() => {
+              setSelectedStation(null);
+              setShowStationModal(false);
+            }}
+            cardBorderColor={currentTheme.cardBorder}
+          />
 
           <View style={styles.statsRow}>
             {crimeStats.map((stat, index) => (

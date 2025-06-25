@@ -111,9 +111,10 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       const formData = new FormData();
+      formData.append('action', 'accept');
       formData.append('alert_id', alertId.toString());
       formData.append('police_id', policeId);
-      const response = await fetch(API_ACCEPT_SOS_URL, { method: 'POST', body: formData });
+      const response = await fetch('http://mnl911.atwebpages.com/status.php', { method: 'POST', body: formData });
       const result = await response.json();
 
       if (result.success) {

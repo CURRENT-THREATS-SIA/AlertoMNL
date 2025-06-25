@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -141,6 +142,9 @@ const CrimeMap: React.FC = () => {
   // --- Map Filtering State from master ---
   const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
 
+  // --- NEW: State for the officer's location ---
+  const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | null>(null);
+
   // Only show the modal for the latest unseen alert
   useEffect(() => {
     if (notifications.length > 0) {
@@ -276,6 +280,22 @@ const CrimeMap: React.FC = () => {
     filterMapData();
   }, [selectedCrimeType, selectedStation]);
 
+  // --- NEW: Effect to get and watch the officer's location ---
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+      setOfficerLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      // Optionally, watch position for live updates
+      const sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 10 },
+        (loc) => setOfficerLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude })
+      );
+      return () => sub.remove();
+    })();
+  }, []);
+
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <AlertModal 
@@ -305,6 +325,7 @@ const CrimeMap: React.FC = () => {
               userType="police"
               selectedCrimeType={selectedCrimeType}
               selectedStation={selectedStation}
+              userLocation={officerLocation ?? undefined}
             />
             
             {/* Legend Toggle Button */}
@@ -410,18 +431,18 @@ const CrimeMap: React.FC = () => {
             onRequestClose={() => setShowCrimeTypeModal(false)}
           >
             <TouchableOpacity 
-              style={[styles.modalOverlay, { backgroundColor: currentTheme.modalOverlay }]} 
+              style={styles.modalOverlay} 
               activeOpacity={1} 
               onPress={() => setShowCrimeTypeModal(false)}
             >
-              <View style={[styles.modalContent, { backgroundColor: currentTheme.modalBackground }]}>
-                <View style={[styles.modalHeader, { borderBottomColor: currentTheme.cardBorder }]}>
-                  <Text style={[styles.modalTitle, { color: currentTheme.text }]}>Select Crime Type</Text>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Crime Type</Text>
                   <TouchableOpacity 
                     onPress={() => setShowCrimeTypeModal(false)}
                     style={styles.closeButton}
                   >
-                    <MaterialIcons name="close" size={24} color={currentTheme.text} />
+                    <MaterialIcons name="close" size={24} color="#000" />
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
@@ -448,14 +469,12 @@ const CrimeMap: React.FC = () => {
                       key={type.id}
                       style={[
                         styles.modalOption,
-                        { borderBottomColor: currentTheme.cardBorder },
                         selectedCrimeType === type.value && styles.modalOptionSelected
                       ]}
                       onPress={() => handleCrimeTypeSelect(type.value)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        { color: currentTheme.text },
                         selectedCrimeType === type.value && styles.modalOptionTextSelected
                       ]}>
                         {type.label}
@@ -475,18 +494,18 @@ const CrimeMap: React.FC = () => {
             onRequestClose={() => setShowStationModal(false)}
           >
             <TouchableOpacity 
-              style={[styles.modalOverlay, { backgroundColor: currentTheme.modalOverlay }]} 
+              style={styles.modalOverlay} 
               activeOpacity={1} 
               onPress={() => setShowStationModal(false)}
             >
-              <View style={[styles.modalContent, { backgroundColor: currentTheme.modalBackground }]}>
-                <View style={[styles.modalHeader, { borderBottomColor: currentTheme.cardBorder }]}>
-                  <Text style={[styles.modalTitle, { color: currentTheme.text }]}>Select Police Station</Text>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Select Police Station</Text>
                   <TouchableOpacity 
                     onPress={() => setShowStationModal(false)}
                     style={styles.closeButton}
                   >
-                    <MaterialIcons name="close" size={24} color={currentTheme.text} />
+                    <MaterialIcons name="close" size={24} color="#000" />
                   </TouchableOpacity>
                 </View>
                 <ScrollView>
@@ -513,14 +532,12 @@ const CrimeMap: React.FC = () => {
                       key={station.id}
                       style={[
                         styles.modalOption,
-                        { borderBottomColor: currentTheme.cardBorder },
                         selectedStation === station.value && styles.modalOptionSelected
                       ]}
                       onPress={() => handleStationSelect(station.value as StationName)}
                     >
                       <Text style={[
                         styles.modalOptionText,
-                        { color: currentTheme.text },
                         selectedStation === station.value && styles.modalOptionTextSelected
                       ]}>
                         {station.label}
@@ -757,14 +774,21 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContent: {
+    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    paddingBottom: 20,
     maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -772,10 +796,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   modalTitle: {
     fontSize: 18,
-    fontFamily: fonts.poppins.medium,
+    fontFamily: fonts.poppins.semiBold,
     color: '#E02323',
   },
   closeButton: {
@@ -784,6 +809,7 @@ const styles = StyleSheet.create({
   modalOption: {
     padding: 16,
     borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   modalOptionSelected: {
     backgroundColor: '#FFE5E5',
@@ -791,10 +817,11 @@ const styles = StyleSheet.create({
   modalOptionText: {
     fontSize: 16,
     fontFamily: fonts.poppins.regular,
+    color: '#000',
   },
   modalOptionTextSelected: {
     color: '#E02323',
-    fontFamily: fonts.poppins.medium,
+    fontFamily: fonts.poppins.semiBold,
   },
   statsContainer: {
     flexDirection: 'row',

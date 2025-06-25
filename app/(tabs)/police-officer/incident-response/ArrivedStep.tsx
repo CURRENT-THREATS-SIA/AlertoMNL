@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -45,6 +46,51 @@ export default function ArrivedStep() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | undefined>();
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
+
+  // Get user's current location
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    const startLocationTracking = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.BestForNavigation,
+          });
+          setUserLocation({
+            lat: location.coords.latitude,
+            lng: location.coords.longitude,
+          });
+
+          locationSubscription = await Location.watchPositionAsync(
+            {
+              accuracy: Location.Accuracy.BestForNavigation,
+              timeInterval: 5000,
+              distanceInterval: 10,
+            },
+            (location) => {
+              setUserLocation({
+                lat: location.coords.latitude,
+                lng: location.coords.longitude,
+              });
+            }
+          );
+        }
+      } catch (error) {
+        console.error('Error getting location:', error);
+      }
+    };
+
+    startLocationTracking();
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!alert_id) {
@@ -131,7 +177,9 @@ export default function ArrivedStep() {
           userType={'police'}
           data={{ type: 'FeatureCollection', features: [] }}
           officerLocation={officerLocation}
+          userLocation={userLocation}
           incidentLocation={alertDetails && alertDetails.a_latitude && alertDetails.a_longitude ? { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) } : undefined}
+          hideIncidentMarker={true}
         />
       </View>
       
@@ -163,7 +211,7 @@ export default function ArrivedStep() {
             </View>
             
             <TouchableOpacity style={[styles.button, { backgroundColor: buttonColor }]} onPress={() => router.push(`/police-officer/incident-response/ReportStep?alert_id=${alert_id}`)}>
-              <Text style={[styles.buttonText, { color: '#fff' }]}>Crime Resolved</Text>
+              <Text style={[styles.buttonText, { color: '#fff' }]}>Crime Responded</Text>
             </TouchableOpacity>
 
             <Text style={[styles.footerText, { color: isDarkMode ? currentTheme.subtitle : '#444' } ]}>
