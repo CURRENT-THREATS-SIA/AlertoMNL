@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
@@ -43,6 +43,16 @@ const Profile: React.FC = () => {
       }
     };
     loadUserInfo();
+    // Load shift status
+    const loadShiftStatus = async () => {
+      try {
+        const storedShift = await AsyncStorage.getItem('isOnShift');
+        setIsOnShift(storedShift === 'true');
+      } catch (e) {
+        // Optionally handle error
+      }
+    };
+    loadShiftStatus();
   }, []);
 
   useEffect(() => {
@@ -62,6 +72,44 @@ const Profile: React.FC = () => {
     };
     fetchOfficerStats();
   }, []);
+
+  const updateShiftStatusOnServer = async (isOn: boolean) => {
+    const policeId = await AsyncStorage.getItem('police_id');
+    if (!policeId) return;
+    try {
+      await fetch('http://mnl911.atwebpages.com/update_shift_status.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ police_id: policeId, is_on_shift: isOn ? 1 : 0 }),
+      });
+    } catch (e) {
+      // Optionally handle error
+    }
+  };
+
+  const handleToggleShift = (value: boolean) => {
+    if (value) {
+      // Turning ON
+      Alert.alert(
+        'Notice',
+        `Have a great day on patrol, Police Officer ${lastName}.\n[On Shift]`,
+        [
+          { text: 'OK', onPress: async () => { setIsOnShift(true); await AsyncStorage.setItem('isOnShift', 'true'); await updateShiftStatusOnServer(true); } }
+        ]
+      );
+    } else {
+      // Turning OFF
+      Alert.alert(
+        'Notice',
+        `Are you sure your duty is finished, Police Officer ${lastName}?
+\n[End Shift]`,
+        [
+          { text: 'Yes', onPress: async () => { setIsOnShift(false); await AsyncStorage.setItem('isOnShift', 'false'); await updateShiftStatusOnServer(false); } },
+          { text: 'Cancel', style: 'cancel', onPress: () => {} }
+        ]
+      );
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
@@ -113,7 +161,7 @@ const Profile: React.FC = () => {
             <Text style={[styles.shiftText, { color: currentTheme.text }]}>On shift</Text>
             <Switch
               value={isOnShift}
-              onValueChange={setIsOnShift}
+              onValueChange={handleToggleShift}
               trackColor={{ false: currentTheme.switchTrack, true: currentTheme.switchActive }}
               thumbColor={currentTheme.switchThumb}
             />
