@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
@@ -19,17 +18,6 @@ export type CrimeStat = {
   location?: string;
   type?: string;
 };
-
-export type SeverityLevel = {
-  level: string;
-  color: string;
-};
-
-const severityLevels: SeverityLevel[] = [
-  { level: 'Low', color: '#65ee15' },
-  { level: 'Medium', color: '#f89900' },
-  { level: 'High', color: '#ff0000' },
-];
 
 // Crime types and stations data (match regular user)
 const crimeTypes = [
@@ -60,9 +48,6 @@ const policeStations = [
   { id: 13, label: 'MPD Station 13 - Baseco', value: 'MPD Station 13 - Baseco' },
   { id: 14, label: 'MPD Station 14 - Barbosa', value: 'MPD Station 14 - Barbosa' },
 ];
-
-const API_ACCEPT_SOS_URL = 'http://mnl911.atwebpages.com/accept-sos-alert.php'; 
-const API_GET_NOTIFICATIONS_URL = 'http://mnl911.atwebpages.com/getnotifications1.php';
 
 interface AlertNotification {
   alert_id: number;
@@ -117,12 +102,10 @@ const AlertModal: React.FC<{
 
 const CrimeMap: React.FC = () => {
   const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
   const isSmallDevice = width < 375;
   const mapHeight = Math.min(height * 0.45, 500);
-  const statsCardWidth = (width - 40 - 16) / 3;
   const [isLegendVisible, setIsLegendVisible] = useState(false);
   const legendAnimation = new Animated.Value(0);
   
@@ -160,17 +143,6 @@ const CrimeMap: React.FC = () => {
     }
   }, [notifications]);
 
-  // Token registration is now handled in the login flow
-
-  // Add reset function
-  const handleReset = () => {
-    setSelectedCrimeType('');
-    setSelectedStation(null);
-    setShowCrimeTypeModal(false);
-    setShowStationModal(false);
-    setFilteredMapData(totalCrimeData);
-  };
-
   // Function to toggle legend visibility with animation
   const toggleLegend = () => {
     setIsLegendVisible(!isLegendVisible);
@@ -186,7 +158,7 @@ const CrimeMap: React.FC = () => {
         tension: 40,
       }).start();
     }
-  }, [isLegendVisible]);
+  }, [isLegendVisible, legendAnimation]);
 
   // Function to calculate crime statistics based on filters
   const calculateCrimeStats = () => {
@@ -287,11 +259,15 @@ const CrimeMap: React.FC = () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+      console.log('Initial officer location:', loc.coords.latitude, loc.coords.longitude); // Debug log
       setOfficerLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
       // Optionally, watch position for live updates
       const sub = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 10 },
-        (loc) => setOfficerLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude })
+        (loc) => {
+          console.log('Updated officer location:', loc.coords.latitude, loc.coords.longitude); // Debug log
+          setOfficerLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        }
       );
       return () => sub.remove();
     })();
@@ -460,63 +436,64 @@ const CrimeMap: React.FC = () => {
           {/* Crime Stats */}
           <View style={styles.statsContainer}>
             {crimeStats.map((stat, index) => (
-              <View 
-                key={index} 
-                style={[
-                  styles.statCard,
-                  { 
-                    width: width / 3 - 16,
-                    backgroundColor: currentTheme.cardBackground
-                  }
-                ]}
-              >
-                <Text 
+              <React.Fragment key={index}>
+                <View 
                   style={[
-                    styles.statTitle, 
-                    styles.defaultFont,
-                    isSmallDevice && { fontSize: 12 }
-                  ]}
-                  numberOfLines={2}
-                >
-                  {stat.title}
-                </Text>
-                
-                {stat.location ? (
-                  <>
-                    <Text 
-                      style={[
-                        styles.statLocation, 
-                        styles.defaultFont,
-                        isSmallDevice && { fontSize: 11 },
-                        { color: currentTheme.text }
-                      ]}
-                    >
-                      {stat.location}
-                    </Text>
-                    <Text 
-                      style={[
-                        styles.statType, 
-                        styles.defaultFont,
-                        isSmallDevice && { fontSize: 9 },
-                        { color: currentTheme.subtitle }
-                      ]}
-                    >
-                      {stat.type}
-                    </Text>
-                  </>
-                ) : null}
-                
-                <Text 
-                  style={[
-                    styles.statValue, 
-                    styles.defaultFont,
-                    isSmallDevice && { fontSize: 16 },
-                    { color: currentTheme.text }
+                    styles.statCard,
+                    { 
+                      width: width / 3 - 16,
+                      backgroundColor: currentTheme.cardBackground
+                    }
                   ]}
                 >
-                  {stat.value}
-                </Text>
-              </View>
+                  <Text 
+                    style={[
+                      styles.statTitle, 
+                      styles.defaultFont,
+                      isSmallDevice && { fontSize: 12 }
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {stat.title}
+                  </Text>
+                  
+                  {stat.location ? (
+                    <>
+                      <Text 
+                        style={[
+                          styles.statLocation, 
+                          styles.defaultFont,
+                          isSmallDevice && { fontSize: 11 },
+                          { color: currentTheme.text }
+                        ]}
+                      >
+                        {stat.location}
+                      </Text>
+                      <Text 
+                        style={[
+                          styles.statType, 
+                          styles.defaultFont,
+                          isSmallDevice && { fontSize: 9 },
+                          { color: currentTheme.subtitle }
+                        ]}
+                      >
+                        {stat.type}
+                      </Text>
+                    </>
+                  ) : null}
+                  
+                  <Text 
+                    style={[
+                      styles.statValue, 
+                      styles.defaultFont,
+                      isSmallDevice && { fontSize: 16 },
+                      { color: currentTheme.text }
+                    ]}
+                  >
+                    {stat.value}
+                  </Text>
+                </View>
+              </React.Fragment>
             ))}
           </View>
         </View>
