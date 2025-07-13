@@ -59,15 +59,18 @@ const Profile: React.FC = () => {
     const fetchOfficerStats = async () => {
       try {
         const policeId = await AsyncStorage.getItem('police_id');
+        console.log('policeId:', policeId); // Debug log
         if (!policeId) return;
         const res = await fetch(`http://mnl911.atwebpages.com/get_officer_stats.php?police_id=${policeId}`);
         const data = await res.json();
+        console.log('Officer stats API response:', data); // Debug log
         if (data.success) {
           setEmergencyResponded(data.emergency_responded);
           setAvgTimeResponse(data.avg_time_response);
         }
       } catch (e) {
         // Optionally handle error
+        console.error('Error fetching officer stats:', e);
       }
     };
     fetchOfficerStats();
@@ -101,8 +104,7 @@ const Profile: React.FC = () => {
       // Turning OFF
       Alert.alert(
         'Notice',
-        `Are you sure your duty is finished, Police Officer ${lastName}?
-\n[End Shift]`,
+        `Are you sure your duty is finished, Police Officer ${lastName}?\n[End Shift]`,
         [
           { text: 'Yes', onPress: async () => { setIsOnShift(false); await AsyncStorage.setItem('isOnShift', 'false'); await updateShiftStatusOnServer(false); } },
           { text: 'Cancel', style: 'cancel', onPress: () => {} }
@@ -177,7 +179,7 @@ const Profile: React.FC = () => {
               </View>
               <View style={[styles.activityCard, { backgroundColor: currentTheme.cardBackground }]}> 
                 <Text style={[styles.activityTitle, { color: '#E02323' }]}>Avg. Time Response</Text>
-                <Text style={[styles.activityValue, { color: currentTheme.text }]}>{avgTimeResponse !== null ? `${avgTimeResponse}%` : '--'}</Text>
+                <Text style={[styles.activityValue, { color: currentTheme.text }]}>{avgTimeResponse !== null ? `${avgTimeResponse} min` : '--'}</Text>
               </View>
             </View>
           </View>

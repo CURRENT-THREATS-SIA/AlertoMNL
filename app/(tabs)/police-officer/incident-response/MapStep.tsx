@@ -266,7 +266,6 @@ export default function MapStep() {
         // Request permission if not already granted
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") return;
-        
         // Use faster location accuracy for emergency response
         const loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced, // Faster than BestForNavigation
@@ -278,12 +277,13 @@ export default function MapStep() {
           setShowAccuracyModal(true);
           hasShownAccuracyWarning.current = true;
         }
-
         const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+        console.log('Fetched officer location:', coords.lat, coords.lng); // Debug log
         setOfficerLocation(coords);
         // Send to backend
         const policeId = await AsyncStorage.getItem('police_id');
         if (policeId && alert_id) {
+          console.log('Sending officer location to backend:', coords.lat, coords.lng); // Debug log
           const response = await fetch('http://mnl911.atwebpages.com/update_police_location.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -308,7 +308,6 @@ export default function MapStep() {
     fetchAndSendLocation();
     // Repeat every 10 seconds (reduced from 20 for faster updates)
     locationInterval = setInterval(fetchAndSendLocation, 10000) as unknown as number;
-
     return () => {
       if (locationInterval) clearInterval(locationInterval);
     };
@@ -409,9 +408,9 @@ export default function MapStep() {
           const reason = data.error || data.message || "No route found.";
           throw new Error(reason);
         }
-      } catch (err: any) {
-        console.error("Route calculation failed:", err.message);
-        setError(`Failed to get route: ${err.message}`);
+      } catch (e: any) {
+        console.error("Route calculation failed:", e.message);
+        setError(`Failed to get route: ${e.message}`);
         setRouteCoords(null); 
       }
     };
@@ -580,7 +579,7 @@ export default function MapStep() {
                   }
                   // Navigate to ArrivedStep only if update is successful
                   router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
-                } catch (err) {
+                } catch (err: any) {
                   console.error('Arrived error:', err);
                   alert('Network error: ' + ((err as Error).message || err));
                 }

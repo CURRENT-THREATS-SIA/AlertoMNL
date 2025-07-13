@@ -56,24 +56,30 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       const policeId = await AsyncStorage.getItem('police_id');
+      console.log('🔍 Fetching notifications with police_id:', policeId); // Debug log
       if (!policeId) {
         setNotifications([]); // Clear notifications if not logged in
         return;
       }
       const location = await Location.getLastKnownPositionAsync();
+      console.log('🔍 Device location for alerts:', location?.coords.latitude, location?.coords.longitude); // Debug log
       if (!location) {
         console.warn("Could not get device location for alert fetching.");
         return;
       }
 
-      const response = await fetch(`${API_GET_NOTIFICATIONS_URL}?police_id=${policeId}&latitude=${location.coords.latitude}&longitude=${location.coords.longitude}`);
+      const apiUrl = `${API_GET_NOTIFICATIONS_URL}?police_id=${policeId}&latitude=${location.coords.latitude}&longitude=${location.coords.longitude}`;
+      console.log('🔍 Calling API:', apiUrl); // Debug log
+      const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
       }
       const data = await response.json();
+      console.log('🔍 API response:', data); // Debug log
 
       if (data.success && Array.isArray(data.notifications)) {
         const newAlerts = data.notifications as AlertNotification[];
+        console.log('🔍 Found', newAlerts.length, 'notifications'); // Debug log
         const hasUnheardAlerts = newAlerts.some(alert => !playedAlertIds.current.has(alert.alert_id));
 
         if (hasUnheardAlerts) {
@@ -83,6 +89,7 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
         }
         setNotifications(newAlerts);
       } else {
+        console.log('🔍 No notifications or invalid response format'); // Debug log
         setNotifications([]);
       }
     } catch (error) {
