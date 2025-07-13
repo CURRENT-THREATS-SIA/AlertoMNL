@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -7,6 +8,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
+import { getPhilippineDateTimeString } from '../../utils/timezoneConverter';
 
 interface HistoryDetails {
   location: string;
@@ -26,6 +28,7 @@ interface HistoryDetails {
   officer_email: string;
   officer_station: string;
   officer_badge: string;
+  alert_id: string;
 }
 
 const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
@@ -37,6 +40,7 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
 
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [timeRange, setTimeRange] = useState<string>('Loading...');
 
   const router = useRouter();
 
@@ -110,16 +114,43 @@ const HistoryContent: React.FC<{ historyId?: string }> = ({ historyId }) => {
     fetchDetails();
   }, [historyId]);
 
+  useEffect(() => {
+    const getTimeRange = async () => {
+      if (!details?.alert_id || !details?.triggered_at || !details?.resolved_at) {
+        setTimeRange('N/A');
+        return;
+      }
+
+      try {
+        // Get the captured SOS received time and resolved time from AsyncStorage
+        const sosReceivedTime = await AsyncStorage.getItem(`sos_received_time_${details.alert_id}`);
+        const resolvedTime = await AsyncStorage.getItem(`resolved_time_${details.alert_id}`);
+        
+        if (sosReceivedTime && resolvedTime) {
+          // Use captured times for consistent display
+          const resolvedTimeFormatted = getPhilippineDateTimeString(resolvedTime);
+          setTimeRange(`${sosReceivedTime} - ${resolvedTimeFormatted}`);
+        } else if (sosReceivedTime) {
+          // Use captured SOS time but fallback to database resolved time
+          const resolvedTimeFormatted = getPhilippineDateTimeString(details.resolved_at);
+          setTimeRange(`${sosReceivedTime} - ${resolvedTimeFormatted}`);
+        } else {
+          // Fallback to database times if captured times not found
+          const startTime = getPhilippineDateTimeString(details.triggered_at);
+          const endTime = getPhilippineDateTimeString(details.resolved_at);
+          setTimeRange(`${startTime} - ${endTime}`);
+        }
+      } catch (error) {
+        console.error('Date formatting error:', error);
+        setTimeRange('N/A');
+      }
+    };
+
+    getTimeRange();
+  }, [details?.alert_id, details?.triggered_at, details?.resolved_at]);
+
   const formatDateTimeRange = (start?: string, end?: string) => {
-    if (!start || !end) return 'N/A';
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const dateOptions: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
-    const timeOptions: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
-    const formattedDate = startDate.toLocaleDateString('en-US', dateOptions);
-    const startTime = startDate.toLocaleTimeString('en-US', timeOptions);
-    const endTime = endDate.toLocaleTimeString('en-US', timeOptions);
-    return `${formattedDate}, ${startTime} -\n${endTime}`;
+    return timeRange;
   };
 
   const renderLocation = (locationString: string) => {

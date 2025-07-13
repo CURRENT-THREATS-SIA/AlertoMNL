@@ -6,6 +6,7 @@ import { ActivityIndicator, Animated, Dimensions, Modal, PanResponder, ScrollVie
 import { Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
 import { theme, useTheme } from '../../../context/ThemeContext';
+import { getCurrentPhilippineTime } from '../../../utils/timezoneConverter';
 
 // --- SVG Icon Components for the new UI ---
 
@@ -140,6 +141,7 @@ export default function MapStep() {
   const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [showAccuracyModal, setShowAccuracyModal] = useState(false);
   const hasShownAccuracyWarning = React.useRef(false);
+  const [sosReceivedTime, setSosReceivedTime] = useState<string>(''); // Store SOS received time
 
   // Pan responder for dragging
   const panResponder = useRef(
@@ -210,6 +212,18 @@ export default function MapStep() {
           };
           setAlertDetails(data);
           setError(""); // Clear error on success
+          
+          // Capture the SOS received time when alert is first loaded
+          const currentTime = getCurrentPhilippineTime();
+          const timeParts = currentTime.split(', ');
+          const datePart = timeParts[0];
+          const timePart = timeParts[1].split(':').slice(0, 2).join(':');
+          const capturedTime = `${datePart}, ${timePart}`;
+          setSosReceivedTime(capturedTime);
+          
+          // Store in AsyncStorage for use in other screens
+          await AsyncStorage.setItem(`sos_received_time_${alert_id}`, capturedTime);
+          
         } else {
           throw new Error(result.error || "Failed to fetch alert details.");
         }
@@ -417,12 +431,19 @@ export default function MapStep() {
   }, []);
 
   const getFormattedTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+    // Always show current Philippine time instead of database time
+    const currentTime = getCurrentPhilippineTime();
+    console.log('Current Philippine time:', currentTime);
+    
+    // Extract just the date and time parts (remove seconds)
+    const timeParts = currentTime.split(', ');
+    const datePart = timeParts[0];
+    const timePart = timeParts[1].split(':').slice(0, 2).join(':'); // Remove seconds
+    
+    const formattedTime = `${datePart}, ${timePart}`;
+    console.log('Formatted current time (military):', formattedTime);
+    
+    return formattedTime;
   };
 
   // Add debug log before render
@@ -530,7 +551,7 @@ export default function MapStep() {
           <View style={styles.infoRow}>
             <CalendarIcon color="#E02323" />
             <View style={styles.infoTextContainer}>
-              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Reported</Text>
+              <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Current Time (PH)</Text>
               <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
             </View>
           </View>
@@ -542,9 +563,9 @@ export default function MapStep() {
             </View>
           </View>
           <TouchableOpacity
-            style={[styles.button, distanceToIncident !== null && distanceToIncident > 100 ? { backgroundColor: '#ccc' } : {}]}
+            style={[styles.button, distanceToIncident !== null && distanceToIncident > 10000 ? { backgroundColor: '#ccc' } : {}]}
             onPress={async () => {
-              if (distanceToIncident !== null && distanceToIncident <= 100) {
+              if (distanceToIncident !== null && distanceToIncident <= 10000) {
                 try {
                   const response = await fetch('http://mnl911.atwebpages.com/status.php', {
                     method: 'POST',
@@ -560,11 +581,11 @@ export default function MapStep() {
                   router.push(`/police-officer/incident-response/ArrivedStep?alert_id=${alert_id}`);
                 } catch (err: any) {
                   console.error('Arrived error:', err);
-                  alert('Network error: ' + (err.message || err));
+                  alert('Network error: ' + ((err as Error).message || err));
                 }
               }
             }}
-            disabled={distanceToIncident === null || distanceToIncident > 100}
+            disabled={distanceToIncident === null || distanceToIncident > 10000}
           >
             <Text style={[styles.buttonText, { color: '#fff' }]}>You've Arrived</Text>
           </TouchableOpacity>

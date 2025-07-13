@@ -141,16 +141,23 @@ try {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10); // 10 second timeout
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5); // 5 second connection timeout
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification for testing
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Disable host verification for testing
+        
         $response = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
         curl_close($ch);
         
-        // Log notification status
+        // Log notification status with more details
         if ($http_code === 200) {
-            error_log("SOS Notification sent successfully for alert ID: $alert_id");
+            error_log("SOS Notification sent successfully for alert ID: $alert_id to " . count($tokens) . " devices");
         } else {
-            error_log("SOS Notification failed for alert ID: $alert_id, HTTP Code: $http_code");
+            error_log("SOS Notification failed for alert ID: $alert_id, HTTP Code: $http_code, cURL Error: $curl_error");
+            error_log("Response: " . $response);
         }
+    } else {
+        error_log("No police tokens found for SOS alert ID: $alert_id");
     }
     
     // --- Return success immediately ---

@@ -21,6 +21,7 @@ import {
 
 
 
+
   View
 } from 'react-native';
 import { Path, Svg } from 'react-native-svg'; // <-- Import Svg for the dropdown arrow
@@ -75,6 +76,10 @@ export default function ReportStep() {
     });
     const result = await response.json();
     if (result.success) {
+      // Capture the resolved time when the report is submitted
+      const resolvedTime = new Date().toISOString();
+      await AsyncStorage.setItem(`resolved_time_${alert_id}`, resolvedTime);
+      
       alert('Incident report submitted!');
       router.replace('/police-officer');
     } else {

@@ -7,6 +7,7 @@ import { Path, Svg } from 'react-native-svg';
 import CustomTabBar from '../../../app/components/CustomTabBar';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
+import { getPhilippineDateTimeString } from '../../utils/timezoneConverter';
 
 interface HistoryItem {
   history_id: number;
@@ -26,21 +27,43 @@ const ChevronRightIcon = () => (
 const HistoryCard: React.FC<{ item: HistoryItem; onPress: () => void }> = ({ item, onPress }) => {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
-  const formatDateTime = (dateTimeString: string) => {
-    if (!dateTimeString) return 'Invalid Date';
-    const date = new Date(dateTimeString);
-    if (isNaN(date.getTime())) return 'Invalid Date';
-    const day = date.getDate();
-    const month = date.toLocaleString('en-US', { month: 'long' });
-    const time = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    return `${month} ${day}, ${time}`;
-  };
+  const [timeRange, setTimeRange] = useState<string>('Loading...');
+
+  useEffect(() => {
+    const getTimeRange = async () => {
+      try {
+        // Get the captured SOS received time and resolved time from AsyncStorage
+        const sosReceivedTime = await AsyncStorage.getItem(`sos_received_time_${item.alert_id}`);
+        const resolvedTime = await AsyncStorage.getItem(`resolved_time_${item.alert_id}`);
+        
+        if (sosReceivedTime && resolvedTime) {
+          // Use captured times for consistent display
+          const resolvedTimeFormatted = getPhilippineDateTimeString(resolvedTime);
+          setTimeRange(`${sosReceivedTime} - ${resolvedTimeFormatted}`);
+        } else if (sosReceivedTime) {
+          // Use captured SOS time but fallback to database resolved time
+          const resolvedTimeFormatted = getPhilippineDateTimeString(item.resolved_at);
+          setTimeRange(`${sosReceivedTime} - ${resolvedTimeFormatted}`);
+        } else {
+          // Fallback to just resolved time if captured times not found
+          const resolvedTimeFormatted = getPhilippineDateTimeString(item.resolved_at);
+          setTimeRange(resolvedTimeFormatted);
+        }
+      } catch (error) {
+        console.error('Error formatting time range:', error);
+        setTimeRange('Invalid Date');
+      }
+    };
+
+    getTimeRange();
+  }, [item.alert_id, item.resolved_at]);
+
   return (
     <TouchableOpacity style={[styles.card, { backgroundColor: currentTheme.cardBackground }]} onPress={onPress}>
       <View style={styles.cardContent}>
         <Text style={[styles.location, { color: currentTheme.text }]}>{item.location || 'Unknown Location'}</Text>
         <Text style={[styles.userName, { color: currentTheme.subtitle }]}>{`${item.victim_fname || ''} ${item.victim_lname || ''}`.trim()}</Text>
-        <Text style={[styles.dateTime, { color: currentTheme.subtitle }]}>{formatDateTime(item.resolved_at)}</Text>
+        <Text style={[styles.dateTime, { color: currentTheme.subtitle }]}>{timeRange}</Text>
       </View>
       <View style={styles.rightContainer}>
         <Text style={[styles.alertIdText, { color: currentTheme.statusResolved }]}>ALERT #{item.alert_id}</Text>

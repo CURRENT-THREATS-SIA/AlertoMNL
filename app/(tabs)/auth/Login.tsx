@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 export default function Login() {
@@ -99,16 +99,45 @@ export default function Login() {
               formData.append('police_id', data.police_id.toString());
               formData.append('expo_push_token', expoPushToken);
               
-              const tokenResponse = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
-                method: 'POST',
-                body: formData,
-              });
-              const tokenData = await tokenResponse.json();
-              console.log('Token registration response:', tokenData);
-              
-              if (!tokenData.success) {
-                console.error('Failed to register push token:', tokenData.error);
+              try {
+                const tokenResponse = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
+                  method: 'POST',
+                  body: formData,
+                });
+                
+                if (!tokenResponse.ok) {
+                  throw new Error(`HTTP ${tokenResponse.status}: ${tokenResponse.statusText}`);
+                }
+                
+                const tokenData = await tokenResponse.json();
+                console.log('Token registration response:', tokenData);
+                
+                if (!tokenData.success) {
+                  console.error('Failed to register push token:', tokenData.error);
+                  // Show alert to user about notification issue
+                  Alert.alert(
+                    'Notification Setup Warning',
+                    'Push notifications may not work properly. You can still receive alerts through the app.',
+                    [{ text: 'OK' }]
+                  );
+                } else {
+                  console.log('Push token registered successfully');
+                }
+              } catch (tokenError) {
+                console.error('Token registration failed:', tokenError);
+                Alert.alert(
+                  'Notification Setup Warning',
+                  'Could not set up push notifications. You can still receive alerts through the app.',
+                  [{ text: 'OK' }]
+                );
               }
+            } else {
+              console.error('Failed to get push token');
+              Alert.alert(
+                'Notification Setup Warning',
+                'Could not get push notification token. You can still receive alerts through the app.',
+                [{ text: 'OK' }]
+              );
             }
           } catch (error) {
             console.error('Error registering push token:', error);
