@@ -49,19 +49,37 @@ const Profile: React.FC = () => {
     const fetchOfficerStats = async () => {
       try {
         const policeId = await AsyncStorage.getItem('police_id');
+        console.log('policeId:', policeId); // Debug log
         if (!policeId) return;
         const res = await fetch(`http://mnl911.atwebpages.com/get_officer_stats.php?police_id=${policeId}`);
         const data = await res.json();
+        console.log('Officer stats API response:', data); // Debug log
         if (data.success) {
           setEmergencyResponded(data.emergency_responded);
           setAvgTimeResponse(data.avg_time_response);
         }
       } catch (e) {
         // Optionally handle error
+        console.error('Error fetching officer stats:', e);
       }
     };
     fetchOfficerStats();
   }, []);
+
+  const handleShiftToggle = async (value: boolean) => {
+    setIsOnShift(value);
+    const policeId = await AsyncStorage.getItem('police_id');
+    if (!policeId) return;
+    try {
+      await fetch('http://mnl911.atwebpages.com/update_shift_status.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `police_id=${policeId}&is_on_shift=${value ? 1 : 0}`
+      });
+    } catch (e) {
+      console.error('Failed to update shift status:', e);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
@@ -113,7 +131,7 @@ const Profile: React.FC = () => {
             <Text style={[styles.shiftText, { color: currentTheme.text }]}>On shift</Text>
             <Switch
               value={isOnShift}
-              onValueChange={setIsOnShift}
+              onValueChange={handleShiftToggle}
               trackColor={{ false: currentTheme.switchTrack, true: currentTheme.switchActive }}
               thumbColor={currentTheme.switchThumb}
             />
@@ -129,7 +147,7 @@ const Profile: React.FC = () => {
               </View>
               <View style={[styles.activityCard, { backgroundColor: currentTheme.cardBackground }]}> 
                 <Text style={[styles.activityTitle, { color: '#E02323' }]}>Avg. Time Response</Text>
-                <Text style={[styles.activityValue, { color: currentTheme.text }]}>{avgTimeResponse !== null ? `${avgTimeResponse}%` : '--'}</Text>
+                <Text style={[styles.activityValue, { color: currentTheme.text }]}>{avgTimeResponse !== null ? `${avgTimeResponse} min` : '--'}</Text>
               </View>
             </View>
           </View>
