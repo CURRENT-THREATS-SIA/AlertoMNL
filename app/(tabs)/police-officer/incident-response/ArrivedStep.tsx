@@ -6,6 +6,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { Circle, Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
 import { theme, useTheme } from '../../../context/ThemeContext';
+import { getPhilippineDateTimeString } from '../../../utils/timezoneConverter';
 
 // --- SVG Icon Components ---
 
@@ -47,6 +48,7 @@ export default function ArrivedStep() {
   const [error, setError] = useState('');
   const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
+  const [sosReceivedTime, setSosReceivedTime] = useState<string>(''); // Store captured SOS time
 
   // Get user's current location
   useEffect(() => {
@@ -107,6 +109,12 @@ export default function ArrivedStep() {
           return;
         }
 
+        // Get the captured SOS received time from AsyncStorage
+        const capturedTime = await AsyncStorage.getItem(`sos_received_time_${alert_id}`);
+        if (capturedTime) {
+          setSosReceivedTime(capturedTime);
+        }
+
         // Fetch alert and officer location details in parallel
         const [alertRes, locationRes] = await Promise.all([
           fetch(`http://mnl911.atwebpages.com/get_alert_details.php?alert_id=${alert_id}`),
@@ -143,12 +151,20 @@ export default function ArrivedStep() {
   }, [alert_id]);
 
   const getFormattedTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    });
+    // Use the captured SOS received time if available, otherwise fallback to database time
+    if (sosReceivedTime) {
+      return sosReceivedTime;
+    }
+    
+    // Fallback to database time if captured time is not available
+    if (!dateString) return 'Invalid Date';
+    try {
+      const formattedTime = getPhilippineDateTimeString(dateString);
+      return formattedTime;
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid Date';
+    }
   }
 
   if (isLoading) {
