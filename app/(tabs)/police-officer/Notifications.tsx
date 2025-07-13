@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import React from 'react';
-import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { fonts } from '../../config/fonts';
 import { AlertNotification, useAlerts } from '../../context/AlertContext';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -65,7 +65,7 @@ const NotificationsScreen = () => {
   const navigation = useNavigation();
   
   // --- ALERTS ARE NOW HANDLED BY THE CONTEXT ---
-  const { notifications, isLoading, acceptAlert, refreshAlerts } = useAlerts();
+  const { notifications, isLoading, acceptAlert, refreshAlerts, activeAlert } = useAlerts();
 
   // The local `handleAccept`, `fetchNotifications`, `useEffect`, and `useState` for alerts are now removed.
 
@@ -78,6 +78,17 @@ const NotificationsScreen = () => {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: currentTheme.text }]}>Pending SOS Alerts</Text>
       </View>
+
+      {/* Active Alert Warning */}
+      {activeAlert && (
+        <View style={[styles.activeAlertWarning, { backgroundColor: '#fff3cd', borderColor: '#ffeaa7' }]}>
+          <Ionicons name="warning" size={20} color="#856404" />
+          <Text style={[styles.activeAlertWarningText, { color: '#856404' }]}>
+            You are currently responding to Alert #{activeAlert.alert_id}. Complete your current call before accepting new alerts.
+          </Text>
+        </View>
+      )}
+
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -93,7 +104,19 @@ const NotificationsScreen = () => {
         ) : notifications.length > 0 ? (
           <FlashList
             data={notifications}
-            renderItem={({ item }) => <AlertCard notification={item} onAccept={acceptAlert} />}
+            renderItem={({ item }) => (
+              <AlertCard 
+                notification={item} 
+                onAccept={activeAlert ? () => {
+                  // Show warning if trying to accept while on active call
+                  Alert.alert(
+                    "Active Call in Progress",
+                    "You are currently responding to another alert. Please complete your current call before accepting new alerts.",
+                    [{ text: "OK" }]
+                  );
+                } : acceptAlert} 
+              />
+            )}
             keyExtractor={(item) => item.alert_id.toString()}
             estimatedItemSize={280} // Adjusted for larger card
             contentContainerStyle={styles.listContainer}
@@ -200,6 +223,21 @@ const styles = StyleSheet.create({
     fontFamily: fonts.poppins.regular,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  activeAlertWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ffeaa7',
+  },
+  activeAlertWarningText: {
+    fontSize: 14,
+    fontFamily: fonts.poppins.regular,
+    marginLeft: 8,
   },
 });
 

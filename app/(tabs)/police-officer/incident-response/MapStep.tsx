@@ -70,6 +70,30 @@ function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * c;
 }
 
+// Utility: Check if location is likely indoors based on address
+function isIndoorLocation(address: string): boolean {
+  if (!address) return false;
+  
+  const indoorKeywords = [
+    'mall', 'shopping center', 'shopping mall', 'department store', 'supermarket',
+    'office', 'building', 'tower', 'plaza', 'center', 'complex',
+    'hospital', 'clinic', 'medical center', 'health center',
+    'school', 'university', 'college', 'campus',
+    'hotel', 'resort', 'inn', 'lodge',
+    'apartment', 'condo', 'condominium', 'residential',
+    'theater', 'cinema', 'movie theater',
+    'restaurant', 'cafe', 'bar', 'pub',
+    'gym', 'fitness center', 'sports center',
+    'church', 'temple', 'mosque', 'cathedral',
+    'museum', 'library', 'gallery',
+    'airport', 'terminal', 'station',
+    'basement', 'underground', 'parking', 'garage'
+  ];
+  
+  const lowerAddress = address.toLowerCase();
+  return indoorKeywords.some(keyword => lowerAddress.includes(keyword));
+}
+
 // --- ETA Calculation Utilities ---
 function getDistanceInMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371e3; // meters
@@ -371,6 +395,15 @@ export default function MapStep() {
     const calculateRoute = async () => {
       if (!isMountedRef.current) return;
 
+      // Check if incident location is indoors
+      const isIndoor = isIndoorLocation(alertDetails.a_address);
+      if (isIndoor) {
+        console.log("Incident location is indoors. Skipping Dijkstra route calculation.");
+        setRouteCoords(null);
+        setError("");
+        return;
+      }
+
       try {
         const apiUrl = "https://djikstra-calculation.onrender.com/calculate_route";
         const payload = {
@@ -449,10 +482,7 @@ export default function MapStep() {
   // Add debug log before render
   console.log('RENDER officerLocation:', officerLocation, 'routeCoords:', routeCoords, 'error:', error);
 
-  // --- Improved error display logic ---
-  const shouldShowError = !!error && (!officerLocation || !routeCoords);
-
-  // Calculate distance to incident (in meters)
+  // Calculate distance to incident (in meters) - moved before early returns
   let distanceToIncident = null;
   if (officerLocation && alertDetails) {
     distanceToIncident = haversine(
@@ -463,7 +493,11 @@ export default function MapStep() {
     ) * 1000; // haversine returns km, convert to meters
   }
 
-  if (error) {
+  // --- Improved error display logic ---
+  const isIndoor = alertDetails ? isIndoorLocation(alertDetails.a_address) : false;
+  const shouldShowError = !!error && (!officerLocation || !routeCoords) && !isIndoor;
+
+  if (error && !isIndoor) {
     return (
       <View style={[styles.centered, { backgroundColor: currentTheme.background }]}> 
         <Text style={{ color: currentTheme.statusResolved }}>{error}</Text>
@@ -524,7 +558,12 @@ export default function MapStep() {
           scrollEnabled={isExpanded}
         >
           <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
-          <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>Navigate to the incident location and follow the route for the fastest response.</Text>
+          <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>
+            {isIndoorLocation(alertDetails.a_address) 
+              ? "Indoor incident detected. Navigate to the location using the map markers."
+              : "Navigate to the incident location and follow the route for the fastest response."
+            }
+          </Text>
           <View style={styles.infoRow}>
             <PinIcon color="#E02323" />
             <View style={styles.infoTextContainer}>
@@ -544,7 +583,10 @@ export default function MapStep() {
             <View style={styles.infoTextContainer}>
               <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
               <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}> 
-                {getETA(routeCoords) !== null ? `${getETA(routeCoords)} minutes` : 'Calculating...'}
+                {isIndoorLocation(alertDetails.a_address) 
+                  ? "Indoor location - use map markers"
+                  : getETA(routeCoords) !== null ? `${getETA(routeCoords)} minutes` : 'Calculating...'
+                }
               </Text>
             </View>
           </View>
