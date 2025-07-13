@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -295,6 +297,50 @@ const CrimeMap: React.FC = () => {
       );
       return () => sub.remove();
     })();
+  }, []);
+
+  // Refresh push notification token on app launch
+  useEffect(() => {
+    const refreshPushToken = async () => {
+      try {
+        const policeId = await AsyncStorage.getItem('police_id');
+        if (!policeId) return;
+
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          const { status: newStatus } = await Notifications.requestPermissionsAsync();
+          if (newStatus !== 'granted') {
+            console.log('Permission not granted for notifications');
+            return;
+          }
+        }
+
+        const expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
+        if (expoPushToken) {
+          const formData = new FormData();
+          formData.append('police_id', policeId);
+          formData.append('expo_push_token', expoPushToken);
+          
+          const tokenResponse = await fetch('http://mnl911.atwebpages.com/register_police_token.php', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (tokenResponse.ok) {
+            const tokenData = await tokenResponse.json();
+            if (tokenData.success) {
+              console.log('Push token refreshed successfully');
+            } else {
+              console.error('Failed to refresh push token:', tokenData.error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing push token:', error);
+      }
+    };
+
+    refreshPushToken();
   }, []);
 
   return (
