@@ -18,8 +18,11 @@ export interface AlertNotification {
 interface AlertContextType {
   notifications: AlertNotification[];
   isLoading: boolean;
+  activeAlert: AlertNotification | null; // Track the currently active alert
   acceptAlert: (alertId: number) => Promise<void>;
   refreshAlerts: () => void;
+  setActiveAlert: (alert: AlertNotification | null) => void; // Function to set active alert
+  clearActiveAlert: () => void; // Function to clear active alert when resolved
 }
 
 const API_GET_NOTIFICATIONS_URL = 'http://mnl911.atwebpages.com/getnotifications1.php';
@@ -31,6 +34,7 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   const [notifications, setNotifications] = useState<AlertNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeAlert, setActiveAlertState] = useState<AlertNotification | null>(null); // Track active alert
   const playedAlertIds = useRef(new Set<number>());
   const isFetching = useRef(false);
 
@@ -80,12 +84,15 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
       if (data.success && Array.isArray(data.notifications)) {
         const newAlerts = data.notifications as AlertNotification[];
         console.log('🔍 Found', newAlerts.length, 'notifications'); // Debug log
-        const hasUnheardAlerts = newAlerts.some(alert => !playedAlertIds.current.has(alert.alert_id));
-
-        if (hasUnheardAlerts) {
-          console.log(`🚨 ${newAlerts.length} total alerts, some are new!`);
-          playAlertSound();
-          newAlerts.forEach(alert => playedAlertIds.current.add(alert.alert_id));
+        
+        // Only play sound for new alerts if there's no active alert
+        if (!activeAlert) {
+          const hasUnheardAlerts = newAlerts.some(alert => !playedAlertIds.current.has(alert.alert_id));
+          if (hasUnheardAlerts) {
+            console.log(`🚨 ${newAlerts.length} total alerts, some are new!`);
+            playAlertSound();
+            newAlerts.forEach(alert => playedAlertIds.current.add(alert.alert_id));
+          }
         }
         setNotifications(newAlerts);
       } else {
@@ -103,7 +110,7 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(false);
       isFetching.current = false;
     }
-  }, []);
+  }, [activeAlert]);
 
   // --- Centralized Alert Acceptance ---
   const acceptAlert = async (alertId: number) => {
@@ -113,7 +120,17 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    // Immediately remove from UI for responsiveness
+    // Find the alert being accepted
+    const alertToAccept = notifications.find(n => n.alert_id === alertId);
+    if (!alertToAccept) {
+      Alert.alert("Error", "Alert not found.");
+      return;
+    }
+
+    // Set as active alert immediately
+    setActiveAlertState(alertToAccept);
+
+    // Remove from notifications list
     setNotifications(prev => prev.filter(n => n.alert_id !== alertId));
 
     try {
@@ -130,13 +147,26 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
         ]);
       } else {
         Alert.alert("Failed to Accept", result.error || "An unknown error occurred.");
+        // Reset active alert if acceptance failed
+        setActiveAlertState(null);
         fetchNotifications(); // Re-fetch to get the latest true state
       }
     } catch (error) {
       console.error("Error accepting alert:", error);
       Alert.alert("Network Error", "Could not accept the alert. Please try again.");
+      // Reset active alert if acceptance failed
+      setActiveAlertState(null);
       fetchNotifications();
     }
+  };
+
+  // --- Functions to manage active alert ---
+  const setActiveAlert = (alert: AlertNotification | null) => {
+    setActiveAlertState(alert);
+  };
+
+  const clearActiveAlert = () => {
+    setActiveAlertState(null);
   };
 
   // --- Polling and Lifecycle Management ---
@@ -158,8 +188,11 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
   const value = {
     notifications,
     isLoading,
+    activeAlert,
     acceptAlert,
     refreshAlerts: fetchNotifications, // Expose a manual refresh function
+    setActiveAlert,
+    clearActiveAlert,
   };
 
   return <AlertContext.Provider value={value}>{children}</AlertContext.Provider>;

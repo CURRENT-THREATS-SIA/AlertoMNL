@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Alert, Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
@@ -119,10 +119,10 @@ const CrimeMap: React.FC = () => {
   const [crimeStats, setCrimeStats] = useState<CrimeStat[]>([]);
 
   // --- ALERTS ARE NOW HANDLED BY THE CONTEXT ---
-  const { notifications, acceptAlert } = useAlerts();
+  const { notifications, acceptAlert, activeAlert, clearActiveAlert } = useAlerts();
 
   // --- NEW: State for the Alert Modal ---
-  const [activeAlert, setActiveAlert] = useState<AlertNotification | null>(null);
+  const [modalAlert, setModalAlert] = useState<AlertNotification | null>(null);
   const seenAlertIds = useRef(new Set<number>());
 
   // --- Map Filtering State from master ---
@@ -131,19 +131,25 @@ const CrimeMap: React.FC = () => {
   // --- NEW: State for the officer's location ---
   const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Only show the modal for the latest unseen alert
+  // Only show the modal for the latest unseen alert IF there's no active alert
   useEffect(() => {
+    if (activeAlert) {
+      // If there's an active alert, don't show any new alert modals
+      setModalAlert(null);
+      return;
+    }
+
     if (notifications.length > 0) {
       const latestUnseen = notifications.find(alert => !seenAlertIds.current.has(alert.alert_id));
       if (latestUnseen) {
-        setActiveAlert(latestUnseen);
+        setModalAlert(latestUnseen);
       } else {
-        setActiveAlert(null);
+        setModalAlert(null);
       }
     } else {
-      setActiveAlert(null);
+      setModalAlert(null);
     }
-  }, [notifications]);
+  }, [notifications, activeAlert]);
 
   // Function to toggle legend visibility with animation
   const toggleLegend = () => {
@@ -322,19 +328,54 @@ const CrimeMap: React.FC = () => {
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <AlertModal 
-        visible={!!activeAlert}
-        notification={activeAlert}
+        visible={!!modalAlert}
+        notification={modalAlert}
         onAccept={alertId => {
           acceptAlert(alertId);
-          if (activeAlert) seenAlertIds.current.add(activeAlert.alert_id);
-          setActiveAlert(null);
+          if (modalAlert) seenAlertIds.current.add(modalAlert.alert_id);
+          setModalAlert(null);
         }}
         onDismiss={() => {
-          if (activeAlert) seenAlertIds.current.add(activeAlert.alert_id);
-          setActiveAlert(null);
+          if (modalAlert) seenAlertIds.current.add(modalAlert.alert_id);
+          setModalAlert(null);
         }}
       />
       <Header />
+      
+      {/* Active Alert Banner */}
+      {activeAlert && (
+        <View style={[styles.activeAlertBanner, { backgroundColor: '#E02323' }]}>
+          <Ionicons name="warning" size={20} color="#fff" />
+          <Text style={styles.activeAlertText}>
+            🚨 ACTIVE CALL: Responding to Alert #{activeAlert.alert_id}
+          </Text>
+          <TouchableOpacity 
+            style={styles.clearActiveButton}
+            onPress={() => {
+              // Clear active alert - this should be used when call is completed
+              Alert.alert(
+                "Complete Call",
+                "Are you sure you want to mark this call as completed?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { 
+                    text: "Complete", 
+                    style: "destructive",
+                    onPress: () => {
+                      // This would typically call an API to mark the alert as resolved
+                      // For now, we'll just clear the active alert
+                      // You can add API call here later
+                      clearActiveAlert();
+                    }
+                  }
+                ]
+              );
+            }}
+          >
+            <Ionicons name="close" size={16} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
       
       <ScrollView 
         style={styles.scrollView}
@@ -906,6 +947,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  activeAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  activeAlertText: {
+    flex: 1,
+    marginLeft: 10,
+    marginRight: 10,
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: fonts.poppins.medium,
+  },
+  clearActiveButton: {
+    padding: 5,
   },
 });
 

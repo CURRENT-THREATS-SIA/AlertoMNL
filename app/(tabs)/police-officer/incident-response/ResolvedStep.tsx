@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAlerts } from '../../../context/AlertContext';
 import { theme, useTheme } from '../../../context/ThemeContext';
 
 export default function ResolvedStep() {
@@ -9,6 +10,12 @@ export default function ResolvedStep() {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
   const buttonColor = isDarkMode ? currentTheme.iconBackground : '#E02323';
+  const { clearActiveAlert } = useAlerts();
+
+  // Clear active alert when reaching resolved step (call completed)
+  React.useEffect(() => {
+    clearActiveAlert();
+  }, [clearActiveAlert]);
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
