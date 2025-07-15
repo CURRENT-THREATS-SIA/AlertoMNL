@@ -7,6 +7,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isValidName = (name: string) => /^[A-Za-z ]+$/.test(name);
 
 const SECURITY_QUESTIONS = [
   "What city you were born in?",
@@ -40,12 +41,24 @@ export default function SignUpRegular() {
       alert("Please fill in all fields, including the security question and answer.");
       return;
     }
+    if (email.length > 70) {
+      alert("Email address must not exceed 70 characters.");
+      return;
+    }
+    if (!isValidName(firstName) || !isValidName(lastName)) {
+      alert('First name and Last name must only contain letters.');
+      return;
+    }
     if (!/^09\d{9}$/.test(phone)) {
       alert('Philippine mobile number must be exactly 11 digits and must start with 09 (e.g., 09062278962).');
       return; 
     }
     if (!isValidEmail(email)) {
       alert("Please enter a valid email address.");
+      return;
+    }
+    if (password.length > 9) {
+      alert('Password must not exceed 9 characters including special characters.');
       return;
     }
 

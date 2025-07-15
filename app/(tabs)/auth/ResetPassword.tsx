@@ -2,15 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 function showAlert(title: string, message?: string) {
@@ -31,11 +31,15 @@ export default function ResetPassword() {
 
   const handleReset = async () => {
     if (!password || !confirm) {
-      showAlert('Please fill in all fields.');
+      showAlert('Error', 'Please fill in all fields.');
+      return;
+    }
+    if (password.length > 9) {
+      showAlert('Alert', 'New and Confirm Password must not exceed 9 characters including special characters.');
       return;
     }
     if (password !== confirm) {
-      showAlert('Passwords do not match.');
+      showAlert('Error', 'Passwords do not match.');
       return;
     }
 
