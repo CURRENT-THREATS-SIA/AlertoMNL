@@ -10,6 +10,7 @@ const { width, height } = Dimensions.get('window');
 
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isValidBadgeNumber = (badge: string) => /^[A-Za-z]{4}-\d{6}$/.test(badge);
+const isValidName = (name: string) => /^[A-Za-z ]+$/.test(name);
 
 const SECURITY_QUESTIONS = [
   "What city you were born in?",
@@ -52,6 +53,18 @@ export default function SignUpPolice() {
 
     if (!firstName || !lastName || !badgeNumber || !email || !station || !phone || !password || !finalSecurityQuestion || !securityAnswer) {
       alert("Please fill in all fields.");
+      return;
+    }
+    if (!isValidName(firstName) || !isValidName(lastName)) {
+      alert('First name and Last name must only contain letters.');
+      return;
+    }
+    if (email.length > 70) {
+      alert("Email address must not exceed 70 characters.");
+      return;
+    }
+    if (password.length > 9) {
+      alert('Password must not exceed 9 characters including special characters.');
       return;
     }
     if (!isValidBadgeNumber(badgeNumber)) {
