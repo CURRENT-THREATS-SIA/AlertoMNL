@@ -3,6 +3,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 import CustomTabBar from '../../../app/components/CustomTabBar';
 import { fonts } from '../../config/fonts';
@@ -79,6 +80,7 @@ const History: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -141,6 +143,7 @@ const History: React.FC = () => {
             ListEmptyComponent={
               <Text style={[styles.noHistoryText, { color: currentTheme.subtitle }]}>No history records found.</Text>
             }
+            ListFooterComponent={<View style={{ height: insets.bottom + 16 }} />}
           />
         )}
       </View>
@@ -157,6 +160,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 20,
+    paddingBottom: 80,
   },
   title: {
     fontSize: 24,

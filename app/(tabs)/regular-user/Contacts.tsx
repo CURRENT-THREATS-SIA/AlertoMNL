@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
-import { MoreVertical, Plus, RefreshCw } from 'lucide-react-native';
+import { MoreVertical, Plus, RefreshCw, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import PersonAlertIcon from '../../components/icons/PersonAlertIcon';
 import { fonts } from '../../config/fonts';
 import { theme, useTheme } from '../../context/ThemeContext';
@@ -45,6 +45,12 @@ const Contacts: React.FC = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editContact, setEditContact] = useState<Contact | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editNumber, setEditNumber] = useState('');
+  const [editRelationship, setEditRelationship] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   const fetchContacts = async () => {
     setLoading(true);
@@ -118,6 +124,41 @@ const Contacts: React.FC = () => {
     }
   };
 
+  const handleEdit = () => {
+    if (!selectedContact) return;
+    setEditContact(selectedContact);
+    setEditName(selectedContact.contact_name);
+    setEditNumber(selectedContact.contact_number);
+    setEditRelationship(selectedContact.relationship);
+    setShowMenu(false);
+    setEditMode(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editContact) return;
+    setEditLoading(true);
+    try {
+      const response = await fetch('http://mnl911.atwebpages.com/update_contact.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `contact_id=${editContact.contact_id}&contact_name=${encodeURIComponent(editName)}&contact_number=${encodeURIComponent(editNumber)}&relationship=${encodeURIComponent(editRelationship)}`,
+      });
+      const data = await response.json();
+      if (data.success) {
+        Alert.alert('Contact updated!');
+        setEditMode(false);
+        setEditContact(null);
+        fetchContacts();
+      } else {
+        Alert.alert(data.message || 'Failed to update contact');
+      }
+    } catch (error) {
+      Alert.alert('Network error', error instanceof Error ? error.message : 'Please try again.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -152,6 +193,7 @@ const Contacts: React.FC = () => {
               <Text style={[styles.emptySubText, { color: currentTheme.subtitle }]}>Add your emergency contacts</Text>
             </View>
           }
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           scrollEnabled={false}
         />
 
@@ -168,13 +210,60 @@ const Contacts: React.FC = () => {
       {showMenu && (
         <View style={styles.menuOverlay}>
           <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setShowMenu(false)} />
-          <View style={[styles.menuContent, { backgroundColor: currentTheme.cardBackground, borderColor: currentTheme.border }]}> 
-            <Text style={styles.menuTitle}>{selectedContact?.contact_name}</Text>
-            <TouchableOpacity onPress={handleDelete} style={styles.menuItem}>
-              <Text style={[styles.menuText, { color: '#e33c3c' }]}>Delete</Text>
+          <View style={styles.actionModal}> 
+            <Text style={styles.actionModalTitle}>{selectedContact?.contact_name}</Text>
+            <TouchableOpacity onPress={handleEdit} style={styles.actionModalItem}>
+              <Text style={[styles.actionModalText, { color: '#2196F3' }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowMenu(false)} style={styles.menuItem}>
-              <Text style={[styles.menuText, { color: currentTheme.subtitle }]}>Cancel</Text>
+            <TouchableOpacity onPress={handleDelete} style={styles.actionModalItem}>
+              <Text style={[styles.actionModalText, { color: '#e02323' }]}>Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowMenu(false)} style={styles.actionModalItem}>
+              <Text style={[styles.actionModalText, { color: '#888' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {editMode && (
+        <View style={styles.menuOverlay}>
+          <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setEditMode(false)} />
+          <View style={[styles.editModal, { backgroundColor: currentTheme.cardBackground, borderColor: currentTheme.border }]}> 
+            <View style={styles.editModalHeader}>
+              <Text style={styles.menuTitle}>Edit Contact</Text>
+              <TouchableOpacity onPress={() => setEditMode(false)} style={styles.closeButton}>
+                <X size={22} color={currentTheme.subtitle} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={[styles.input, { color: currentTheme.text, borderColor: currentTheme.border }]}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Name"
+              placeholderTextColor={currentTheme.subtitle}
+              editable={!editLoading}
+            />
+            <TextInput
+              style={[styles.input, { color: currentTheme.text, borderColor: currentTheme.border }]}
+              value={editNumber}
+              onChangeText={setEditNumber}
+              placeholder="Phone Number"
+              placeholderTextColor={currentTheme.subtitle}
+              keyboardType="phone-pad"
+              editable={!editLoading}
+            />
+            <TextInput
+              style={[styles.input, { color: currentTheme.text, borderColor: currentTheme.border }]}
+              value={editRelationship}
+              onChangeText={setEditRelationship}
+              placeholder="Relationship"
+              placeholderTextColor={currentTheme.subtitle}
+              editable={!editLoading}
+            />
+            <TouchableOpacity onPress={handleEditSave} style={[styles.saveButton, editLoading && { opacity: 0.7 }]} disabled={editLoading}>
+              <Text style={styles.saveButtonText}>{editLoading ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditMode(false)} style={styles.cancelButton}>
+              <Text style={[styles.menuText, { color: '#e02323' }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -351,6 +440,95 @@ const styles = StyleSheet.create({
   },
   moreButton: {
     padding: 4,
+  },
+  input: {
+    width: '100%',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 16,
+    fontFamily: fonts.poppins.regular,
+    marginBottom: 16,
+    backgroundColor: '#f7f7f9',
+  },
+  editModal: {
+    width: '90%',
+    maxWidth: 340,
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+    backgroundColor: '#fff',
+  },
+  editModalHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  closeButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  saveButton: {
+    width: '100%',
+    backgroundColor: '#e02323',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: fonts.poppins.semiBold,
+  },
+  cancelButton: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginTop: 2,
+  },
+  // Add new styles for the action modal
+  actionModal: {
+    width: '90%',
+    maxWidth: 340,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#eee',
+    paddingVertical: 24,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  actionModalTitle: {
+    fontSize: 18,
+    fontFamily: fonts.poppins.semiBold,
+    color: '#e02323',
+    marginBottom: 18,
+    textAlign: 'center',
+  },
+  actionModalItem: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginBottom: 2,
+  },
+  actionModalText: {
+    fontSize: 16,
+    fontFamily: fonts.poppins.medium,
   },
 });
 
