@@ -22,6 +22,7 @@ import {
 
 
 
+
   View
 } from 'react-native';
 import { Path, Svg } from 'react-native-svg'; // <-- Import Svg for the dropdown arrow
@@ -29,7 +30,14 @@ import Header from '../../../../components/Header';
 import { theme, useTheme } from '../../../context/ThemeContext';
 
 const incidentTypes = [
-  'Theft', 'Robbery', 'Assault', 'Homicide', 'Vandalism', 'Drugs', 'Other'
+  'Murder',
+  'Homicide',
+  'Physical Injury',
+  'Rape',
+  'Robbery',
+  'Theft',
+  'Carnapping MV',
+  'Carnapping MC'
 ];
 
 // --- Reusable Dropdown Arrow Icon ---

@@ -16,6 +16,7 @@ interface MapComponentProps {
   userLocation?: { lat: number; lng: number };
   hideControls?: boolean; // New prop to hide UI controls
   hideIncidentMarker?: boolean; // New prop to hide incident marker
+  incidentPhotoUrl?: string; // New prop for incident profile picture
 }
 
 // Manila coordinates
@@ -25,7 +26,7 @@ const MANILA_CENTER = {
   zoom: 12
 };
 
-const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation, userLocation, hideControls = false, hideIncidentMarker = false }) => {
+const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selectedStation, userType, data, routeCoords, officerLocation, incidentLocation, userLocation, hideControls = false, hideIncidentMarker = false, incidentPhotoUrl }) => {
   const [deviceLocation, setDeviceLocation] = useState<Location.LocationObject | null>(null);
   const webViewRef = useRef<WebView>(null);
   const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
@@ -220,50 +221,40 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
 
     const incidentCoord = [incidentLocation.lng, incidentLocation.lat];
     const isEndPoint = isRouteMode; // Show as end point when in route mode
+    // Use the proxy PHP script for the image URL
+    function getProxyPhotoUrl(photo_url) {
+      const safeUrl = typeof photo_url === 'string' ? photo_url : '';
+      const filename = safeUrl.split('/').pop();
+      return `http://mnl911.atwebpages.com/get_profile_photo.php?file=${filename}`;
+    }
+    const photoUrl = incidentPhotoUrl ? getProxyPhotoUrl(incidentPhotoUrl) : '';
+    // Only inject the image block if photoUrl is truthy
+    const imageBlock = photoUrl ? `
+      const img = document.createElement('img');
+      img.src = '${photoUrl}';
+      img.style.width = '40px';
+      img.style.height = '40px';
+      img.style.borderRadius = '20px';
+      img.style.border = '2px solid #fff';
+      img.style.marginBottom = '-10px';
+      img.style.zIndex = '20';
+      container.appendChild(img);
+    ` : '';
 
     const markerScript = `
       (function() {
-        // Remove existing incident marker if it exists
         if (window.incidentMarker) {
           window.incidentMarker.remove();
         }
-
-        // Add custom marker style to the document head
-        if (!document.getElementById('incident-marker-style')) {
-          const style = document.createElement('style');
-          style.id = 'incident-marker-style';
-          style.innerHTML = \`
-            .incident-marker {
-              display: block !important;
-              border: 3px solid #E02323 !important;
-              border-radius: 50% !important;
-              width: 30px !important;
-              height: 30px !important;
-              background-color: #E02323 !important;
-              box-shadow: 0 0 0 rgba(224, 35, 35, 0.4);
-              animation: incidentPulse 2s infinite;
-              position: relative;
-              z-index: 10;
-            }
-            @keyframes incidentPulse {
-              0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(224, 35, 35, 0.7); }
-              70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(224, 35, 35, 0); }
-              100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(224, 35, 35, 0); }
-            }
-          \`;
-          document.head.appendChild(style);
-        }
-        
-        // Create container for the marker
         const container = document.createElement('div');
         container.style.position = 'relative';
-        
-        // Create the marker element
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.alignItems = 'center';
+        ${imageBlock}
         const el = document.createElement('div');
         el.className = 'incident-marker';
-        
         ${isEndPoint ? `
-        // Add "DESTINATION" label for route mode
         const label = document.createElement('div');
         label.innerText = 'DESTINATION';
         label.style.position = 'absolute';
@@ -280,8 +271,6 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
         label.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
         label.style.zIndex = '15';
         container.appendChild(label);
-        
-        // Add white center dot for destination
         const centerDot = document.createElement('div');
         centerDot.style.position = 'absolute';
         centerDot.style.top = '50%';
@@ -294,17 +283,14 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
         centerDot.style.zIndex = '2';
         el.appendChild(centerDot);
         ` : ''}
-        
         container.appendChild(el);
-        
-        // Add the new marker to the map
         window.incidentMarker = new mapboxgl.Marker(container)
           .setLngLat([${incidentCoord[0]}, ${incidentCoord[1]}])
           .addTo(map);
       })();
     `;
     webViewRef.current.injectJavaScript(markerScript);
-  }, [incidentLocation, isRouteMode, hideIncidentMarker, hideControls]);
+  }, [incidentLocation, isRouteMode, hideIncidentMarker, hideControls, incidentPhotoUrl]);
 
   // Add effect to handle route updates
   useEffect(() => {
@@ -317,117 +303,77 @@ const MapComponent: React.FC<MapComponentProps> = ({ selectedCrimeType, selected
     const coordinates = routeCoords.map(coord => [coord.lng, coord.lat]);
     console.log('DEBUG: Transformed coordinates:', coordinates);
     
+    // Use the proxy PHP script for the image URL
+    function getProxyPhotoUrl(photo_url) {
+      const safeUrl = typeof photo_url === 'string' ? photo_url : '';
+      const filename = safeUrl.split('/').pop();
+      return `http://mnl911.atwebpages.com/get_profile_photo.php?file=${filename}`;
+    }
+    const photoUrl = incidentPhotoUrl ? getProxyPhotoUrl(incidentPhotoUrl) : '';
+    // Build the image block string for the destination marker (single line, no newlines)
+    const imageBlock = photoUrl
+      ? "const img = document.createElement('img');" +
+        "img.src = '" + photoUrl + "';" +
+        "img.style.width = '40px';" +
+        "img.style.height = '40px';" +
+        "img.style.borderRadius = '20px';" +
+        "img.style.border = '2px solid #fff';" +
+        "img.style.marginBottom = '-10px';" +
+        "img.style.zIndex = '20';" +
+        "container.appendChild(img);"
+      : '';
+    
     const script = `
       console.log('DEBUG: Received route update:', ${JSON.stringify(coordinates)});
-      
       // Remove existing route if it exists
-      if (map.getLayer('route-layer')) {
-        console.log('DEBUG: Removing existing route layer');
-        map.removeLayer('route-layer');
-      }
-      if (map.getSource('route-source')) {
-        console.log('DEBUG: Removing existing route source');
-        map.removeSource('route-source');
-      }
+      if (map.getLayer('route-layer')) { map.removeLayer('route-layer'); }
+      if (map.getSource('route-source')) { map.removeSource('route-source'); }
 
       // Add new route
       if (${JSON.stringify(coordinates)}.length > 1) {
-        console.log('DEBUG: Adding new route');
         map.addSource('route-source', {
           type: 'geojson',
-          data: {
-            type: 'Feature',
-            geometry: {
-              type: 'LineString',
-              coordinates: ${JSON.stringify(coordinates)}
-            }
-          }
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: ${JSON.stringify(coordinates)} } }
         });
-
-        map.addLayer({
-          id: 'route-layer',
-          type: 'line',
-          source: 'route-source',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round'
-          },
-          paint: {
-            'line-color': '#e31a1c',
-            'line-width': 8,
-            'line-opacity': 0.9
-          }
-        });
-
+        map.addLayer({ id: 'route-layer', type: 'line', source: 'route-source', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#e31a1c', 'line-width': 8, 'line-opacity': 0.9 } });
         // Add route markers when hideControls is true (for MapStep)
         const shouldHideControls = ${hideControls ? 'true' : 'false'};
         const routeCoordinates = ${JSON.stringify(coordinates)};
         if (shouldHideControls && routeCoordinates.length > 1) {
-          // Clean up existing markers first
           if (window.routeStartMarker) { window.routeStartMarker.remove(); window.routeStartMarker = null; }
           if (window.routeEndMarker) { window.routeEndMarker.remove(); window.routeEndMarker = null; }
           if (window.officerMarker) { window.officerMarker.remove(); window.officerMarker = null; }
           if (window.incidentMarker) { window.incidentMarker.remove(); window.incidentMarker = null; }
           if (window.userMarker) { window.userMarker.remove(); window.userMarker = null; }
-          
           const startCoord = routeCoordinates[0];
           const endCoord = routeCoordinates[routeCoordinates.length - 1];
-          
-          // Create start marker (user location icon) - just the icon, no label
           const startEl = document.createElement('div');
           startEl.style.width = '30px';
           startEl.style.height = '30px';
-          startEl.innerHTML = \`
-            <svg viewBox="0 0 24 24" width="30" height="30">
-              <circle cx="12" cy="12" r="8" 
-                      fill="#4285F4" 
-                      stroke="#ffffff" 
-                      stroke-width="3"/>
-              <circle cx="12" cy="12" r="3" 
-                      fill="#ffffff"/>
-            </svg>
-          \`;
-          
-          window.routeStartMarker = new mapboxgl.Marker({
-            element: startEl
-          })
-            .setLngLat(startCoord)
-            .addTo(map);
-          
-          // Create destination marker (red pin) - just the icon, no label
+          startEl.innerHTML = '<svg viewBox="0 0 24 24" width="30" height="30"><circle cx="12" cy="12" r="8" fill="#4285F4" stroke="#ffffff" stroke-width="3"/><circle cx="12" cy="12" r="3" fill="#ffffff"/></svg>';
+          window.routeStartMarker = new mapboxgl.Marker({ element: startEl }).setLngLat(startCoord).addTo(map);
+          // --- Add profile photo above the red pin (end marker) ---
+          const container = document.createElement('div');
+          container.style.position = 'relative';
+          container.style.display = 'flex';
+          container.style.flexDirection = 'column';
+          container.style.alignItems = 'center';
+          ${imageBlock}
           const endEl = document.createElement('div');
           endEl.style.width = '35px';
           endEl.style.height = '42px';
-          endEl.innerHTML = \`
-            <svg viewBox="0 0 24 32" width="35" height="42">
-              <path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12zm0 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" 
-                    fill="#E02323" 
-                    stroke="#ffffff" 
-                    stroke-width="2"/>
-            </svg>
-          \`;
-          
-          window.routeEndMarker = new mapboxgl.Marker({
-            element: endEl,
-            anchor: 'bottom'
-          })
-            .setLngLat(endCoord)
-            .addTo(map);
+          endEl.innerHTML = '<svg viewBox="0 0 24 32" width="35" height="42"><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 20 12 20s12-11 12-20c0-6.627-5.373-12-12-12zm0 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="#E02323" stroke="#ffffff" stroke-width="2"/></svg>';
+          container.appendChild(endEl);
+          window.routeEndMarker = new mapboxgl.Marker({ element: container, anchor: 'bottom' }).setLngLat(endCoord).addTo(map);
         }
-
-        // Fit map to route bounds
         const bounds = ${JSON.stringify(coordinates)}.reduce((b, coord) => b.extend(coord), new mapboxgl.LngLatBounds(${JSON.stringify(coordinates[0])}, ${JSON.stringify(coordinates[0])}));
-        map.fitBounds(bounds, { 
-          padding: 100,
-          maxZoom: 17,
-          duration: 1000
-        });
+        map.fitBounds(bounds, { padding: 100, maxZoom: 17, duration: 1000 });
       }
       true;
     `;
 
     webViewRef.current.injectJavaScript(script);
-  }, [routeCoords, hideControls]);
+  }, [routeCoords, hideControls, incidentPhotoUrl]);
 
   useEffect(() => {
     if (isClusterMode && data) {
