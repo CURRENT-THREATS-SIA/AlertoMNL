@@ -55,6 +55,7 @@ interface AlertDetails {
   f_name: string;
   l_name: string;
   m_number: string;
+  photo_url?: string; // <-- Add this line
 }
 
 // Utility: Haversine distance for more accurate nearest node
@@ -533,6 +534,7 @@ export default function MapStep() {
               : undefined
           }
           hideControls={true}
+          incidentPhotoUrl={alertDetails?.photo_url}
         />
       </View>
       <Animated.View 
