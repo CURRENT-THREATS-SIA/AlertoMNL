@@ -15,7 +15,7 @@ export const TermsAndConditionScreen: React.FC = () => {
                     </View>
                     <ScrollView style={{ flex: 1 }}>
                         <Text style={styles.anceOfTerms}>
-                            <Text style={styles.span}>ance of Terms{"\n"}</Text>
+                            <Text style={styles.span}>Acceptance of Terms{"\n"}</Text>
                             <Text style={styles.textWrapper3}> By downloading, accessing, or using the ALERTO MNL, you agree to be bound by these Terms and Conditions. If you do not agree, do not use the App.{"\n\n"}</Text>
                             <Text style={styles.span}>Account Responsibilities{"\n"}</Text>
                             <Text style={styles.textWrapper3}>You are responsible for maintaining the confidentiality of your login credentials.{"\n"}You agree to notify us immediately of any unauthorized access to your account.{"\n\n"}</Text>
@@ -43,7 +43,7 @@ export const TermsAndConditionScreen: React.FC = () => {
                 <TouchableOpacity 
                     style={styles.Button}
                     onPress={() => router.push("/auth/Login")} > 
-                    <Text style={styles.ButtonText}> Terms and Conditions</Text>
+                    <Text style={styles.ButtonText}>Accept Terms and Conditions</Text>
                 </TouchableOpacity>
             </View>
         </View>
