@@ -181,7 +181,11 @@ export default function Dashboard() {
                                 <Text style={[styles.cell, { flex: 3 }]}>{formatDate(record.date)}</Text>
                                 <Text style={[styles.cell, { flex: 2 }]}>{record.type || 'N/A'}</Text>
                                 <Text style={[styles.cell, { flex: 2 }]}>{record.respondedBy}</Text>
-                                <Text style={[styles.cell, { flex: 1.5 }]}>{record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'N/A'}</Text>
+                                <Text style={[styles.cell, { flex: 1.5 }]}>{
+    record.status
+        ? (record.status.toLowerCase() === 'resolved' ? 'Submit' : record.status.charAt(0).toUpperCase() + record.status.slice(1))
+        : 'N/A'
+}</Text>
                             </View>
                         ))
                     )}
