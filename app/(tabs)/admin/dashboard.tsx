@@ -26,9 +26,11 @@ interface CrimeRecord {
 const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
-        const date = new Date(dateString.replace(' ', 'T'));
+        // Parse the date string as UTC, then convert to PH time
+        const date = new Date(dateString.replace(' ', 'T') + 'Z');
         if (isNaN(date.getTime())) return 'Invalid Date';
-        return date.toLocaleString('en-US', {
+        return date.toLocaleString('en-PH', {
+            timeZone: 'Asia/Manila',
             year: 'numeric',
             month: 'long',
             day: 'numeric',
