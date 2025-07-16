@@ -21,38 +21,6 @@ interface CrimeRecord {
     respondedBy: string;
 }
 
-// The stats are static as you requested
-const crimeStats = [
-    { 
-        title: 'Total Crime', 
-        value: '40,689', 
-        period: 'from 2021 to present', 
-        icon: <Shield size={24} color="#e02323" />,
-        bgColor: '#fff'
-    },
-    { 
-        title: 'Highest Crime', 
-        value: 'Theft', 
-        period: 'from 2021 to present',
-        icon: <TrendingUp size={24} color="#e02323" />,
-        bgColor: '#FFF9E7'
-    },
-    { 
-        title: 'Index', 
-        value: '84.41%', 
-        period: 'from 2021 to present',
-        icon: <Gavel size={24} color="#e02323" />,
-        bgColor: '#F0FDF4'
-    },
-    { 
-        title: 'Non-Index', 
-        value: '505.40%', 
-        period: 'from 2021 to present',
-        icon: <Clock size={24} color="#e02323" />,
-        bgColor: '#FFF1F2'
-    },
-];
-
 // Helper functions for formatting data
 const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
@@ -82,6 +50,7 @@ export default function Dashboard() {
     const [recentCrimes, setRecentCrimes] = useState<CrimeRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [resolvedCount, setResolvedCount] = useState<number>(0); // New state for total resolved crimes
 
     useEffect(() => {
         const fetchRecentCrimes = async () => {
@@ -109,6 +78,8 @@ export default function Dashboard() {
                     // 3. Set the state with the top 5 most recent unique crimes
                     setRecentCrimes(uniqueRecords.slice(0, 5));
 
+                    // Set resolved count from backend
+                    setResolvedCount(json.resolvedCount || 0);
                 } else {
                     throw new Error(json.message || 'Invalid data format');
                 }
@@ -122,6 +93,40 @@ export default function Dashboard() {
 
         fetchRecentCrimes();
     }, []);
+
+    const BASE_TOTAL_CRIME = 40689; // your static base value
+
+    // Use BASE_TOTAL_CRIME + resolvedCount for Total Crime stat
+    const crimeStats = [
+        { 
+            title: 'Total Crime', 
+            value: (BASE_TOTAL_CRIME + resolvedCount).toLocaleString(), // base + new resolved
+            period: 'from 2021 to present', 
+            icon: <Shield size={24} color="#e02323" />, 
+            bgColor: '#fff' 
+        },
+        { 
+            title: 'Highest Crime', 
+            value: 'Theft', 
+            period: 'from 2021 to present',
+            icon: <TrendingUp size={24} color="#e02323" />,
+            bgColor: '#FFF9E7'
+        },
+        { 
+            title: 'Index', 
+            value: '84.41%', 
+            period: 'from 2021 to present',
+            icon: <Gavel size={24} color="#e02323" />,
+            bgColor: '#F0FDF4'
+        },
+        { 
+            title: 'Non-Index', 
+            value: '505.40%', 
+            period: 'from 2021 to present',
+            icon: <Clock size={24} color="#e02323" />,
+            bgColor: '#FFF1F2'
+        },
+    ];
 
     return (
         <AdminLayout>
