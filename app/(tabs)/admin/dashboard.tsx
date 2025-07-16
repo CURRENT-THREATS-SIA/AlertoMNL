@@ -19,6 +19,7 @@ interface CrimeRecord {
     type: string | null;
     severity: string | null;
     respondedBy: string;
+    status?: string | null; // Add status field
 }
 
 // Helper functions for formatting data
@@ -158,6 +159,7 @@ export default function Dashboard() {
                         <Text style={[styles.headerCell, { flex: 3 }]}>DATE</Text>
                         <Text style={[styles.headerCell, { flex: 2 }]}>TYPE</Text>
                         <Text style={[styles.headerCell, { flex: 2 }]}>RESPONDED BY</Text>
+                        <Text style={[styles.headerCell, { flex: 1.5 }]}>STATUS</Text>
                     </View>
 
                     {isLoading ? (
@@ -177,6 +179,7 @@ export default function Dashboard() {
                                 <Text style={[styles.cell, { flex: 3 }]}>{formatDate(record.date)}</Text>
                                 <Text style={[styles.cell, { flex: 2 }]}>{record.type || 'N/A'}</Text>
                                 <Text style={[styles.cell, { flex: 2 }]}>{record.respondedBy}</Text>
+                                <Text style={[styles.cell, { flex: 1.5 }]}>{record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : 'N/A'}</Text>
                             </View>
                         ))
                     )}
