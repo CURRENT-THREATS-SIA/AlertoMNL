@@ -7,7 +7,7 @@ import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Linking, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
 import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
@@ -156,7 +156,10 @@ export default function RegularUserHome() {
         console.log("Test Mode: SOS Active, transitioning to received in 5s");
         timer = setTimeout(() => setSosState('received'), 5000);
     } else if (sosState === 'received') {
-        console.log("Test Mode: Police Received, transitioning to resolved in 5s");
+        console.log("Test Mode: Police Received, transitioning to arrived in 5s");
+        timer = setTimeout(() => setSosState('arrived'), 5000);
+    } else if (sosState === 'arrived') {
+        console.log("Test Mode: Police Arrived, transitioning to resolved in 5s");
         timer = setTimeout(() => setSosState('resolved'), 5000);
     } else if (sosState === 'resolved') {
         console.log("Test Mode: Incident Resolved, transitioning to idle in 3s");
@@ -165,7 +168,7 @@ export default function RegularUserHome() {
             setIsSendingSOS(false);
         }, 3000);
     }
-
+      
     return () => clearTimeout(timer); // Cleanup on unmount or if sosState changes
 
   }, [sosState, testModeEnabled]);
@@ -267,8 +270,38 @@ export default function RegularUserHome() {
     try {
       // Request background location permission for better tracking
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
-      if (backgroundStatus === 'granted') {
-        console.log('Background location permission granted');
+      if (backgroundStatus !== 'granted') {
+        console.log('Background location permission not granted');
+        Alert.alert(
+          'Background Location Needed',
+          'Please enable "Allow all the time" location permission in your device settings for full functionality.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        // Still try to get foreground location for basic functionality
+        const foregroundLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
+        setLocation(foregroundLocation);
+        try {
+          const addresses = await Location.reverseGeocodeAsync({
+            latitude: foregroundLocation.coords.latitude,
+            longitude: foregroundLocation.coords.longitude,
+          });
+          if (addresses && addresses[0]) {
+            const address = addresses[0];
+            const formattedAddress = [
+              address.street,
+              address.district,
+              address.subregion,
+              address.city
+            ].filter(Boolean).join(', ');
+            setLocationAddress(formattedAddress || 'Location found');
+          }
+        } catch (error) {
+          setLocationAddress('Location found (address unavailable)');
+        }
+        return;
       }
 
       // Configure location task for background updates
@@ -300,7 +333,6 @@ export default function RegularUserHome() {
               latitude: newLocation.coords.latitude,
               longitude: newLocation.coords.longitude,
             });
-            
             if (addresses && addresses[0]) {
               const address = addresses[0];
               const formattedAddress = [
@@ -309,7 +341,6 @@ export default function RegularUserHome() {
                 address.subregion,
                 address.city
               ].filter(Boolean).join(', ');
-              
               setLocationAddress(formattedAddress || 'Location found');
             }
           } catch (error) {
@@ -1007,7 +1038,7 @@ const styles = StyleSheet.create({
   helpText: {
     alignItems: "center",
     gap: 4,
-    marginBottom: 8,
+    marginBottom: 24,
     width: '100%',
   },
   helpTextPrimary: {
