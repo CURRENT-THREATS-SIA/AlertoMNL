@@ -174,3 +174,27 @@ export function getTimeDifference(dateString: string): number {
     return 0;
   }
 }
+
+export function getPhilippineFullDateTimeString(dateString: string): string {
+  try {
+    const philippineDate = convertToPhilippineTime(dateString);
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const month = months[philippineDate.getMonth()];
+    const day = philippineDate.getDate();
+    const year = philippineDate.getFullYear();
+
+    let hours = philippineDate.getHours();
+    const minutes = philippineDate.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+
+    return `${month} ${day}, ${year} at ${hours}:${minutes} ${ampm}`;
+  } catch (error) {
+    console.error('Error formatting Philippine full date/time string:', error);
+    return 'Invalid date/time';
+  }
+}

@@ -1,4 +1,4 @@
-import { ChevronDown, Filter, RefreshCw, Search } from 'lucide-react-native';
+import { Calendar, ChevronDown, Filter, RefreshCw, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     FlatList,
@@ -18,6 +18,9 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 // XLSX for Excel file generation
 import * as XLSX from 'xlsx';
+// For native date picker
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 
 // --- Interfaces, Constants, and Helper Functions ---
 
@@ -31,23 +34,40 @@ interface CrimeRecord {
     respondedBy: string;
 }
 
-const crimeTypes = ['All Types', 'Theft', 'Robbery', 'Assault', 'Burglary', 'Vandalism', 'Drugs'];
+const crimeTypes = [ 
+    'All Types',
+    'Murder',
+    'Homicide',
+    'Physical Injury',
+    'Rape',
+    'Robbery',
+    'Theft',
+    'Carnapping MV',
+    'Carnapping MC'
+  ];
 const severityLevels = ['All Severities', 'Low', 'Medium', 'High'];
 const itemsPerPage = 10;
 
 const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
+        // Parse as local (no Z, no +8)
         const date = new Date(dateString.replace(' ', 'T'));
-        if (isNaN(date.getTime())) return 'Invalid Date';
-        return date.toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-        });
+        const months = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        const month = months[date.getMonth()];
+        const day = date.getDate();
+        const year = date.getFullYear();
+
+        let hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+
+        return `${month} ${day}, ${year} at ${hours}:${minutes} ${ampm}`;
     } catch {
         return 'N/A';
     }
@@ -81,6 +101,17 @@ const HighlightText = ({ text = '', highlight = '', style }: { text: string; hig
     );
 };
 
+// Helper to convert DD/MM/YYYY to YYYY-MM-DD
+function toISODate(dateString: string) {
+    if (!dateString) return '';
+    if (dateString.includes('-')) return dateString; // already ISO
+    const parts = dateString.split('/');
+    if (parts.length !== 3) return '';
+    const [day, month, year] = parts;
+    if (!day || !month || !year) return '';
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
 
 export default function CrimeData() {
     // --- State and Hooks ---
@@ -94,6 +125,9 @@ export default function CrimeData() {
     const [showSeverityDropdown, setShowSeverityDropdown] = useState(false);
     const [hoveredType, setHoveredType] = useState<string | null>(null);
     const [hoveredSeverity, setHoveredSeverity] = useState<string | null>(null);
+    // Date filter state
+    const [selectedDate, setSelectedDate] = useState<string>(''); // format: 'YYYY-MM-DD'
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     // --- Data Fetching and Filtering ---
     useEffect(() => {
@@ -131,7 +165,7 @@ export default function CrimeData() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedType, selectedSeverity, searchQuery]);
+    }, [selectedType, selectedSeverity, searchQuery, selectedDate]);
 
     const filteredData = useMemo(() => {
         let result = [...masterCrimeData];
@@ -158,7 +192,16 @@ export default function CrimeData() {
         if (selectedSeverity !== 'All Severities') {
             result = result.filter(item => item.severity === selectedSeverity);
         }
-        
+        // Date filter
+        if (selectedDate) {
+            const isoSelectedDate = toISODate(selectedDate);
+            if (isoSelectedDate) {
+                result = result.filter(item => {
+                    const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
+                    return utcDateString === isoSelectedDate;
+                });
+            }
+        }
         // Use Set for faster deduplication
         const seen = new Set();
         result = result.filter(item => {
@@ -166,11 +209,10 @@ export default function CrimeData() {
             seen.add(item.alertId);
             return !duplicate;
         });
-        
         // Sort once at the end
         result.sort((a, b) => parseInt(a.alertId) - parseInt(b.alertId));
         return result;
-    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity]);
+    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity, selectedDate]);
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const paginatedData = useMemo(() => {
@@ -186,6 +228,7 @@ export default function CrimeData() {
         setSelectedType('All Types');
         setSelectedSeverity('All Severities');
         setSearchQuery('');
+        setSelectedDate('');
     };
 
     const handleCloseDropdowns = () => {
@@ -201,6 +244,18 @@ export default function CrimeData() {
     const toggleSeverityDropdown = () => {
         setShowTypeDropdown(false);
         setShowSeverityDropdown(prev => !prev);
+    };
+
+    // --- Date Picker Handlers ---
+    const handleDateChange = (event: any, date?: Date) => {
+        setShowDatePicker(false);
+        if (date) {
+            // Format as YYYY-MM-DD
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            setSelectedDate(`${yyyy}-${mm}-${dd}`);
+        }
     };
 
     // --- EXPORT FUNCTIONS ---
@@ -439,6 +494,7 @@ export default function CrimeData() {
 
                     <View style={styles.filtersContainer}>
                         <View style={styles.filterGroup}>
+                            {/* Type Filter */}
                             <Pressable onPress={(e) => e.stopPropagation()}>
                                 <View>
                                     <TouchableOpacity style={styles.filterButton} onPress={toggleTypeDropdown}>
@@ -466,6 +522,7 @@ export default function CrimeData() {
                                     )}
                                 </View>
                             </Pressable>
+                            {/* Severity Filter */}
                             <Pressable onPress={(e) => e.stopPropagation()}>
                                 <View>
                                     <TouchableOpacity style={styles.filterButton} onPress={toggleSeverityDropdown}>
@@ -493,7 +550,50 @@ export default function CrimeData() {
                                     )}
                                 </View>
                             </Pressable>
-
+                            {/* Date Filter */}
+                            <View style={styles.dateFilterContainer}>
+                                <Calendar size={16} color="#666" style={{ marginRight: 4 }} />
+                                {Platform.OS === 'web' ? (
+                                    <input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={e => setSelectedDate(e.target.value)}
+                                        style={{
+                                            border: '1px solid #e5e5e5',
+                                            borderRadius: 8,
+                                            padding: '8px 10px',
+                                            fontSize: 14,
+                                            color: '#444',
+                                            outline: 'none',
+                                            marginRight: 4
+                                        }}
+                                    />
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.dateInput}
+                                        onPress={() => setShowDatePicker(true)}
+                                    >
+                                        <Text style={{ color: selectedDate ? '#444' : '#aaa', fontSize: 14 }}>
+                                            {selectedDate ? selectedDate : 'Select Date'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {selectedDate ? (
+                                    <TouchableOpacity onPress={() => setSelectedDate('')} style={styles.clearDateButton}>
+                                        <Text style={styles.clearDateText}>×</Text>
+                                    </TouchableOpacity>
+                                ) : null}
+                                {/* Native Date Picker Modal */}
+                                {showDatePicker && Platform.OS !== 'web' && (
+                                    <DateTimePicker
+                                        value={selectedDate ? new Date(selectedDate) : new Date()}
+                                        mode="date"
+                                        display="default"
+                                        onChange={handleDateChange}
+                                    />
+                                )}
+                            </View>
+                            {/* Reset Button */}
                             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
                                 <RefreshCw size={18} color="#e02323" />
                                 <Text style={styles.resetText}>Reset</Text>
@@ -510,7 +610,7 @@ export default function CrimeData() {
                     </View>
                 </View>
                 
-                <View style={styles.tableContainer}>
+                <View style={[styles.tableContainer, Platform.OS === 'web' && { overflow: 'scroll' }]}>
                     <FlatList
                         data={paginatedData}
                         keyExtractor={(item) => `${item.alertId}`}
@@ -543,7 +643,7 @@ export default function CrimeData() {
 
                 <View style={{ flex: 1 }} />
 
-                {paginatedData.length > 0 && (
+                {filteredData.length > 0 && (
                     <View style={styles.pagination}>
                         <Text style={styles.paginationText}>Showing {showStart}-{showEnd} of {filteredData.length}</Text>
                         <View style={styles.paginationControls}>
@@ -601,6 +701,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#eee',
+        height: 400, // Fixed height for scrollable area
+        // overflow: 'auto', // Moved to inline style for web only
     },
     tableHeader: { flexDirection: 'row', backgroundColor: '#fcfcfc', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
     headerCell: { fontSize: 12, fontWeight: '600', color: '#666', paddingHorizontal: 4, textAlign: 'center' },
@@ -649,5 +751,31 @@ const styles = StyleSheet.create({
     },
     highlightedText: {
         backgroundColor: '#fff8b4'
+    },
+    dateFilterContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: '#e5e5e5',
+        gap: 8,
+    },
+    dateInput: {
+        flex: 1,
+        paddingVertical: 0,
+        paddingHorizontal: 0,
+        fontSize: 14,
+        color: '#444',
+    },
+    clearDateButton: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    clearDateText: {
+        fontSize: 18,
+        color: '#aaa',
     }
 });
