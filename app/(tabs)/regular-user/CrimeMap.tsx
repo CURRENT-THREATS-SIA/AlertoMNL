@@ -14,7 +14,7 @@ import {
 import * as Location from 'expo-location';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import CustomTabBar from '../../../app/components/CustomTabBar';
-import { createCrimeTypeData, StationName, totalCrime, totalCrimeData, totalRates } from '../../../constants/mapData';
+import { createCrimeTypeData, crimeData, StationName, totalCrime, totalCrimeData, totalRates } from '../../../constants/mapData';
 import MapComponent from '../../components/MapComponent';
 import SelectionModal from '../../components/SelectionModal';
 import { fonts } from '../../config/fonts';
@@ -46,21 +46,22 @@ const crimeTypes = [
   { id: 10, label: 'Non-Index Crime', value: 'Non-Index Crime' },
 ];
 
+// Update policeStations to show full names but keep internal values as 'Station 1', etc.
 const policeStations = [
-  { id: 1, label: 'MPD Station 1 - Raxabago', value: 'MPD Station 1 - Raxabago' },
-  { id: 2, label: 'MPD Station 2 - Tondo', value: 'MPD Station 2 - Tondo' },
-  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'MPD Station 3 - Sta Cruz' },
-  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'MPD Station 4 - Sampaloc' },
-  { id: 5, label: 'MPD Station 5 - Ermita', value: 'MPD Station 5 - Ermita' },
-  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'MPD Station 6 - Sta Ana' },
-  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'MPD Station 7 - J. A. Santos' },
-  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'MPD Station 8 - Sta. Mesa' },
-  { id: 9, label: 'MPD Station 9 - Malate', value: 'MPD Station 9 - Malate' },
-  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'MPD Station 10 - Pandacan' },
-  { id: 11, label: 'MPD Station 11 - Meisic', value: 'MPD Station 11 - Meisic' },
-  { id: 12, label: 'MPD Station 12 - Delpan', value: 'MPD Station 12 - Delpan' },
-  { id: 13, label: 'MPD Station 13 - Baseco', value: 'MPD Station 13 - Baseco' },
-  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'MPD Station 14 - Barbosa' },
+  { id: 1, label: 'MPD Station 1 - Raxabago', value: 'Station 1' },
+  { id: 2, label: 'MPD Station 2 - Tondo', value: 'Station 2' },
+  { id: 3, label: 'MPD Station 3 - Sta Cruz', value: 'Station 3' },
+  { id: 4, label: 'MPD Station 4 - Sampaloc', value: 'Station 4' },
+  { id: 5, label: 'MPD Station 5 - Ermita', value: 'Station 5' },
+  { id: 6, label: 'MPD Station 6 - Sta Ana', value: 'Station 6' },
+  { id: 7, label: 'MPD Station 7 - J. A. Santos', value: 'Station 7' },
+  { id: 8, label: 'MPD Station 8 - Sta. Mesa', value: 'Station 8' },
+  { id: 9, label: 'MPD Station 9 - Malate', value: 'Station 9' },
+  { id: 10, label: 'MPD Station 10 - Pandacan', value: 'Station 10' },
+  { id: 11, label: 'MPD Station 11 - Meisic', value: 'Station 11' },
+  { id: 12, label: 'MPD Station 12 - Delpan', value: 'Station 12' },
+  { id: 13, label: 'MPD Station 13 - Baseco', value: 'Station 13' },
+  { id: 14, label: 'MPD Station 14 - Barbosa', value: 'Station 14' },
 ];
 
 export type CrimeStat = {
@@ -100,6 +101,53 @@ const CrimeMap: React.FC = () => {
   const [filteredMapData, setFilteredMapData] = useState(totalCrimeData);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  // Add state for dynamic data
+  const [dynamicCrimeCounts, setDynamicCrimeCounts] = useState<any>({});
+  const [dynamicTotalCrime, setDynamicTotalCrime] = useState<any>({});
+
+  // Fetch dynamic data from backend on mount
+  useEffect(() => {
+    console.log('Fetching dynamic crime stats...');
+    fetch('http://mnl911.atwebpages.com/get_crime_stats.php')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Dynamic crime stats received:', data);
+        if (data.success) {
+          setDynamicCrimeCounts(data.crimeCounts);
+          setDynamicTotalCrime(data.totalCrime);
+        } else {
+          console.error('Failed to fetch crime stats:', data.error);
+        }
+      })
+      .catch(err => console.error('Error fetching dynamic crime stats:', err));
+  }, []);
+
+  // Helper to get merged count for a station/type
+  const getMergedCrimeCount = (station: string, type: string) => {
+    // Find base count from crimeData (individual crime type data)
+    const baseFeature = crimeData.features.find(
+      (f: any) => f.properties.station === station && f.properties.crimeType === type
+    );
+    const baseCount = baseFeature && baseFeature.properties ? baseFeature.properties.count : 0;
+    const dynamicCount = dynamicCrimeCounts[station]?.[type] || 0;
+    const mergedCount = baseCount + dynamicCount;
+    
+    console.log(`Merged count for ${station} - ${type}:`, {
+      baseCount,
+      dynamicCount,
+      mergedCount
+    });
+    
+    return mergedCount;
+  };
+
+  // Helper to get merged total crime for a station
+  const getMergedTotalCrime = (station: string) => {
+    const baseTotal = totalCrime[station as StationName]?.totalCrime || 0;
+    const dynamicTotal = dynamicTotalCrime[station] || 0;
+    return baseTotal + dynamicTotal;
+  };
+
   // Add reset function
   const handleReset = () => {
     setSelectedCrimeType('');
@@ -127,16 +175,31 @@ const CrimeMap: React.FC = () => {
       );
     }
     
+    // Update the count properties with merged data
+    filtered = filtered.map(feature => {
+      const mergedCount = selectedCrimeType 
+        ? getMergedCrimeCount(feature.properties.station, selectedCrimeType)
+        : getMergedTotalCrime(feature.properties.station);
+      
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          count: mergedCount
+        }
+      };
+    });
+    
     setFilteredMapData({
       type: 'FeatureCollection',
       features: filtered
     });
   };
 
-  // Update filtered data when selections change
+  // Update filtered data when selections change or dynamic data updates
   useEffect(() => {
     filterMapData();
-  }, [selectedCrimeType, selectedStation]);
+  }, [selectedCrimeType, selectedStation, dynamicCrimeCounts, dynamicTotalCrime]);
 
   // Function to calculate crime statistics based on filters
   const calculateCrimeStats = () => {
@@ -172,12 +235,26 @@ const CrimeMap: React.FC = () => {
       );
       
       if (stationFeature) {
+        // Use merged count for the selected crime type
+        const mergedCount = selectedCrimeType 
+          ? getMergedCrimeCount(selectedStation, selectedCrimeType)
+          : getMergedTotalCrime(selectedStation);
+        
+        // Get the display name for the selected station
+        const stationDisplayName = policeStations.find(ps => ps.value === selectedStation)?.label || selectedStation;
+        const locationName = stationDisplayName.split(' - ')[1] || stationDisplayName;
+        
         highestCrime = {
-          count: stationFeature.properties.count,
-          location: selectedStation.split(' - ')[1],
+          count: mergedCount,
+          location: locationName,
           type: selectedCrimeType || 'Total Crime'
         };
       }
+
+      // Use merged data for the selected crime type count
+      const mergedCrimeCount = selectedCrimeType 
+        ? getMergedCrimeCount(selectedStation, selectedCrimeType)
+        : getMergedTotalCrime(selectedStation);
 
       setCrimeStats([
         { 
@@ -192,7 +269,7 @@ const CrimeMap: React.FC = () => {
           title: selectedCrimeType ? `${selectedCrimeType} Count` : 'Total Crime Count', 
           location: highestCrime.location || 'N/A', 
           type: highestCrime.type || 'N/A', 
-          value: stationCrimeData.totalCrime.toString() 
+          value: mergedCrimeCount.toString() 
         },
       ]);
       return;
@@ -203,13 +280,21 @@ const CrimeMap: React.FC = () => {
     const avgIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].indexRate, 0) / stations.length).toFixed(2);
     const avgNonIndexRate = (stations.reduce((sum, station) => sum + totalRates[station].nonIndexRate, 0) / stations.length).toFixed(2);
 
-    // Find highest crime across all stations
+    // Find highest crime across all stations using merged data
     filteredFeatures.forEach((feature: CrimeFeature) => {
-      const { station, count } = feature.properties;
-      if (count > highestCrime.count) {
+      const { station } = feature.properties;
+      const mergedCount = selectedCrimeType 
+        ? getMergedCrimeCount(station, selectedCrimeType)
+        : getMergedTotalCrime(station);
+      
+      if (mergedCount > highestCrime.count) {
+        // Get the display name for this station
+        const stationDisplayName = policeStations.find(ps => ps.value === station)?.label || station;
+        const locationName = stationDisplayName.split(' - ')[1] || stationDisplayName;
+        
         highestCrime = {
-          count,
-          location: station.split(' - ')[1],
+          count: mergedCount,
+          location: locationName,
           type: selectedCrimeType || 'Total Crime'
         };
       }
