@@ -112,6 +112,18 @@ function toISODate(dateString: string) {
     return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
+// Helper to check if a date string is valid (not empty, not placeholder)
+function isValidDateString(dateString: string) {
+    if (!dateString) return false;
+    if (dateString === 'dd/mm/yyyy' || dateString === 'yyyy-mm-dd') return false;
+    if (dateString.includes('-')) {
+        // ISO format
+        return /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+    }
+    // DD/MM/YYYY
+    return /^\d{2}\/\d{2}\/\d{4}$/.test(dateString);
+}
+
 
 export default function CrimeData() {
     // --- State and Hooks ---
@@ -119,18 +131,28 @@ export default function CrimeData() {
     const [masterCrimeData, setMasterCrimeData] = useState<CrimeRecord[]>([]);
     const [selectedType, setSelectedType] = useState('All Types');
     const [selectedSeverity, setSelectedSeverity] = useState('All Severities');
+    const [selectedOfficer, setSelectedOfficer] = useState('All Officers');
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [showTypeDropdown, setShowTypeDropdown] = useState(false);
     const [showSeverityDropdown, setShowSeverityDropdown] = useState(false);
+    const [showOfficerDropdown, setShowOfficerDropdown] = useState(false);
     const [hoveredType, setHoveredType] = useState<string | null>(null);
     const [hoveredSeverity, setHoveredSeverity] = useState<string | null>(null);
-    // Date filter state
-    const [selectedDate, setSelectedDate] = useState<string>(''); // format: 'YYYY-MM-DD'
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    // Add state for date range
-    const [startDate, setStartDate] = useState<string>(''); // format: 'DD/MM/YYYY' or 'YYYY-MM-DD'
-    const [endDate, setEndDate] = useState<string>('');
+    const [hoveredOfficer, setHoveredOfficer] = useState<string | null>(null);
+// Date filter state
+const [selectedDate, setSelectedDate] = useState<string>(''); // format: 'YYYY-MM-DD'
+const [showDatePicker, setShowDatePicker] = useState(false);
+// Add state for date range
+const [startDate, setStartDate] = useState<string>(''); // format: 'DD/MM/YYYY' or 'YYYY-MM-DD'
+const [endDate, setEndDate] = useState<string>('');
+
+// Compute unique officer options
+const officerOptions = useMemo(() => {
+  const officers = Array.from(new Set(masterCrimeData.map(item => item.respondedBy).filter(Boolean)));
+  officers.sort();
+  return ['All Officers', ...officers];
+}, [masterCrimeData]);
 
     // --- Data Fetching and Filtering ---
     useEffect(() => {
@@ -195,8 +217,25 @@ export default function CrimeData() {
         if (selectedSeverity !== 'All Severities') {
             result = result.filter(item => item.severity === selectedSeverity);
         }
-        // Date filter
-        if (selectedDate) {
+        if (selectedOfficer !== 'All Officers') {
+            result = result.filter(item => item.respondedBy === selectedOfficer);
+        }
+        // Date filter: only one type of filter should be active at a time
+        const validStart = isValidDateString(startDate) ? toISODate(startDate) : null;
+        const validEnd = isValidDateString(endDate) ? toISODate(endDate) : null;
+        if (validStart || validEnd) {
+            result = result.filter(item => {
+                const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
+                if (validStart && validEnd) {
+                    return utcDateString >= validStart && utcDateString <= validEnd;
+                } else if (validStart) {
+                    return utcDateString === validStart;
+                } else if (validEnd) {
+                    return utcDateString === validEnd;
+                }
+                return true;
+            });
+        } else if (selectedDate) {
             const isoSelectedDate = toISODate(selectedDate);
             if (isoSelectedDate) {
                 result = result.filter(item => {
@@ -204,27 +243,6 @@ export default function CrimeData() {
                     return utcDateString === isoSelectedDate;
                 });
             }
-        }
-        // Date range filter
-        if (startDate && endDate) {
-            const isoStart = toISODate(startDate);
-            const isoEnd = toISODate(endDate);
-            result = result.filter(item => {
-                const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
-                return utcDateString >= isoStart && utcDateString <= isoEnd;
-            });
-        } else if (startDate) {
-            const isoStart = toISODate(startDate);
-            result = result.filter(item => {
-                const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
-                return utcDateString >= isoStart;
-            });
-        } else if (endDate) {
-            const isoEnd = toISODate(endDate);
-            result = result.filter(item => {
-                const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
-                return utcDateString <= isoEnd;
-            });
         }
         // Use Set for faster deduplication
         const seen = new Set();
@@ -234,9 +252,17 @@ export default function CrimeData() {
             return !duplicate;
         });
         // Sort once at the end
-        result.sort((a, b) => parseInt(a.alertId) - parseInt(b.alertId));
+        result.sort((a, b) => {
+            // Compare by date (ascending)
+            const dateA = new Date(a.date.replace(' ', 'T'));
+            const dateB = new Date(b.date.replace(' ', 'T'));
+            if (dateA < dateB) return -1;
+            if (dateA > dateB) return 1;
+            // If dates are equal, fallback to alertId
+            return parseInt(a.alertId) - parseInt(b.alertId);
+        });
         return result;
-    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity, selectedDate, startDate, endDate]);
+    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity, selectedOfficer, selectedDate, startDate, endDate]);
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const paginatedData = useMemo(() => {
@@ -251,6 +277,7 @@ export default function CrimeData() {
     const handleReset = () => {
         setSelectedType('All Types');
         setSelectedSeverity('All Severities');
+        setSelectedOfficer('All Officers');
         setSearchQuery('');
         setSelectedDate('');
         setStartDate('');
@@ -260,6 +287,7 @@ export default function CrimeData() {
     const handleCloseDropdowns = () => {
         setShowTypeDropdown(false);
         setShowSeverityDropdown(false);
+        setShowOfficerDropdown(false);
     };
 
     const toggleTypeDropdown = () => {
@@ -576,6 +604,38 @@ export default function CrimeData() {
                                     )}
                                 </View>
                             </Pressable>
+                            {/* Officer Filter */}
+                            <Pressable onPress={e => e.stopPropagation()}>
+                              <View>
+                                <TouchableOpacity style={styles.filterButton} onPress={() => {
+                                  setShowOfficerDropdown(prev => !prev);
+                                  setShowTypeDropdown(false);
+                                  setShowSeverityDropdown(false);
+                                }}>
+                                  <Filter size={16} color="#666" />
+                                  <Text style={styles.filterButtonText}>{selectedOfficer}</Text>
+                                  <ChevronDown size={16} color="#666" />
+                                </TouchableOpacity>
+                                {showOfficerDropdown && (
+                                  <View style={styles.dropdown}>
+                                    {officerOptions.map(officer => (
+                                      <TouchableOpacity
+                                        key={officer}
+                                        onPress={() => {
+                                          setSelectedOfficer(officer);
+                                          setShowOfficerDropdown(false);
+                                        }}
+                                        style={styles.dropdownItem}
+                                      >
+                                        <Text style={selectedOfficer === officer ? [styles.dropdownItemText, styles.dropdownItemTextSelected] : styles.dropdownItemText}>
+                                          {officer}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    ))}
+                                  </View>
+                                )}
+                              </View>
+                            </Pressable>
                             {/* Date Filter */}
                             <View style={styles.dateFilterContainer}>
                                 <Calendar size={16} color="#666" style={{ marginRight: 4 }} />
@@ -583,7 +643,7 @@ export default function CrimeData() {
                                 {Platform.OS === 'web' ? (
                                     <input
                                         type="date"
-                                        value={toISODate(startDate)}
+                                        value={startDate ? toISODate(startDate) : ''}
                                         onChange={e => setStartDate(e.target.value)}
                                         style={{
                                             border: '1px solid #e5e5e5',
@@ -610,7 +670,7 @@ export default function CrimeData() {
                                 {Platform.OS === 'web' ? (
                                     <input
                                         type="date"
-                                        value={toISODate(endDate)}
+                                        value={endDate ? toISODate(endDate) : ''}
                                         onChange={e => setEndDate(e.target.value)}
                                         style={{
                                             border: '1px solid #e5e5e5',
@@ -676,25 +736,25 @@ export default function CrimeData() {
                         data={paginatedData}
                         keyExtractor={(item) => `${item.alertId}`}
                         ListHeaderComponent={() => (
-                            <View style={styles.tableHeader}>
-                                <Text style={[styles.headerCell, { flex: 1 }]}>ALERT ID</Text>
-                                <Text style={[styles.headerCell, { flex: 2 }]}>NAME</Text>
-                                <Text style={[styles.headerCell, { flex: 3 }]}>ADDRESS</Text>
-                                <Text style={[styles.headerCell, { flex: 2 }]}>DATE</Text>
-                                <Text style={[styles.headerCell, { flex: 2 }]}>TYPE</Text>
-                                <Text style={[styles.headerCell, { flex: 2 }]}>SEVERITY</Text>
-                                <Text style={[styles.headerCell, { flex: 2 }]}>RESPONDED BY</Text>
+                            <View style={styles.tableHeaderRow}>
+                                <View style={{ flex: 1 }}><Text style={styles.headerCell}>ALERT ID</Text></View>
+                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>NAME</Text></View>
+                                <View style={{ flex: 3 }}><Text style={styles.headerCell}>ADDRESS</Text></View>
+                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>DATE</Text></View>
+                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>TYPE</Text></View>
+                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>SEVERITY</Text></View>
+                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>RESPONDED BY</Text></View>
                             </View>
                         )}
                         renderItem={({ item }) => (
                             <View style={styles.tableRow}>
-                                <HighlightText style={[styles.cell, { flex: 1 }]} text={item.alertId} highlight={searchQuery} />
-                                <HighlightText style={[styles.cell, { flex: 2 }]} text={item.name || 'N/A'} highlight={searchQuery} />
-                                <HighlightText style={[styles.cell, { flex: 3 }]} text={formatAddress(item.address)} highlight={searchQuery} />
-                                <HighlightText style={[styles.cell, { flex: 2 }]} text={formatDate(item.date)} highlight={searchQuery} />
-                                <HighlightText style={[styles.cell, { flex: 2 }]} text={item.type || 'N/A'} highlight={searchQuery} />
-                                <HighlightText style={[styles.cell, { flex: 2 }]} text={item.severity || 'N/A'} highlight={searchQuery} />
-                                <HighlightText style={[styles.cell, { flex: 2 }]} text={item.respondedBy} highlight={searchQuery} />
+                                <View style={{ flex: 1 }}><HighlightText style={styles.cell} text={item.alertId} highlight={searchQuery} /></View>
+                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.name || 'N/A'} highlight={searchQuery} /></View>
+                                <View style={{ flex: 3 }}><HighlightText style={styles.cell} text={formatAddress(item.address)} highlight={searchQuery} /></View>
+                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={formatDate(item.date)} highlight={searchQuery} /></View>
+                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.type || 'N/A'} highlight={searchQuery} /></View>
+                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.severity || 'N/A'} highlight={searchQuery} /></View>
+                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.respondedBy} highlight={searchQuery} /></View>
                             </View>
                         )}
                         ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -766,6 +826,7 @@ const styles = StyleSheet.create({
         // overflow: 'auto', // Moved to inline style for web only
     },
     tableHeader: { flexDirection: 'row', backgroundColor: '#fcfcfc', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+    tableHeaderRow: { flexDirection: 'row', backgroundColor: '#fcfcfc', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
     headerCell: { fontSize: 12, fontWeight: '600', color: '#666', paddingHorizontal: 4, textAlign: 'center' },
     tableRow: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center' },
     cell: { fontSize: 14, color: '#444', paddingHorizontal: 4, textAlign: 'center' },
@@ -785,30 +846,29 @@ const styles = StyleSheet.create({
     pageButtonTextDisabled: { color: '#aaa' },
     dropdown: {
         position: 'absolute',
-        top: 42,
+        top: '100%',
         left: 0,
         right: 0,
         backgroundColor: '#fff',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e5e5',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
+        zIndex: 100,
+        maxHeight: 250, // Limit height for scroll
+        overflow: 'scroll', // Enable scrolling for RN
     },
     dropdownItem: {
-        paddingVertical: 10,
+        paddingVertical: 8,
         paddingHorizontal: 12,
     },
     dropdownItemText: {
         fontSize: 14,
-        color: '#333',
+        color: '#444',
     },
     dropdownItemTextSelected: {
+        fontWeight: 'bold',
         color: '#e02323',
-        fontWeight: '600',
+        backgroundColor: '#f8f9fa',
     },
     highlightedText: {
         backgroundColor: '#fff8b4'
