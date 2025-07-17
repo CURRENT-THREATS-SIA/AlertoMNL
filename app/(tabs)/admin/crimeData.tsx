@@ -7,6 +7,12 @@ import {
 
 
 
+
+
+
+
+
+
     Platform, // Import Platform API
     Pressable,
     ScrollView,
@@ -38,6 +44,30 @@ interface CrimeRecord {
     type: string | null;
     severity: string | null;
     respondedBy: string;
+    // New fields from ReportStep
+    description?: string;
+    suspect_option?: string;
+    suspect_description?: string;
+    suspect_known_description?: string;
+    suspect_name?: string;
+    suspect_age?: string;
+    suspect_sex?: string;
+    suspect_nationality?: string;
+    suspect_address?: string;
+    weapon_option?: string;
+    weapon_used?: string;
+    vehicle_option?: string;
+    vehicle_involved?: string;
+    evidence_secured?: string;
+    items_left_behind?: string;
+    items_stolen?: string;
+    evidence_details?: string;
+    motive_known?: string;
+    prior_conflict?: string;
+    victims_involved?: string;
+    injuries_fatalities?: string;
+    medical_help?: string;
+    security_cameras?: string;
 }
 
 const crimeTypes = [ 
@@ -819,19 +849,71 @@ export default function CrimeData() {
                     onRequestClose={() => setShowDetailsModal(false)}
                 >
                     <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Crime Record Details</Text>
-                            {selectedRecord && (
-                                <View>
-                                    <Text style={styles.modalLabel}>Alert ID: <Text style={styles.modalValue}>{selectedRecord.alertId}</Text></Text>
-                                    <Text style={styles.modalLabel}>Name: <Text style={styles.modalValue}>{selectedRecord.name || 'N/A'}</Text></Text>
-                                    <Text style={styles.modalLabel}>Address: <Text style={styles.modalValue}>{selectedRecord.address || 'N/A'}</Text></Text>
-                                    <Text style={styles.modalLabel}>Date: <Text style={styles.modalValue}>{formatDate(selectedRecord.date)}</Text></Text>
-                                    <Text style={styles.modalLabel}>Type: <Text style={styles.modalValue}>{selectedRecord.type || 'N/A'}</Text></Text>
-                                    <Text style={styles.modalLabel}>Severity: <Text style={styles.modalValue}>{selectedRecord.severity || 'N/A'}</Text></Text>
-                                    <Text style={styles.modalLabel}>Responded By: <Text style={styles.modalValue}>{selectedRecord.respondedBy || 'N/A'}</Text></Text>
-                                </View>
-                            )}
+                        <View style={[styles.modalContent, { maxHeight: 600 }]}> {/* Set maxHeight for modal */}
+                            <ScrollView>
+                                <Text style={styles.modalTitle}>Crime Record Details</Text>
+                                {selectedRecord && (
+                                    <View>
+                                        {/* Incident Info */}
+                                        <Text style={styles.modalLabel}>Incident Type: <Text style={styles.modalValue}>{selectedRecord.type || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Severity Level: <Text style={styles.modalValue}>{selectedRecord.severity || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Responded By: <Text style={styles.modalValue}>{selectedRecord.respondedBy || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Date: <Text style={styles.modalValue}>{formatDate(selectedRecord.date)}</Text></Text>
+                                        <Text style={styles.modalLabel}>Address: <Text style={styles.modalValue}>{selectedRecord.address || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Name: <Text style={styles.modalValue}>{selectedRecord.name || 'N/A'}</Text></Text>
+
+                                        {/* Suspect Section */}
+                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Suspect</Text>
+                                        <Text style={styles.modalLabel}>Suspect Option: <Text style={styles.modalValue}>{selectedRecord.suspect_option || 'N/A'}</Text></Text>
+                                        {selectedRecord.suspect_option === 'Description' && (
+                                            <Text style={styles.modalLabel}>Suspect Description: <Text style={styles.modalValue}>{selectedRecord.suspect_description || 'N/A'}</Text></Text>
+                                        )}
+                                        {selectedRecord.suspect_option === 'IF KNOWN' && (
+                                            <>
+                                                <Text style={styles.modalLabel}>Name: <Text style={styles.modalValue}>{selectedRecord.suspect_name || 'N/A'}</Text></Text>
+                                                <Text style={styles.modalLabel}>Age: <Text style={styles.modalValue}>{selectedRecord.suspect_age || 'N/A'}</Text></Text>
+                                                <Text style={styles.modalLabel}>Sex: <Text style={styles.modalValue}>{selectedRecord.suspect_sex || 'N/A'}</Text></Text>
+                                                <Text style={styles.modalLabel}>Address: <Text style={styles.modalValue}>{selectedRecord.suspect_address || 'N/A'}</Text></Text>
+                                                <Text style={styles.modalLabel}>Description: <Text style={styles.modalValue}>{selectedRecord.suspect_known_description || 'N/A'}</Text></Text>
+                                            </>
+                                        )}
+
+                                        {/* Weapon Section */}
+                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Weapon Used</Text>
+                                        <Text style={styles.modalLabel}>Weapon Option: <Text style={styles.modalValue}>{selectedRecord.weapon_option || 'N/A'}</Text></Text>
+                                        {selectedRecord.weapon_option === 'IF KNOWN' && (
+                                            <Text style={styles.modalLabel}>Weapon Used: <Text style={styles.modalValue}>{selectedRecord.weapon_used || 'N/A'}</Text></Text>
+                                        )}
+
+                                        {/* Vehicle Section */}
+                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Vehicle Involved</Text>
+                                        <Text style={styles.modalLabel}>Vehicle Option: <Text style={styles.modalValue}>{selectedRecord.vehicle_option || 'N/A'}</Text></Text>
+                                        {selectedRecord.vehicle_option === 'IF KNOWN' && (
+                                            <Text style={styles.modalLabel}>Vehicle Involved: <Text style={styles.modalValue}>{selectedRecord.vehicle_involved || 'N/A'}</Text></Text>
+                                        )}
+
+                                        {/* Evidence Collection */}
+                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Evidence Collection</Text>
+                                        <Text style={styles.modalLabel}>Area Secured: <Text style={styles.modalValue}>{selectedRecord.evidence_secured || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Items Left Behind: <Text style={styles.modalValue}>{selectedRecord.items_left_behind || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Items Stolen: <Text style={styles.modalValue}>{selectedRecord.items_stolen || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Evidence Details: <Text style={styles.modalValue}>{selectedRecord.evidence_details || 'N/A'}</Text></Text>
+
+                                        {/* Motive & Context */}
+                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Motive & Context</Text>
+                                        <Text style={styles.modalLabel}>Motive Known: <Text style={styles.modalValue}>{selectedRecord.motive_known || 'N/A'}</Text></Text>
+                                        <Text style={styles.modalLabel}>Prior Conflict: <Text style={styles.modalValue}>{selectedRecord.prior_conflict || 'N/A'}</Text></Text>
+
+                                        {/* Other Victim's Information */}
+                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Other Victim's Information</Text>
+                                        <Text style={styles.modalLabel}>Victims Involved: <Text style={styles.modalValue}>{selectedRecord.victims_involved || 'N/A'}</Text></Text>
+
+                                        {/* Other Details */}
+                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Other Details</Text>
+                                        <Text style={styles.modalLabel}>Description: <Text style={styles.modalValue}>{selectedRecord.description || 'N/A'}</Text></Text>
+                                    </View>
+                                )}
+                            </ScrollView>
                             <TouchableOpacity style={styles.closeModalButton} onPress={() => setShowDetailsModal(false)}>
                                 <Text style={styles.closeModalButtonText}>Close</Text>
                             </TouchableOpacity>
