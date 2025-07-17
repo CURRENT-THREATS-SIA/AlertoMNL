@@ -128,6 +128,9 @@ export default function CrimeData() {
     // Date filter state
     const [selectedDate, setSelectedDate] = useState<string>(''); // format: 'YYYY-MM-DD'
     const [showDatePicker, setShowDatePicker] = useState(false);
+    // Add state for date range
+    const [startDate, setStartDate] = useState<string>(''); // format: 'DD/MM/YYYY' or 'YYYY-MM-DD'
+    const [endDate, setEndDate] = useState<string>('');
 
     // --- Data Fetching and Filtering ---
     useEffect(() => {
@@ -202,6 +205,27 @@ export default function CrimeData() {
                 });
             }
         }
+        // Date range filter
+        if (startDate && endDate) {
+            const isoStart = toISODate(startDate);
+            const isoEnd = toISODate(endDate);
+            result = result.filter(item => {
+                const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
+                return utcDateString >= isoStart && utcDateString <= isoEnd;
+            });
+        } else if (startDate) {
+            const isoStart = toISODate(startDate);
+            result = result.filter(item => {
+                const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
+                return utcDateString >= isoStart;
+            });
+        } else if (endDate) {
+            const isoEnd = toISODate(endDate);
+            result = result.filter(item => {
+                const utcDateString = item.date.replace(' ', 'T').slice(0, 10);
+                return utcDateString <= isoEnd;
+            });
+        }
         // Use Set for faster deduplication
         const seen = new Set();
         result = result.filter(item => {
@@ -212,7 +236,7 @@ export default function CrimeData() {
         // Sort once at the end
         result.sort((a, b) => parseInt(a.alertId) - parseInt(b.alertId));
         return result;
-    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity, selectedDate]);
+    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity, selectedDate, startDate, endDate]);
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const paginatedData = useMemo(() => {
@@ -229,6 +253,8 @@ export default function CrimeData() {
         setSelectedSeverity('All Severities');
         setSearchQuery('');
         setSelectedDate('');
+        setStartDate('');
+        setEndDate('');
     };
 
     const handleCloseDropdowns = () => {
@@ -553,11 +579,12 @@ export default function CrimeData() {
                             {/* Date Filter */}
                             <View style={styles.dateFilterContainer}>
                                 <Calendar size={16} color="#666" style={{ marginRight: 4 }} />
+                                {/* Start Date Picker */}
                                 {Platform.OS === 'web' ? (
                                     <input
                                         type="date"
-                                        value={selectedDate}
-                                        onChange={e => setSelectedDate(e.target.value)}
+                                        value={toISODate(startDate)}
+                                        onChange={e => setStartDate(e.target.value)}
                                         style={{
                                             border: '1px solid #e5e5e5',
                                             borderRadius: 8,
@@ -567,19 +594,53 @@ export default function CrimeData() {
                                             outline: 'none',
                                             marginRight: 4
                                         }}
+                                        placeholder="Start Date"
                                     />
                                 ) : (
                                     <TouchableOpacity
                                         style={styles.dateInput}
                                         onPress={() => setShowDatePicker(true)}
                                     >
-                                        <Text style={{ color: selectedDate ? '#444' : '#aaa', fontSize: 14 }}>
-                                            {selectedDate ? selectedDate : 'Select Date'}
+                                        <Text style={{ color: startDate ? '#444' : '#aaa', fontSize: 14 }}>
+                                            {startDate ? startDate : 'Start Date'}
                                         </Text>
                                     </TouchableOpacity>
                                 )}
-                                {selectedDate ? (
-                                    <TouchableOpacity onPress={() => setSelectedDate('')} style={styles.clearDateButton}>
+                                {/* End Date Picker */}
+                                {Platform.OS === 'web' ? (
+                                    <input
+                                        type="date"
+                                        value={toISODate(endDate)}
+                                        onChange={e => setEndDate(e.target.value)}
+                                        style={{
+                                            border: '1px solid #e5e5e5',
+                                            borderRadius: 8,
+                                            padding: '8px 10px',
+                                            fontSize: 14,
+                                            color: '#444',
+                                            outline: 'none',
+                                            marginRight: 4
+                                        }}
+                                        placeholder="End Date"
+                                    />
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.dateInput}
+                                        onPress={() => setShowDatePicker(true)}
+                                    >
+                                        <Text style={{ color: endDate ? '#444' : '#aaa', fontSize: 14 }}>
+                                            {endDate ? endDate : 'End Date'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                {/* Clear buttons for both */}
+                                {startDate ? (
+                                    <TouchableOpacity onPress={() => setStartDate('')} style={styles.clearDateButton}>
+                                        <Text style={styles.clearDateText}>×</Text>
+                                    </TouchableOpacity>
+                                ) : null}
+                                {endDate ? (
+                                    <TouchableOpacity onPress={() => setEndDate('')} style={styles.clearDateButton}>
                                         <Text style={styles.clearDateText}>×</Text>
                                     </TouchableOpacity>
                                 ) : null}
