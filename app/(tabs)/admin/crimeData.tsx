@@ -2,13 +2,19 @@ import { Calendar, ChevronDown, Filter, RefreshCw, Search } from 'lucide-react-n
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     FlatList,
+    Modal // Add Modal for details view
+    ,
+
+
+
     Platform, // Import Platform API
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import AdminLayout from '../../components/AdminLayout';
 
@@ -140,19 +146,21 @@ export default function CrimeData() {
     const [hoveredType, setHoveredType] = useState<string | null>(null);
     const [hoveredSeverity, setHoveredSeverity] = useState<string | null>(null);
     const [hoveredOfficer, setHoveredOfficer] = useState<string | null>(null);
-// Date filter state
-const [selectedDate, setSelectedDate] = useState<string>(''); // format: 'YYYY-MM-DD'
-const [showDatePicker, setShowDatePicker] = useState(false);
-// Add state for date range
-const [startDate, setStartDate] = useState<string>(''); // format: 'DD/MM/YYYY' or 'YYYY-MM-DD'
-const [endDate, setEndDate] = useState<string>('');
-
-// Compute unique officer options
-const officerOptions = useMemo(() => {
-  const officers = Array.from(new Set(masterCrimeData.map(item => item.respondedBy).filter(Boolean)));
-  officers.sort();
-  return ['All Officers', ...officers];
-}, [masterCrimeData]);
+    // Date filter state
+    const [selectedDate, setSelectedDate] = useState<string>(''); // format: 'YYYY-MM-DD'
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    // Add state for date range
+    const [startDate, setStartDate] = useState<string>(''); // format: 'DD/MM/YYYY' or 'YYYY-MM-DD'
+    const [endDate, setEndDate] = useState<string>('');
+    // Compute unique officer options
+    const officerOptions = useMemo(() => {
+      const officers = Array.from(new Set(masterCrimeData.map(item => item.respondedBy).filter(Boolean)));
+      officers.sort();
+      return ['All Officers', ...officers];
+    }, [masterCrimeData]);
+    // Modal state for viewing details
+    const [selectedRecord, setSelectedRecord] = useState<CrimeRecord | null>(null);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
 
     // --- Data Fetching and Filtering ---
     useEffect(() => {
@@ -731,60 +739,105 @@ const officerOptions = useMemo(() => {
                     </View>
                 </View>
                 
-                <View style={[styles.tableContainer, Platform.OS === 'web' && { overflow: 'scroll' }]}>
-                    <FlatList
-                        data={paginatedData}
-                        keyExtractor={(item) => `${item.alertId}`}
-                        ListHeaderComponent={() => (
-                            <View style={styles.tableHeaderRow}>
-                                <View style={{ flex: 1 }}><Text style={styles.headerCell}>ALERT ID</Text></View>
-                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>NAME</Text></View>
-                                <View style={{ flex: 3 }}><Text style={styles.headerCell}>ADDRESS</Text></View>
-                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>DATE</Text></View>
-                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>TYPE</Text></View>
-                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>SEVERITY</Text></View>
-                                <View style={{ flex: 2 }}><Text style={styles.headerCell}>RESPONDED BY</Text></View>
-                            </View>
-                        )}
-                        renderItem={({ item }) => (
-                            <View style={styles.tableRow}>
-                                <View style={{ flex: 1 }}><HighlightText style={styles.cell} text={item.alertId} highlight={searchQuery} /></View>
-                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.name || 'N/A'} highlight={searchQuery} /></View>
-                                <View style={{ flex: 3 }}><HighlightText style={styles.cell} text={formatAddress(item.address)} highlight={searchQuery} /></View>
-                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={formatDate(item.date)} highlight={searchQuery} /></View>
-                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.type || 'N/A'} highlight={searchQuery} /></View>
-                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.severity || 'N/A'} highlight={searchQuery} /></View>
-                                <View style={{ flex: 2 }}><HighlightText style={styles.cell} text={item.respondedBy} highlight={searchQuery} /></View>
-                            </View>
-                        )}
-                        ItemSeparatorComponent={() => <View style={styles.separator} />}
-                        ListEmptyComponent={<Text style={styles.emptyListText}>No records found.</Text>}
-                    />
-                </View>
+                {/* Wrap table and pagination in a ScrollView for small screens */}
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-start' }}>
+                    <View style={[styles.tableContainer, Platform.OS === 'web' && { overflow: 'scroll' }]}> 
+                        <FlatList
+                            data={paginatedData}
+                            keyExtractor={(item) => `${item.alertId}`}
+                            scrollEnabled={false}
+                            ListHeaderComponent={() => (
+                                <View style={styles.tableHeader}>
+                                    <Text style={[styles.headerCell, { flex: 1 }]}>ALERT ID</Text>
+                                    <Text style={[styles.headerCell, { flex: 2 }]}>NAME</Text>
+                                    <Text style={[styles.headerCell, { flex: 3 }]}>ADDRESS</Text>
+                                    <Text style={[styles.headerCell, { flex: 2 }]}>DATE</Text>
+                                    <Text style={[styles.headerCell, { flex: 2 }]}>TYPE</Text>
+                                    <Text style={[styles.headerCell, { flex: 2 }]}>SEVERITY</Text>
+                                    <Text style={[styles.headerCell, { flex: 2 }]}>RESPONDED BY</Text>
+                                    <Text style={[styles.headerCell, styles.viewHeaderCell]}>VIEW</Text>
+                                </View>
+                            )}
+                            renderItem={({ item }) => (
+                                <View style={styles.tableRow}>
+                                    <HighlightText style={[styles.cell, { flex: 1 }]} text={item.alertId} highlight={searchQuery} />
+                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={item.name || 'N/A'} highlight={searchQuery} />
+                                    <HighlightText style={[styles.cell, { flex: 3 }]} text={formatAddress(item.address)} highlight={searchQuery} />
+                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={formatDate(item.date)} highlight={searchQuery} />
+                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={item.type || 'N/A'} highlight={searchQuery} />
+                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={item.severity || 'N/A'} highlight={searchQuery} />
+                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={item.respondedBy} highlight={searchQuery} />
+                                    <View style={[styles.cell, styles.viewCell]}>
+                                        <TouchableOpacity
+                                            style={styles.viewButton}
+                                            onPress={() => {
+                                                setSelectedRecord(item);
+                                                setShowDetailsModal(true);
+                                            }}
+                                        >
+                                            <Text style={styles.viewButtonText}>View</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
+                            ItemSeparatorComponent={() => <View style={styles.separator} />}
+                            ListEmptyComponent={<Text style={styles.emptyListText}>No records found.</Text>}
+                        />
+                    </View>
 
-                <View style={{ flex: 1 }} />
-
-                {filteredData.length > 0 && (
-                    <View style={styles.pagination}>
-                        <Text style={styles.paginationText}>Showing {showStart}-{showEnd} of {filteredData.length}</Text>
-                        <View style={styles.paginationControls}>
-                            <TouchableOpacity
-                                style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
-                                onPress={() => setCurrentPage(c => Math.max(1, c - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                <Text style={[styles.pageButtonText, currentPage === 1 && styles.pageButtonTextDisabled]}>Previous</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.pageButton, currentPage === totalPages && styles.pageButtonDisabled]}
-                                onPress={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                <Text style={[styles.pageButtonText, currentPage === totalPages && styles.pageButtonTextDisabled]}>Next</Text>
+                    {filteredData.length > 0 && (
+                        <View style={styles.pagination}>
+                            {/* Adjusted pagination text to always show 1-10, 11-20, etc. except for last page */}
+                            <Text style={styles.paginationText}>
+                                Showing {(currentPage - 1) * itemsPerPage + 1}-
+                                {currentPage === totalPages ? showEnd : currentPage * itemsPerPage} of {filteredData.length}
+                            </Text>
+                            <View style={styles.paginationControls}>
+                                <TouchableOpacity
+                                    style={[styles.pageButton, currentPage === 1 && styles.pageButtonDisabled]}
+                                    onPress={() => setCurrentPage(c => Math.max(1, c - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <Text style={[styles.pageButtonText, currentPage === 1 && styles.pageButtonTextDisabled]}>Previous</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.pageButton, currentPage === totalPages && styles.pageButtonDisabled]}
+                                    onPress={() => setCurrentPage(c => Math.min(totalPages, c + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <Text style={[styles.pageButtonText, currentPage === totalPages && styles.pageButtonTextDisabled]}>Next</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+                </ScrollView>
+                {/* Details Modal */}
+                <Modal
+                    visible={showDetailsModal}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowDetailsModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>Crime Record Details</Text>
+                            {selectedRecord && (
+                                <View>
+                                    <Text style={styles.modalLabel}>Alert ID: <Text style={styles.modalValue}>{selectedRecord.alertId}</Text></Text>
+                                    <Text style={styles.modalLabel}>Name: <Text style={styles.modalValue}>{selectedRecord.name || 'N/A'}</Text></Text>
+                                    <Text style={styles.modalLabel}>Address: <Text style={styles.modalValue}>{selectedRecord.address || 'N/A'}</Text></Text>
+                                    <Text style={styles.modalLabel}>Date: <Text style={styles.modalValue}>{formatDate(selectedRecord.date)}</Text></Text>
+                                    <Text style={styles.modalLabel}>Type: <Text style={styles.modalValue}>{selectedRecord.type || 'N/A'}</Text></Text>
+                                    <Text style={styles.modalLabel}>Severity: <Text style={styles.modalValue}>{selectedRecord.severity || 'N/A'}</Text></Text>
+                                    <Text style={styles.modalLabel}>Responded By: <Text style={styles.modalValue}>{selectedRecord.respondedBy || 'N/A'}</Text></Text>
+                                </View>
+                            )}
+                            <TouchableOpacity style={styles.closeModalButton} onPress={() => setShowDetailsModal(false)}>
+                                <Text style={styles.closeModalButtonText}>Close</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                )}
+                </Modal>
             </Pressable>
         </AdminLayout>
     );
@@ -822,7 +875,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#eee',
-        height: 400, // Fixed height for scrollable area
+        // height: 400, // Removed fixed height for dynamic sizing
         // overflow: 'auto', // Moved to inline style for web only
     },
     tableHeader: { flexDirection: 'row', backgroundColor: '#fcfcfc', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
@@ -898,5 +951,76 @@ const styles = StyleSheet.create({
     clearDateText: {
         fontSize: 18,
         color: '#aaa',
-    }
+    },
+    viewButton: {
+        backgroundColor: '#e02323',
+        borderRadius: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    viewButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 24,
+        width: 320,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        marginBottom: 16,
+        color: '#e02323',
+        textAlign: 'center',
+    },
+    modalLabel: {
+        fontSize: 15,
+        fontWeight: '600',
+        marginTop: 8,
+        color: '#444',
+    },
+    modalValue: {
+        fontWeight: '400',
+        color: '#222',
+    },
+    closeModalButton: {
+        marginTop: 24,
+        backgroundColor: '#e02323',
+        borderRadius: 8,
+        paddingVertical: 10,
+        alignItems: 'center',
+    },
+    closeModalButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 15,
+    },
+    viewHeaderCell: {
+        flex: 1.2,
+        textAlign: 'center',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    viewCell: {
+        flex: 1.2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+    },
 });
