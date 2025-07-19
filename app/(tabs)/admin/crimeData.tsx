@@ -13,6 +13,19 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
     Platform, // Import Platform API
     Pressable,
     ScrollView,
@@ -192,6 +205,62 @@ export default function CrimeData() {
     const [selectedRecord, setSelectedRecord] = useState<CrimeRecord | null>(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+    // Function to log crime record view
+    const logCrimeRecordView = async (record: CrimeRecord) => {
+        try {
+            const logData = {
+                alert_id: record.alertId,
+                viewed_by: 'admin', // You can modify this to get actual admin user
+                viewed_at: new Date().toISOString(),
+                record_type: 'crime_record',
+                action: 'view_details'
+            };
+
+            const response = await fetch('http://mnl911.atwebpages.com/log_crime_record_view.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                console.error('Failed to log crime record view:', result.error);
+            }
+        } catch (error) {
+            console.error('Error logging crime record view:', error);
+        }
+    };
+
+    // Function to log crime record download
+    const logCrimeRecordDownload = async (record: CrimeRecord) => {
+        try {
+            const logData = {
+                alert_id: record.alertId,
+                downloaded_by: 'admin', // You can modify this to get actual admin user
+                downloaded_at: new Date().toISOString(),
+                record_type: 'crime_record',
+                action: 'download_pdf'
+            };
+
+            const response = await fetch('http://mnl911.atwebpages.com/log_crime_record_download.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logData)
+            });
+
+            const result = await response.json();
+            if (!result.success) {
+                console.error('Failed to log crime record download:', result.error);
+            }
+        } catch (error) {
+            console.error('Error logging crime record download:', error);
+        }
+    };
+
     // --- Data Fetching and Filtering ---
     useEffect(() => {
         const fetchAllCrimeData = async () => {
@@ -359,6 +428,279 @@ export default function CrimeData() {
      * @returns {string} The HTML content for the PDF.
      */
     const generatePdfHtml = (data: CrimeRecord[], title: string): string => {
+      const generatedAt = new Date().toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+      });
+
+      // If it's a single record, generate detailed view
+      if (data.length === 1) {
+          const item = data[0];
+          return `
+              <html>
+                  <head>
+                                             <style>
+                           body {
+                               font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                               color: #333;
+                               margin: 20px;
+                               line-height: 1.3;
+                               font-size: 10px;
+                           }
+                           .date-right {
+                               text-align: right;
+                               font-size: 9px;
+                               color: #666;
+                               margin-bottom: 10px;
+                           }
+                           .spacer {
+                               height: 10px;
+                           }
+                           .report-header {
+                               text-align: center;
+                               margin-bottom: 15px;
+                               border-bottom: 2px solid #e02323;
+                               padding-bottom: 10px;
+                           }
+                           h1 {
+                               font-size: 20px;
+                               margin: 0;
+                               color: #e02323;
+                           }
+                           .subtitle {
+                               font-size: 11px;
+                               color: #666;
+                               margin: 4px 0 0 0;
+                           }
+                           .section {
+                               margin-bottom: 12px;
+                               page-break-inside: avoid;
+                           }
+                           .section-title {
+                               font-size: 12px;
+                               font-weight: bold;
+                               color: #e02323;
+                               margin-bottom: 8px;
+                               border-bottom: 1px solid #eee;
+                               padding-bottom: 3px;
+                           }
+                           .detail-row {
+                               display: flex;
+                               margin-bottom: 4px;
+                               page-break-inside: avoid;
+                           }
+                           .detail-label {
+                               font-weight: bold;
+                               width: 140px;
+                               color: #444;
+                               font-size: 9px;
+                           }
+                           .detail-value {
+                               flex: 1;
+                               color: #222;
+                               font-size: 9px;
+                           }
+                           .page-break {
+                               page-break-after: always;
+                           }
+                           .alert-id {
+                               font-size: 12px;
+                               font-weight: bold;
+                               color: #e02323;
+                               margin-bottom: 12px;
+                           }
+                           .two-column {
+                               display: flex;
+                               gap: 20px;
+                           }
+                           .column {
+                               flex: 1;
+                           }
+                       </style>
+                  </head>
+                  <body>
+                      <div class="date-right">Generated: ${generatedAt}</div>
+                      <div class="spacer"></div>
+                      <div class="report-header">
+                          <h1>${title}</h1>
+                          <p class="subtitle">ALERTOMNL Crime Record Details</p>
+                      </div>
+                      
+                      <div class="alert-id">Alert ID: ${item.alertId}</div>
+                      
+                      <div class="two-column">
+                          <div class="column">
+                              <!-- Incident Information -->
+                              <div class="section">
+                                  <div class="section-title">Incident Information</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Incident Type:</div>
+                                      <div class="detail-value">${item.type || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Severity Level:</div>
+                                      <div class="detail-value">${item.severity || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Responded By:</div>
+                                      <div class="detail-value">${item.respondedBy || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Date:</div>
+                                      <div class="detail-value">${formatDate(item.date)}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Address:</div>
+                                      <div class="detail-value">${item.address || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Name:</div>
+                                      <div class="detail-value">${item.name || 'N/A'}</div>
+                                  </div>
+                              </div>
+
+                              <!-- Suspect Information -->
+                              <div class="section">
+                                  <div class="section-title">Suspect Information</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Suspect Option:</div>
+                                      <div class="detail-value">${item.suspect_option || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Suspect Description:</div>
+                                      <div class="detail-value">${item.suspect_description || 'N/A'}</div>
+                                  </div>
+                                  ${item.suspect_option === 'IF KNOWN' ? `
+                                  <div class="detail-row">
+                                      <div class="detail-label">Name:</div>
+                                      <div class="detail-value">${item.suspect_name || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Age:</div>
+                                      <div class="detail-value">${item.suspect_age || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Sex:</div>
+                                      <div class="detail-value">${item.suspect_sex || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Address:</div>
+                                      <div class="detail-value">${item.suspect_address || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Known Description:</div>
+                                      <div class="detail-value">${item.suspect_known_description || 'N/A'}</div>
+                                  </div>
+                                  ` : ''}
+                              </div>
+
+                              <!-- Weapon Information -->
+                              <div class="section">
+                                  <div class="section-title">Weapon Used</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Weapon Option:</div>
+                                      <div class="detail-value">${item.weapon_option || 'N/A'}</div>
+                                  </div>
+                                  ${item.weapon_option === 'IF KNOWN' ? `
+                                  <div class="detail-row">
+                                      <div class="detail-label">Weapon Used:</div>
+                                      <div class="detail-value">${item.weapon_used || 'N/A'}</div>
+                                  </div>
+                                  ` : ''}
+                              </div>
+
+                              <!-- Vehicle Information -->
+                              <div class="section">
+                                  <div class="section-title">Vehicle Involved</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Vehicle Option:</div>
+                                      <div class="detail-value">${item.vehicle_option || 'N/A'}</div>
+                                  </div>
+                                  ${item.vehicle_option === 'IF KNOWN' ? `
+                                  <div class="detail-row">
+                                      <div class="detail-label">Vehicle Involved:</div>
+                                      <div class="detail-value">${item.vehicle_involved || 'N/A'}</div>
+                                  </div>
+                                  ` : ''}
+                              </div>
+                          </div>
+
+                          <div class="column">
+                              <!-- Evidence Collection -->
+                              <div class="section">
+                                  <div class="section-title">Evidence Collection</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Area Secured:</div>
+                                      <div class="detail-value">${item.evidence_secured || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Items Left Behind:</div>
+                                      <div class="detail-value">${item.items_left_behind || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Items Stolen:</div>
+                                      <div class="detail-value">${item.items_stolen || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Evidence Details:</div>
+                                      <div class="detail-value">${item.evidence_details || 'N/A'}</div>
+                                  </div>
+                              </div>
+
+                              <!-- Motive & Context -->
+                              <div class="section">
+                                  <div class="section-title">Motive & Context</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Motive Known:</div>
+                                      <div class="detail-value">${item.motive_known || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Prior Conflict:</div>
+                                      <div class="detail-value">${item.prior_conflict || 'N/A'}</div>
+                                  </div>
+                              </div>
+
+                              <!-- Other Victim's Information -->
+                              <div class="section">
+                                  <div class="section-title">Other Victim's Information</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Victims Involved:</div>
+                                      <div class="detail-value">${item.victims_involved || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Injuries/Fatalities:</div>
+                                      <div class="detail-value">${item.injuries_fatalities || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Medical Help:</div>
+                                      <div class="detail-value">${item.medical_help || 'N/A'}</div>
+                                  </div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Security Cameras:</div>
+                                      <div class="detail-value">${item.security_cameras || 'N/A'}</div>
+                                  </div>
+                              </div>
+
+                              <!-- Other Details -->
+                              <div class="section">
+                                  <div class="section-title">Other Details</div>
+                                  <div class="detail-row">
+                                      <div class="detail-label">Description:</div>
+                                      <div class="detail-value">${item.description || 'N/A'}</div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </body>
+              </html>
+          `;
+      }
+
+      // For multiple records, use the original table format
       const tableHeaders = `
           <thead>
               <tr>
@@ -391,14 +733,6 @@ export default function CrimeData() {
       });
   
       const totalRecords = `Total Records: ${data.length}`;
-      const generatedAt = new Date().toLocaleString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-      });
   
       return `
           <html>
@@ -513,6 +847,46 @@ export default function CrimeData() {
   };
   
     
+    /**
+     * Creates and handles PDF export for a SINGLE RECORD.
+     */
+    const downloadSingleRecord = async (record: CrimeRecord) => {
+        // Log the download action
+        await logCrimeRecordDownload(record);
+        
+        const reportTitle = `ALERTOMNL - Crime Record #${record.alertId}`;
+        const htmlContent = generatePdfHtml([record], reportTitle);
+
+        if (Platform.OS === 'web') {
+            // Use html2pdf.js on Web to convert HTML to PDF and auto-download
+            const element = document.createElement('div');
+            element.innerHTML = htmlContent;
+
+            const opt = {
+                margin:       0.5,
+                filename:     `CrimeRecord-${record.alertId}-${new Date().getTime()}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            // @ts-ignore - Assume html2pdf is loaded globally
+            html2pdf().from(element).set(opt).save();
+        } else {
+            // Native (mobile) fallback
+            try {
+                const { uri } = await Print.printToFileAsync({ html: htmlContent });
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Share PDF Report'
+                });
+            } catch (error) {
+                console.error("Error exporting to PDF:", error);
+                alert('Failed to export PDF. Please try again.');
+            }
+        }
+    };
+
     /**
      * Creates and handles Excel (.xlsx) export for ALL FILTERED DATA with platform-specific logic.
      */
@@ -786,6 +1160,7 @@ export default function CrimeData() {
                                     <Text style={[styles.headerCell, { flex: 2 }]}>SEVERITY</Text>
                                     <Text style={[styles.headerCell, { flex: 2 }]}>RESPONDED BY</Text>
                                     <Text style={[styles.headerCell, styles.viewHeaderCell]}>VIEW</Text>
+                                    <Text style={[styles.headerCell, styles.viewHeaderCell]}>DOWNLOAD</Text>
                                 </View>
                             )}
                             renderItem={({ item }) => (
@@ -803,9 +1178,18 @@ export default function CrimeData() {
                                             onPress={() => {
                                                 setSelectedRecord(item);
                                                 setShowDetailsModal(true);
+                                                logCrimeRecordView(item);
                                             }}
                                         >
                                             <Text style={styles.viewButtonText}>View</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <View style={[styles.cell, styles.viewCell]}>
+                                        <TouchableOpacity
+                                            style={styles.downloadButton}
+                                            onPress={() => downloadSingleRecord(item)}
+                                        >
+                                            <Text style={styles.downloadButtonText}>PDF</Text>
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -1043,6 +1427,19 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     viewButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    downloadButton: {
+        backgroundColor: '#28a745',
+        borderRadius: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    downloadButtonText: {
         color: 'white',
         fontWeight: '600',
         fontSize: 13,
