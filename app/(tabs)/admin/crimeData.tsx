@@ -1,9 +1,16 @@
-import { Calendar, ChevronDown, Filter, RefreshCw, Search } from 'lucide-react-native';
+import { Calendar, ChevronDown, Eye, Filter, RefreshCw, Search } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     FlatList,
     Modal // Add Modal for details view
     ,
+
+
+
+
+
+
+
 
 
 
@@ -279,6 +286,23 @@ function isValidDateString(dateString: string) {
     return /^\d{2}\/\d{2}\/\d{4}$/.test(dateString);
 }
 
+// Add these helper functions above the component:
+const getSeverityStyle = (severity: string | null) => {
+  switch ((severity || '').toLowerCase()) {
+    case 'low': return styles.severitylow;
+    case 'medium': return styles.severitymedium;
+    case 'high': return styles.severityhigh;
+    default: return {};
+  }
+};
+const getStatusStyle = (status: string | null) => {
+  switch ((status || '').toLowerCase()) {
+    case 'pending': return styles.statuspending;
+    case 'responded': return styles.statusresponded;
+    case 'resolved': return styles.statusresolved;
+    default: return {};
+  }
+};
 
 export default function CrimeData() {
     // --- State and Hooks ---
@@ -1119,226 +1143,228 @@ export default function CrimeData() {
                         </View>
                     </View>
 
-                    <View style={styles.filtersContainer}>
-                        <View style={styles.filterGroup}>
-                            {/* Type Filter */}
-                            <Pressable onPress={(e) => e.stopPropagation()}>
-                                <View>
-                                    <TouchableOpacity style={styles.filterButton} onPress={toggleTypeDropdown}>
-                                        <Filter size={16} color="#666" />
-                                        <Text style={styles.filterButtonText}>{selectedType}</Text>
-                                        <ChevronDown size={16} color="#666" />
-                                    </TouchableOpacity>
-                                    {showTypeDropdown && (
-                                        <View style={styles.dropdown}>
-                                            {crimeTypes.map(type => (
-                                                <TouchableOpacity
-                                                    key={type}
-                                                    onPress={() => {
-                                                        setSelectedType(type);
-                                                        setShowTypeDropdown(false);
-                                                    }}
-                                                    style={styles.dropdownItem}
-                                                >
-                                                    <Text style={[styles.dropdownItemText, selectedType === type && styles.dropdownItemTextSelected]}>
-                                                        {type}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    )}
-                                </View>
-                            </Pressable>
-                            {/* Severity Filter */}
-                            <Pressable onPress={(e) => e.stopPropagation()}>
-                                <View>
-                                    <TouchableOpacity style={styles.filterButton} onPress={toggleSeverityDropdown}>
-                                        <Filter size={16} color="#666" />
-                                        <Text style={styles.filterButtonText}>{selectedSeverity}</Text>
-                                        <ChevronDown size={16} color="#666" />
-                                    </TouchableOpacity>
-                                    {showSeverityDropdown && (
-                                        <View style={styles.dropdown}>
-                                            {severityLevels.map(level => (
-                                                <TouchableOpacity
-                                                    key={level}
-                                                    onPress={() => {
-                                                        setSelectedSeverity(level);
-                                                        setShowSeverityDropdown(false);
-                                                    }}
-                                                    style={styles.dropdownItem}
-                                                >
-                                                    <Text style={[styles.dropdownItemText, selectedSeverity === level && styles.dropdownItemTextSelected]}>
-                                                        {level}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    )}
-                                </View>
-                            </Pressable>
-                            {/* Officer Filter */}
-                            <Pressable onPress={e => e.stopPropagation()}>
-                              <View>
-                                <TouchableOpacity style={styles.filterButton} onPress={() => {
-                                  setShowOfficerDropdown(prev => !prev);
-                                  setShowTypeDropdown(false);
-                                  setShowSeverityDropdown(false);
-                                  setShowStatusDropdown(false);
-                                }}>
-                                  <Filter size={16} color="#666" />
-                                  <Text style={styles.filterButtonText}>{selectedOfficer}</Text>
-                                  <ChevronDown size={16} color="#666" />
+                    <View style={styles.filtersRow}>
+                      <View style={styles.filterGroupRow}>
+                        {/* Type Filter */}
+                        <Pressable onPress={(e) => e.stopPropagation()}>
+                            <View>
+                                <TouchableOpacity style={styles.filterButton} onPress={toggleTypeDropdown}>
+                                    <Filter size={16} color="#666" />
+                                    <Text style={styles.filterButtonText}>{selectedType}</Text>
+                                    <ChevronDown size={16} color="#666" />
                                 </TouchableOpacity>
-                                {showOfficerDropdown && (
-                                  <View style={styles.dropdown}>
-                                    {officerOptions.map(officer => (
-                                      <TouchableOpacity
-                                        key={officer}
-                                        onPress={() => {
-                                          setSelectedOfficer(officer);
-                                          setShowOfficerDropdown(false);
-                                        }}
-                                        style={styles.dropdownItem}
-                                      >
-                                        <Text style={selectedOfficer === officer ? [styles.dropdownItemText, styles.dropdownItemTextSelected] : styles.dropdownItemText}>
-                                          {officer}
-                                        </Text>
-                                      </TouchableOpacity>
-                                    ))}
-                                  </View>
-                                )}
-                              </View>
-                            </Pressable>
-                            {/* Status Filter */}
-                            <Pressable onPress={e => e.stopPropagation()}>
-                              <View>
-                                <TouchableOpacity style={styles.filterButton} onPress={() => {
-                                  setShowStatusDropdown(prev => !prev);
-                                  setShowTypeDropdown(false);
-                                  setShowSeverityDropdown(false);
-                                  setShowOfficerDropdown(false);
-                                }}>
-                                  <Filter size={16} color="#666" />
-                                  <Text style={styles.filterButtonText}>{selectedStatus}</Text>
-                                  <ChevronDown size={16} color="#666" />
-                                </TouchableOpacity>
-                                {showStatusDropdown && (
-                                  <View style={styles.dropdown}>
-                                    {statusOptions.map(status => (
-                                      <TouchableOpacity
-                                        key={status}
-                                        onPress={() => {
-                                          setSelectedStatus(status);
-                                          setShowStatusDropdown(false);
-                                        }}
-                                        style={styles.dropdownItem}
-                                      >
-                                        <Text style={selectedStatus === status ? [styles.dropdownItemText, styles.dropdownItemTextSelected] : styles.dropdownItemText}>
-                                          {status}
-                                        </Text>
-                                      </TouchableOpacity>
-                                    ))}
-                                  </View>
-                                )}
-                              </View>
-                            </Pressable>
-                            {/* Date Filter */}
-                            <View style={styles.dateFilterContainer}>
-                                <Calendar size={16} color="#666" style={{ marginRight: 4 }} />
-                                {/* Start Date Picker */}
-                                {Platform.OS === 'web' ? (
-                                    <input
-                                        type="date"
-                                        value={startDate ? toISODate(startDate) : ''}
-                                        onChange={e => setStartDate(e.target.value)}
-                                        style={{
-                                            border: '1px solid #e5e5e5',
-                                            borderRadius: 8,
-                                            padding: '8px 10px',
-                                            fontSize: 14,
-                                            color: '#444',
-                                            outline: 'none',
-                                            marginRight: 4
-                                        }}
-                                        placeholder="Start Date"
-                                    />
-                                ) : (
-                                    <TouchableOpacity
-                                        style={styles.dateInput}
-                                        onPress={() => setShowDatePicker(true)}
-                                    >
-                                        <Text style={{ color: startDate ? '#444' : '#aaa', fontSize: 14 }}>
-                                            {startDate ? startDate : 'Start Date'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                {/* End Date Picker */}
-                                {Platform.OS === 'web' ? (
-                                    <input
-                                        type="date"
-                                        value={endDate ? toISODate(endDate) : ''}
-                                        onChange={e => setEndDate(e.target.value)}
-                                        style={{
-                                            border: '1px solid #e5e5e5',
-                                            borderRadius: 8,
-                                            padding: '8px 10px',
-                                            fontSize: 14,
-                                            color: '#444',
-                                            outline: 'none',
-                                            marginRight: 4
-                                        }}
-                                        placeholder="End Date"
-                                    />
-                                ) : (
-                                    <TouchableOpacity
-                                        style={styles.dateInput}
-                                        onPress={() => setShowDatePicker(true)}
-                                    >
-                                        <Text style={{ color: endDate ? '#444' : '#aaa', fontSize: 14 }}>
-                                            {endDate ? endDate : 'End Date'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                                {/* Clear buttons for both */}
-                                {startDate ? (
-                                    <TouchableOpacity onPress={() => setStartDate('')} style={styles.clearDateButton}>
-                                        <Text style={styles.clearDateText}>×</Text>
-                                    </TouchableOpacity>
-                                ) : null}
-                                {endDate ? (
-                                    <TouchableOpacity onPress={() => setEndDate('')} style={styles.clearDateButton}>
-                                        <Text style={styles.clearDateText}>×</Text>
-                                    </TouchableOpacity>
-                                ) : null}
-                                {/* Native Date Picker Modal */}
-                                {showDatePicker && Platform.OS !== 'web' && (
-                                    <DateTimePicker
-                                        value={selectedDate ? new Date(selectedDate) : new Date()}
-                                        mode="date"
-                                        display="default"
-                                        onChange={handleDateChange}
-                                    />
+                                {showTypeDropdown && (
+                                    <View style={styles.dropdown}>
+                                        {crimeTypes.map(type => (
+                                            <TouchableOpacity
+                                                key={type}
+                                                onPress={() => {
+                                                    setSelectedType(type);
+                                                    setShowTypeDropdown(false);
+                                                }}
+                                                style={styles.dropdownItem}
+                                            >
+                                                <Text style={[styles.dropdownItemText, selectedType === type && styles.dropdownItemTextSelected]}>
+                                                    {type}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
                                 )}
                             </View>
-                            {/* Reset Button */}
-                            <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-                                <RefreshCw size={18} color="#e02323" />
-                                <Text style={styles.resetText}>Reset</Text>
+                        </Pressable>
+                        {/* Severity Filter */}
+                        <Pressable onPress={(e) => e.stopPropagation()}>
+                            <View>
+                                <TouchableOpacity style={styles.filterButton} onPress={toggleSeverityDropdown}>
+                                    <Filter size={16} color="#666" />
+                                    <Text style={styles.filterButtonText}>{selectedSeverity}</Text>
+                                    <ChevronDown size={16} color="#666" />
+                                </TouchableOpacity>
+                                {showSeverityDropdown && (
+                                    <View style={styles.dropdown}>
+                                        {severityLevels.map(level => (
+                                            <TouchableOpacity
+                                                key={level}
+                                                onPress={() => {
+                                                    setSelectedSeverity(level);
+                                                    setShowSeverityDropdown(false);
+                                                }}
+                                                style={styles.dropdownItem}
+                                            >
+                                                <Text style={[styles.dropdownItemText, selectedSeverity === level && styles.dropdownItemTextSelected]}>
+                                                    {level}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                        </Pressable>
+                        {/* Officer Filter */}
+                        <Pressable onPress={e => e.stopPropagation()}>
+                          <View>
+                            <TouchableOpacity style={styles.filterButton} onPress={() => {
+                              setShowOfficerDropdown(prev => !prev);
+                              setShowTypeDropdown(false);
+                              setShowSeverityDropdown(false);
+                              setShowStatusDropdown(false);
+                            }}>
+                              <Filter size={16} color="#666" />
+                              <Text style={styles.filterButtonText}>{selectedOfficer}</Text>
+                              <ChevronDown size={16} color="#666" />
                             </TouchableOpacity>
+                            {showOfficerDropdown && (
+                              <View style={styles.dropdown}>
+                                {officerOptions.map(officer => (
+                                  <TouchableOpacity
+                                    key={officer}
+                                    onPress={() => {
+                                      setSelectedOfficer(officer);
+                                      setShowOfficerDropdown(false);
+                                    }}
+                                    style={styles.dropdownItem}
+                                  >
+                                    <Text style={selectedOfficer === officer ? [styles.dropdownItemText, styles.dropdownItemTextSelected] : styles.dropdownItemText}>
+                                      {officer}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        </Pressable>
+                        {/* Status Filter */}
+                        <Pressable onPress={e => e.stopPropagation()}>
+                          <View>
+                            <TouchableOpacity style={styles.filterButton} onPress={() => {
+                              setShowStatusDropdown(prev => !prev);
+                              setShowTypeDropdown(false);
+                              setShowSeverityDropdown(false);
+                              setShowOfficerDropdown(false);
+                            }}>
+                              <Filter size={16} color="#666" />
+                              <Text style={styles.filterButtonText}>{selectedStatus}</Text>
+                              <ChevronDown size={16} color="#666" />
+                            </TouchableOpacity>
+                            {showStatusDropdown && (
+                              <View style={styles.dropdown}>
+                                {statusOptions.map(status => (
+                                  <TouchableOpacity
+                                    key={status}
+                                    onPress={() => {
+                                      setSelectedStatus(status);
+                                      setShowStatusDropdown(false);
+                                    }}
+                                    style={styles.dropdownItem}
+                                  >
+                                    <Text style={selectedStatus === status ? [styles.dropdownItemText, styles.dropdownItemTextSelected] : styles.dropdownItemText}>
+                                      {status}
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        </Pressable>
+                        {/* Date Filter */}
+                        <View style={styles.dateFilterContainer}>
+                            <Calendar size={16} color="#666" style={{ marginRight: 4 }} />
+                            {/* Start Date Picker */}
+                            {Platform.OS === 'web' ? (
+                                <input
+                                    type="date"
+                                    value={startDate ? toISODate(startDate) : ''}
+                                    onChange={e => setStartDate(e.target.value)}
+                                    style={{
+                                        border: '1px solid #e5e5e5',
+                                        borderRadius: 8,
+                                        padding: '8px 10px',
+                                        fontSize: 14,
+                                        color: '#444',
+                                        outline: 'none',
+                                        marginRight: 4
+                                    }}
+                                    placeholder="Start Date"
+                                />
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.dateInput}
+                                    onPress={() => setShowDatePicker(true)}
+                                >
+                                    <Text style={{ color: startDate ? '#444' : '#aaa', fontSize: 14 }}>
+                                        {startDate ? startDate : 'Start Date'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            {/* End Date Picker */}
+                            {Platform.OS === 'web' ? (
+                                <input
+                                    type="date"
+                                    value={endDate ? toISODate(endDate) : ''}
+                                    onChange={e => setEndDate(e.target.value)}
+                                    style={{
+                                        border: '1px solid #e5e5e5',
+                                        borderRadius: 8,
+                                        padding: '8px 10px',
+                                        fontSize: 14,
+                                        color: '#444',
+                                        outline: 'none',
+                                        marginRight: 4
+                                    }}
+                                    placeholder="End Date"
+                                />
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.dateInput}
+                                    onPress={() => setShowDatePicker(true)}
+                                >
+                                    <Text style={{ color: endDate ? '#444' : '#aaa', fontSize: 14 }}>
+                                        {endDate ? endDate : 'End Date'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            {/* Clear buttons for both */}
+                            {startDate ? (
+                                <TouchableOpacity onPress={() => setStartDate('')} style={styles.clearDateButton}>
+                                    <Text style={styles.clearDateText}>×</Text>
+                                </TouchableOpacity>
+                            ) : null}
+                            {endDate ? (
+                                <TouchableOpacity onPress={() => setEndDate('')} style={styles.clearDateButton}>
+                                    <Text style={styles.clearDateText}>×</Text>
+                                </TouchableOpacity>
+                            ) : null}
+                            {/* Native Date Picker Modal */}
+                            {showDatePicker && Platform.OS !== 'web' && (
+                                <DateTimePicker
+                                    value={selectedDate ? new Date(selectedDate) : new Date()}
+                                    mode="date"
+                                    display="default"
+                                    onChange={handleDateChange}
+                                />
+                            )}
                         </View>
-                        <View style={styles.exportGroup}>
-                            <TouchableOpacity style={styles.exportButton} onPress={exportToPdf}>
-                                <Text style={styles.exportText}>Export All to PDF</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.exportButton} onPress={exportToExcel}>
-                                <Text style={styles.exportText}>Export All to Excel</Text>
-                            </TouchableOpacity>
-                            {/* [EXPERIMENTAL] Export all filtered as formal PDFs */}
-                            <TouchableOpacity style={styles.exportButton} onPress={exportFilteredFormalPdfs}>
-                                <Text style={styles.exportText}>Export Filtered to PDFs</Text>
-                            </TouchableOpacity>
-                        </View>
+                        {/* Reset Button */}
+                        <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
+                            <RefreshCw size={18} color="#e02323" />
+                            <Text style={styles.resetText}>Reset Filters</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <View style={styles.exportRow}>
+                      <View style={styles.exportGroupRow}>
+                        <TouchableOpacity style={styles.exportButton} onPress={exportToPdf}>
+                            <Text style={styles.exportText}>Export All to PDF</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.exportButton} onPress={exportToExcel}>
+                            <Text style={styles.exportText}>Export All to Excel</Text>
+                        </TouchableOpacity>
+                        {/* [EXPERIMENTAL] Export all filtered as formal PDFs */}
+                        <TouchableOpacity style={styles.exportButton} onPress={exportFilteredFormalPdfs}>
+                            <Text style={styles.exportText}>Export Filtered to PDFs</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                 </View>
                 
@@ -1369,9 +1395,13 @@ export default function CrimeData() {
                                     <HighlightText style={[styles.cell, { flex: 3 }]} text={formatAddress(item.address)} highlight={searchQuery} />
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={formatDate(item.date)} highlight={searchQuery} />
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={item.type || 'N/A'} highlight={searchQuery} />
-                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={item.severity || 'N/A'} highlight={searchQuery} />
+                                    <View style={[styles.cell, { flex: 2 }]}> {/* Severity badge */}
+                                      <Text style={[styles.severityBadge, getSeverityStyle(item.severity ?? null)]}>{item.severity || 'N/A'}</Text>
+                                    </View>
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={item.respondedBy} highlight={searchQuery} />
-                                    <Text style={[styles.cell, { flex: 1.5 }]}>{item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'N/A'}</Text>
+                                    <View style={[styles.cell, { flex: 1.5 }]}> {/* Status badge */}
+                                      <Text style={[styles.statusBadge, getStatusStyle(item.status ?? null)]}>{item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'N/A'}</Text>
+                                    </View>
                                     <View style={[styles.cell, styles.viewCell]}>
                                         <TouchableOpacity
                                             style={styles.viewButton}
@@ -1381,6 +1411,7 @@ export default function CrimeData() {
                                                 logCrimeRecordView(item);
                                             }}
                                         >
+                                            <Eye size={16} color="#fff" style={{ marginRight: 4 }} />
                                             <Text style={styles.viewButtonText}>View</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -1532,14 +1563,29 @@ const styles = StyleSheet.create({
     title: { fontSize: 24, fontWeight: '700', color: '#202224' },
     searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 16, width: 300, height: 44, borderWidth: 1, borderColor: '#e5e5e5' },
     searchInput: { marginLeft: 12, flex: 1, fontSize: 15, color: '#333' },
-    filtersContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingBottom: 24,
+    filtersRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+      gap: 12,
     },
-    filterGroup: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    exportGroup: { flexDirection: 'row', gap: 10 },
+    filterGroupRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: 12,
+    },
+    exportRow: {
+      flexDirection: 'row',
+      justifyContent: Platform.OS === 'web' ? 'flex-end' : 'center',
+      marginBottom: 18,
+    },
+    exportGroupRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
     exportButton: { backgroundColor: '#e02323', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 16 },
     exportText: { color: 'white', fontWeight: '600', fontSize: 14 },
     filterButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, gap: 6, borderWidth: 1, borderColor: '#e5e5e5' },
@@ -1555,7 +1601,19 @@ const styles = StyleSheet.create({
         // height: 400, // Removed fixed height for dynamic sizing
         // overflow: 'auto', // Moved to inline style for web only
     },
-    tableHeader: { flexDirection: 'row', backgroundColor: '#fcfcfc', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
+    tableHeader: {
+      flexDirection: 'row',
+      position: Platform.OS === 'web' ? 'sticky' : 'relative',
+      top: 0,
+      zIndex: 20,
+      backgroundColor: '#fcfcfc',
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#eee',
+      flexWrap: 'nowrap',
+      width: '100%',
+    },
     tableHeaderRow: { flexDirection: 'row', backgroundColor: '#fcfcfc', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
     headerCell: { fontSize: 12, fontWeight: '600', color: '#666', paddingHorizontal: 4, textAlign: 'center' },
     tableRow: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16, alignItems: 'center' },
@@ -1852,4 +1910,16 @@ const styles = StyleSheet.create({
         color: '#222',
         marginBottom: 6,
     },
+    severityBadge: { borderRadius: 12, paddingVertical: 2, paddingHorizontal: 10, fontSize: 13, fontWeight: '600', color: '#fff', alignSelf: 'center' },
+    severitylow: { backgroundColor: '#4fc3f7' },
+    severitymedium: { backgroundColor: '#ffb300' },
+    severityhigh: { backgroundColor: '#e02323' },
+    statusBadge: { borderRadius: 12, paddingVertical: 2, paddingHorizontal: 10, fontSize: 13, fontWeight: '600', color: '#fff', alignSelf: 'center' },
+    statuspending: { backgroundColor: '#ffb300' },
+    statusresponded: { backgroundColor: '#4caf50' },
+    statusresolved: { backgroundColor: '#4caf50' },
+    rowHover: { backgroundColor: '#f9f9f9' },
+    zebraRow: { backgroundColor: '#fcfcfc' },
+    clearFiltersButton: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, marginLeft: 8, borderWidth: 1, borderColor: '#e5e5e5' },
+    clearFiltersText: { fontSize: 14, fontWeight: '600', color: '#e02323' },
 });
