@@ -302,302 +302,346 @@ export default function ReportStep() {
               </TouchableOpacity>
             ))}
           </View>
-          {/* Suspect Description */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Suspect</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-            {['Description', 'IF KNOWN'].map(option => (
-              <TouchableOpacity
-                key={option}
-                style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}
-                onPress={() => handleSuspectOption(option as 'Description' | 'IF KNOWN')}
-              >
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, suspectOption === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {suspectOption === 'Description' && (
-            <View style={{
-              marginBottom: 16,
-              backgroundColor: isDarkMode ? '#232323' : '#fff',
-              borderRadius: 14,
-              padding: 16,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12,
-              shadowRadius: 6,
-              elevation: 3,
-              borderWidth: 1,
-              borderColor: '#E02323',
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <MaterialIcons name="person" size={22} color="#E02323" style={{ marginRight: 8 }} />
-                <Text style={{ color: isDarkMode ? '#fff' : '#222', fontWeight: 'bold', fontSize: 15 }}>Suspect Description</Text>
-              </View>
-              <TextInput
-                style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40 }]}
-                placeholder="Describe the suspect"
-                placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                value={suspectDescription}
-                onChangeText={setSuspectDescription}
-              />
+          {/* Suspect (Card) */}
+          <View style={{
+            backgroundColor: isDarkMode ? '#232323' : '#f5f5f5',
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E02323',
+            marginBottom: 28,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
+          }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E02323', marginBottom: 10 }}>Suspect</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+              {['Description', 'IF KNOWN'].map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}
+                  onPress={() => handleSuspectOption(option as 'Description' | 'IF KNOWN')}
+                >
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, suspectOption === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option === 'IF KNOWN' ? 'If Known' : option}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          )}
-          {suspectOption === 'IF KNOWN' && (
-            <View style={{
-              marginBottom: 16,
-              backgroundColor: isDarkMode ? '#232323' : '#fff',
-              borderRadius: 14,
-              padding: 16,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12,
-              shadowRadius: 6,
-              elevation: 3,
-              borderWidth: 1,
-              borderColor: '#E02323',
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <MaterialIcons name="person" size={22} color="#E02323" style={{ marginRight: 8 }} />
-                <Text style={{ color: isDarkMode ? '#fff' : '#222', fontWeight: 'bold', fontSize: 15 }}>Suspect Details</Text>
-              </View>
-              <TextInput
-                style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, marginBottom: 8, minHeight: 40 }]}
-                placeholder="Name"
-                placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                value={suspectName}
-                onChangeText={setSuspectName}
-              />
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: -15 }}>
+            {suspectOption === 'Description' && (
+              <View style={{
+                marginBottom: 16,
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  <MaterialIcons name="person" size={22} color="#E02323" style={{ marginRight: 8 }} />
+                  <Text style={{ color: isDarkMode ? '#fff' : '#222', fontWeight: 'bold', fontSize: 15 }}>Suspect Description</Text>
+                </View>
                 <TextInput
-                  style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40 }]}
-                  placeholder="Age"
+                  style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40 }]}
+                  placeholder="Describe the suspect"
                   placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                  value={suspectAge}
-                  onChangeText={setSuspectAge}
-                  keyboardType="numeric"
-                />
-                <TextInput
-                  style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40 }]}
-                  placeholder="Sex"
-                  placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                  value={suspectSex}
-                  onChangeText={setSuspectSex}
+                  value={suspectDescription}
+                  onChangeText={setSuspectDescription}
                 />
               </View>
-              <TextInput
-                style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 2 }]}
-                placeholder="Address"
-                placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                value={suspectAddress}
-                onChangeText={setSuspectAddress}
-              />
-              <TextInput
-                style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 0 }]}
-                placeholder="Description"
-                placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                value={suspectKnownDescription}
-                onChangeText={setSuspectKnownDescription}
-              />
-            </View>
-          )}
-          {/* Weapon Used */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Weapon Used</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-            {['N/A', 'IF KNOWN'].map(option => (
-              <TouchableOpacity
-                key={option}
-                style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}
-                onPress={() => handleWeaponOption(option as 'N/A' | 'IF KNOWN')}
-              >
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, weaponOption === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
+            )}
+            {suspectOption === 'IF KNOWN' && (
+              <View style={{
+                marginBottom: 16,
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                  <MaterialIcons name="person" size={22} color="#E02323" style={{ marginRight: 8 }} />
+                  <Text style={{ color: isDarkMode ? '#fff' : '#222', fontWeight: 'bold', fontSize: 15 }}>Suspect Details</Text>
+                </View>
+                <TextInput
+                  style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, marginBottom: 8, minHeight: 40 }]}
+                  placeholder="Name"
+                  placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                  value={suspectName}
+                  onChangeText={setSuspectName}
+                />
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: -15 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40 }]}
+                    placeholder="Age"
+                    placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                    value={suspectAge}
+                    onChangeText={setSuspectAge}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40 }]}
+                    placeholder="Sex"
+                    placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                    value={suspectSex}
+                    onChangeText={setSuspectSex}
+                  />
+                </View>
+                <TextInput
+                  style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 2 }]}
+                  placeholder="Address"
+                  placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                  value={suspectAddress}
+                  onChangeText={setSuspectAddress}
+                />
+                <TextInput
+                  style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 0 }]}
+                  placeholder="Description"
+                  placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                  value={suspectKnownDescription}
+                  onChangeText={setSuspectKnownDescription}
+                />
+              </View>
+            )}
           </View>
-          {weaponOption === 'IF KNOWN' && (
-            <View style={{
-              marginBottom: 16,
-              backgroundColor: isDarkMode ? '#232323' : '#fff',
-              borderRadius: 14,
-              padding: 16,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12,
-              shadowRadius: 6,
-              elevation: 3,
-              borderWidth: 1,
-              borderColor: '#E02323',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-            }}>
-              <MaterialIcons name="gavel" size={22} color="#E02323" style={{ marginRight: 8 }} />
-              <TextInput
-                style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 0 }]}
-                placeholder="Describe the weapon used"
-                placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                value={weaponUsed}
-                onChangeText={setWeaponUsed}
-              />
+          {/* Weapon Used (Card) */}
+          <View style={{
+            backgroundColor: isDarkMode ? '#232323' : '#f5f5f5',
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E02323',
+            marginBottom: 28,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
+          }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E02323', marginBottom: 10 }}>Weapon Used</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+              {['N/A', 'IF KNOWN'].map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}
+                  onPress={() => handleWeaponOption(option as 'N/A' | 'IF KNOWN')}
+                >
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, weaponOption === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option === 'N/A' ? 'Unknown' : option === 'IF KNOWN' ? 'If Known' : option}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          )}
-          {/* Vehicle Involved */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Vehicle Involved</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-            {['N/A', 'IF KNOWN'].map(option => (
-              <TouchableOpacity
-                key={option}
-                style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}
-                onPress={() => handleVehicleOption(option as 'N/A' | 'IF KNOWN')}
-              >
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, vehicleOption === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
+            {weaponOption === 'IF KNOWN' && (
+              <View style={{
+                marginBottom: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+                <MaterialIcons name="gavel" size={22} color="#E02323" style={{ marginRight: 8 }} />
+                <TextInput
+                  style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 0 }]}
+                  placeholder="Describe the weapon used"
+                  placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                  value={weaponUsed}
+                  onChangeText={setWeaponUsed}
+                />
+              </View>
+            )}
           </View>
-          {vehicleOption === 'IF KNOWN' && (
-            <View style={{
-              marginBottom: 16,
-              backgroundColor: isDarkMode ? '#232323' : '#fff',
-              borderRadius: 14,
-              padding: 16,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12,
-              shadowRadius: 6,
-              elevation: 3,
-              borderWidth: 1,
-              borderColor: '#E02323',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-            }}>
-              <MaterialIcons name="directions-car" size={22} color="#E02323" style={{ marginRight: 8 }} />
-              <TextInput
-                style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 0 }]}
-                placeholder="Vehicle and plate number"
-                placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-                value={vehicleInvolved}
-                onChangeText={setVehicleInvolved}
-              />
+          {/* Vehicle Involved (Card) */}
+          <View style={{
+            backgroundColor: isDarkMode ? '#232323' : '#f5f5f5',
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E02323',
+            marginBottom: 28,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
+          }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E02323', marginBottom: 10 }}>Vehicle Involved</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+              {['N/A', 'IF KNOWN'].map(option => (
+                <TouchableOpacity
+                  key={option}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }}
+                  onPress={() => handleVehicleOption(option as 'N/A' | 'IF KNOWN')}
+                >
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, vehicleOption === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option === 'N/A' ? 'Unknown' : option === 'IF KNOWN' ? 'If Known' : option}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          )}
+            {vehicleOption === 'IF KNOWN' && (
+              <View style={{
+                marginBottom: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}>
+                <MaterialIcons name="directions-car" size={22} color="#E02323" style={{ marginRight: 8 }} />
+                <TextInput
+                  style={[styles.input, { flex: 1, borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground, minHeight: 40, marginBottom: 0 }]}
+                  placeholder="Vehicle and plate number"
+                  placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                  value={vehicleInvolved}
+                  onChangeText={setVehicleInvolved}
+                />
+              </View>
+            )}
+          </View>
 
           {/* Evidence Collection */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222', marginTop: 16 }]}>Evidence Collection</Text>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Has the area been secured?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setEvidenceSecured(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, evidenceSecured === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Were there any items left behind?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setItemsLeftBehind(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, itemsLeftBehind === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Was anything stolen?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setItemsStolen(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, itemsStolen === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{
+            backgroundColor: isDarkMode ? '#232323' : '#f5f5f5',
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E02323',
+            marginBottom: 28,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
+          }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E02323', marginBottom: 10 }}>Evidence Collection</Text>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Has the area been secured?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setEvidenceSecured(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, evidenceSecured === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Were there any items left behind?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setItemsLeftBehind(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, itemsLeftBehind === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Was anything stolen?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setItemsStolen(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, itemsStolen === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Were there any security cameras nearby?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setSecurityCameras(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, securityCameras === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           {/* Motive & Context */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222', marginTop: 16 }]}>Motive & Context</Text>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Do you know why this happened?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setMotiveKnown(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, motiveKnown === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Was there any prior conflict or threat?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setPriorConflict(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, priorConflict === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{
+            backgroundColor: isDarkMode ? '#232323' : '#f5f5f5',
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E02323',
+            marginBottom: 28,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
+          }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E02323', marginBottom: 10 }}>Motive & Context</Text>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Do you know why this happened?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setMotiveKnown(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, motiveKnown === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Was there any prior conflict or threat?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setPriorConflict(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, priorConflict === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           {/* Other Victim's Information */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222', marginTop: 16 }]}>Other Victim's Information</Text>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Who was involved?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setVictimsInvolved(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, victimsInvolved === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Are there any injuries or fatalities?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setInjuriesFatalities(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, injuriesFatalities === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Was medical help provided?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setMedicalHelp(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, medicalHelp === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Security Cameras Nearby */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222', marginTop: 16 }]}>Were there any security cameras nearby?</Text>
-          <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-            {['Yes', 'No'].map(option => (
-              <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setSecurityCameras(option)}>
-                <View style={[styles.radioCircle, { borderColor: '#E02323' }, securityCameras === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
-                <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {/* Description */}
-          <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Other Details</Text>
           <View style={{
-            marginBottom: 16,
-            backgroundColor: isDarkMode ? '#232323' : '#fff',
-            borderRadius: 14,
-            padding: 16,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.12,
-            shadowRadius: 6,
-            elevation: 3,
+            backgroundColor: isDarkMode ? '#232323' : '#f5f5f5',
+            borderRadius: 16,
+            padding: 20,
             borderWidth: 1,
             borderColor: '#E02323',
+            marginBottom: 28,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
           }}>
-            <TextInput
-              style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground }]}
-              placeholder="Add addtional information"
-              placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-            />
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E02323', marginBottom: 10 }}>Other Information</Text>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Are there any involved individuals?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setVictimsInvolved(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, victimsInvolved === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Are there any injuries or fatalities?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setInjuriesFatalities(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, injuriesFatalities === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={{ color: isDarkMode ? '#fff' : '#222', marginBottom: 4 }}>Was medical help provided?</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+              {['No', 'Yes'].map(option => (
+                <TouchableOpacity key={option} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 24 }} onPress={() => setMedicalHelp(option)}>
+                  <View style={[styles.radioCircle, { borderColor: '#E02323' }, medicalHelp === option && { backgroundColor: '#E02323', borderWidth: 0 }]} />
+                  <Text style={[styles.radioLabel, { color: isDarkMode ? '#fff' : '#222', marginRight: 4 }]}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          {/* Other Details (Card) */}
+          <View style={{
+            backgroundColor: isDarkMode ? '#232323' : '#f5f5f5',
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E02323',
+            marginBottom: 28,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 4,
+          }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#E02323', marginBottom: 10 }}>Other Details</Text>
+            <View style={{ marginBottom: 16 }}>
+              <TextInput
+                style={[styles.input, { borderColor: currentTheme.border, color: isDarkMode ? '#fff' : '#222', backgroundColor: currentTheme.cardBackground }]}
+                placeholder="Add additional information"
+                placeholderTextColor={isDarkMode ? currentTheme.subtitle : '#888'}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+              />
+            </View>
           </View>
           {/* Submit Button */}
           <TouchableOpacity style={[styles.button, { backgroundColor: buttonColor }]} onPress={handleSubmit}>
