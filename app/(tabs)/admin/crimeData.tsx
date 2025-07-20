@@ -26,7 +26,116 @@ import {
 
 
 
-    Platform, // Import Platform API
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    Platform, // Import Platform A
     Pressable,
     ScrollView,
     StyleSheet,
@@ -81,6 +190,8 @@ interface CrimeRecord {
     injuries_fatalities?: string;
     medical_help?: string;
     security_cameras?: string;
+    status?: string;
+    station?: string;
 }
 
 const crimeTypes = [ 
@@ -100,23 +211,18 @@ const itemsPerPage = 10;
 const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
-        // Parse as local (no Z, no +8)
-        const date = new Date(dateString.replace(' ', 'T'));
-        const months = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
-        ];
-        const month = months[date.getMonth()];
-        const day = date.getDate();
-        const year = date.getFullYear();
-
-        let hours = date.getHours();
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours : 12;
-
-        return `${month} ${day}, ${year} at ${hours}:${minutes} ${ampm}`;
+        // Parse the date string as UTC, then convert to PH time
+        const date = new Date(dateString.replace(' ', 'T') + 'Z');
+        if (isNaN(date.getTime())) return 'Invalid Date';
+        return date.toLocaleString('en-PH', {
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+        });
     } catch {
         return 'N/A';
     }
@@ -201,6 +307,17 @@ export default function CrimeData() {
       officers.sort();
       return ['All Officers', ...officers];
     }, [masterCrimeData]);
+
+    // Compute unique status options
+    const statusOptions = useMemo(() => {
+      const statuses = Array.from(new Set(masterCrimeData.map(item => item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'N/A')));
+      statuses.sort();
+      return ['All Status', ...statuses.filter(s => s !== 'N/A')];
+    }, [masterCrimeData]);
+
+    const [selectedStatus, setSelectedStatus] = useState('All Status');
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
     // Modal state for viewing details
     const [selectedRecord, setSelectedRecord] = useState<CrimeRecord | null>(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -327,6 +444,12 @@ export default function CrimeData() {
         if (selectedOfficer !== 'All Officers') {
             result = result.filter(item => item.respondedBy === selectedOfficer);
         }
+        if (selectedStatus !== 'All Status') {
+            result = result.filter(item => {
+                if (!item.status) return false;
+                return (item.status.charAt(0).toUpperCase() + item.status.slice(1)) === selectedStatus;
+            });
+        }
         // Date filter: only one type of filter should be active at a time
         const validStart = isValidDateString(startDate) ? toISODate(startDate) : null;
         const validEnd = isValidDateString(endDate) ? toISODate(endDate) : null;
@@ -369,7 +492,7 @@ export default function CrimeData() {
             return parseInt(a.alertId) - parseInt(b.alertId);
         });
         return result;
-    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity, selectedOfficer, selectedDate, startDate, endDate]);
+    }, [masterCrimeData, searchQuery, selectedType, selectedSeverity, selectedOfficer, selectedStatus, selectedDate, startDate, endDate]);
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const paginatedData = useMemo(() => {
@@ -389,12 +512,14 @@ export default function CrimeData() {
         setSelectedDate('');
         setStartDate('');
         setEndDate('');
+        setSelectedStatus('All Status');
     };
 
     const handleCloseDropdowns = () => {
         setShowTypeDropdown(false);
         setShowSeverityDropdown(false);
         setShowOfficerDropdown(false);
+        setShowStatusDropdown(false);
     };
 
     const toggleTypeDropdown = () => {
@@ -427,7 +552,7 @@ export default function CrimeData() {
      * @param {string} title The title of the report.
      * @returns {string} The HTML content for the PDF.
      */
-    const generatePdfHtml = (data: CrimeRecord[], title: string): string => {
+    const generatePdfHtml = (data: CrimeRecord[], title: string, includeFooter: boolean = true): string => {
       const generatedAt = new Date().toLocaleString('en-US', {
           year: 'numeric',
           month: 'long',
@@ -437,266 +562,176 @@ export default function CrimeData() {
           hour12: true
       });
 
-      // If it's a single record, generate detailed view
       if (data.length === 1) {
           const item = data[0];
           return `
               <html>
                   <head>
-                                             <style>
-                           body {
-                               font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-                               color: #333;
-                               margin: 20px;
-                               line-height: 1.3;
-                               font-size: 10px;
-                           }
-                           .date-right {
-                               text-align: right;
-                               font-size: 9px;
-                               color: #666;
-                               margin-bottom: 10px;
-                           }
-                           .spacer {
-                               height: 10px;
-                           }
-                           .report-header {
-                               text-align: center;
-                               margin-bottom: 15px;
-                               border-bottom: 2px solid #e02323;
-                               padding-bottom: 10px;
-                           }
-                           h1 {
-                               font-size: 20px;
-                               margin: 0;
-                               color: #e02323;
-                           }
-                           .subtitle {
-                               font-size: 11px;
-                               color: #666;
-                               margin: 4px 0 0 0;
-                           }
-                           .section {
-                               margin-bottom: 12px;
-                               page-break-inside: avoid;
-                           }
-                           .section-title {
-                               font-size: 12px;
-                               font-weight: bold;
-                               color: #e02323;
-                               margin-bottom: 8px;
-                               border-bottom: 1px solid #eee;
-                               padding-bottom: 3px;
-                           }
-                           .detail-row {
-                               display: flex;
-                               margin-bottom: 4px;
-                               page-break-inside: avoid;
-                           }
-                           .detail-label {
-                               font-weight: bold;
-                               width: 140px;
-                               color: #444;
-                               font-size: 9px;
-                           }
-                           .detail-value {
-                               flex: 1;
-                               color: #222;
-                               font-size: 9px;
-                           }
-                           .page-break {
-                               page-break-after: always;
-                           }
-                           .alert-id {
-                               font-size: 12px;
-                               font-weight: bold;
-                               color: #e02323;
-                               margin-bottom: 12px;
-                           }
-                           .two-column {
-                               display: flex;
-                               gap: 20px;
-                           }
-                           .column {
-                               flex: 1;
-                           }
-                       </style>
+                      <style>
+                          body {
+                              font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                              color: #222;
+                              margin: 24px;
+                              line-height: 1.25;
+                              font-size: 13px;
+                          }
+                          .header-title {
+                              font-size: 22px;
+                              font-weight: bold;
+                              letter-spacing: 2px;
+                              margin-bottom: 2px;
+                              text-transform: uppercase;
+                          }
+                          .header-sub {
+                              font-size: 13px;
+                              color: #444;
+                              margin-bottom: 2px;
+                              letter-spacing: 1px;
+                          }
+                          .section-title {
+                              font-size: 16px;
+                              font-weight: bold;
+                              color: #e02323;
+                              margin-top: 10px;
+                              margin-bottom: 4px;
+                              letter-spacing: 1px;
+                          }
+                          .row {
+                              display: flex;
+                              flex-direction: row;
+                              align-items: center;
+                              margin-bottom: 4px;
+                          }
+                          .label {
+                              font-weight: bold;
+                              font-size: 12px;
+                              color: #222;
+                              text-transform: uppercase;
+                              min-width: 110px;
+                          }
+                          .value-line {
+                              border-bottom: 1px solid #222;
+                              flex: 1;
+                              min-height: 16px;
+                              display: flex;
+                              align-items: center;
+                          }
+                          .value {
+                              font-size: 12px;
+                              color: #222;
+                              padding-left: 2px;
+                          }
+                          .columns {
+                              width: 100%;
+                              display: flex;
+                              flex-direction: row;
+                              gap: 24px;
+                          }
+                          .column {
+                              flex: 1;
+                              min-width: 0;
+                          }
+                          .officer-box {
+                              margin-top: 8px;
+                              text-align: right;
+                          }
+                          .officer-label {
+                              font-size: 10px;
+                              color: #444;
+                              font-weight: bold;
+                              text-transform: uppercase;
+                          }
+                          .officer-value {
+                              font-size: 11px;
+                              color: #222;
+                          }
+                          .suspect-details {
+                              page-break-inside: avoid;
+                          }
+                          .section-title.first {
+                              margin-top: 40px;
+                          }
+                          .section-title:not(.first) {
+                              margin-top: 24px;
+                          }
+                      </style>
                   </head>
                   <body>
-                      <div class="date-right">Generated: ${generatedAt}</div>
-                      <div class="spacer"></div>
-                      <div class="report-header">
-                          <h1>${title}</h1>
-                          <p class="subtitle">ALERTOMNL Crime Record Details</p>
+                      <div style="width: 100%; text-align: right; font-size: 11px; font-weight: bold; letter-spacing: 1px; margin-bottom: 2px;">
+                           ALERT #${item.alertId}
                       </div>
-                      
-                      <div class="alert-id">Alert ID: ${item.alertId}</div>
-                      
-                      <div class="two-column">
+                      <div style="text-align: center; margin-bottom: 10px;">
+                          <div class="header-title">ALERTO MNL</div>
+                          <div class="header-sub">Crime Incident Report</div>
+                          <div class="header-sub">City of Manila Police District</div>
+                      </div>
+                      <div class="columns">
                           <div class="column">
-                              <!-- Incident Information -->
-                              <div class="section">
-                                  <div class="section-title">Incident Information</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Incident Type:</div>
-                                      <div class="detail-value">${item.type || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Severity Level:</div>
-                                      <div class="detail-value">${item.severity || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Responded By:</div>
-                                      <div class="detail-value">${item.respondedBy || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Date:</div>
-                                      <div class="detail-value">${formatDate(item.date)}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Address:</div>
-                                      <div class="detail-value">${item.address || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Name:</div>
-                                      <div class="detail-value">${item.name || 'N/A'}</div>
-                                  </div>
+                              <div class="section-title first">CRIME REPORT</div>
+                              <div class="row"><div class="label">NATURE OF CASE :</div><div class="value-line"><span class="value">${item.type === 'N/A' ? 'None' : (item.type || 'None')}</span></div></div>
+                              <div class="row"><div class="label">VICTIM NAME :</div><div class="value-line"><span class="value">${item.name || 'N/A'}</span></div></div>
+                              <div class="row"><div class="label">DATE & TIME :</div><div class="value-line"><span class="value">${formatDate(item.date || '')}</span></div></div>
+                              <div class="row"><div class="label">PLACE OF OCCURRENCE :</div><div class="value-line"><span class="value">${item.address || ''}</span></div></div>
+                              <div class="section-title">SUSPECT</div>
+                              <div class="suspect-details">
+                                <div class="row"><div class="label">SUSPECT IDENTIFICATION :</div><div class="value-line"><span class="value">${item.suspect_option === 'N/A' ? 'Unknown' : item.suspect_option === 'IF KNOWN' ? 'Known' : item.suspect_option === 'Description' ? 'Described' : (item.suspect_option || 'Unknown')}</span></div></div>
+                                ${item.suspect_option === 'Description' ? `<div class="row"><div class="label">SUSPECT DESCRIPTION :</div><div class="value-line"><span class="value">${item.suspect_description || 'N/A'}</span></div></div>` : ''}
+                                ${item.suspect_option === 'IF KNOWN' ? `
+                                    <div class="row"><div class="label">NAME :</div><div class="value-line"><span class="value">${item.suspect_name || 'N/A'}</span></div></div>
+                                    <div class="row"><div class="label">AGE :</div><div class="value-line"><span class="value">${item.suspect_age || 'N/A'}</span></div></div>
+                                    <div class="row"><div class="label">SEX :</div><div class="value-line"><span class="value">${item.suspect_sex || 'N/A'}</span></div></div>
+                                    <div class="row"><div class="label">ADDRESS :</div><div class="value-line"><span class="value">${item.suspect_address || 'N/A'}</span></div></div>
+                                    <div class="row"><div class="label">DESCRIPTION :</div><div class="value-line"><span class="value">${item.suspect_known_description || 'N/A'}</span></div></div>
+                                ` : ''}
                               </div>
-
-                              <!-- Suspect Information -->
-                              <div class="section">
-                                  <div class="section-title">Suspect Information</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Suspect Option:</div>
-                                      <div class="detail-value">${item.suspect_option || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Suspect Description:</div>
-                                      <div class="detail-value">${item.suspect_description || 'N/A'}</div>
-                                  </div>
-                                  ${item.suspect_option === 'IF KNOWN' ? `
-                                  <div class="detail-row">
-                                      <div class="detail-label">Name:</div>
-                                      <div class="detail-value">${item.suspect_name || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Age:</div>
-                                      <div class="detail-value">${item.suspect_age || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Sex:</div>
-                                      <div class="detail-value">${item.suspect_sex || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Address:</div>
-                                      <div class="detail-value">${item.suspect_address || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Known Description:</div>
-                                      <div class="detail-value">${item.suspect_known_description || 'N/A'}</div>
-                                  </div>
-                                  ` : ''}
-                              </div>
-
-                              <!-- Weapon Information -->
-                              <div class="section">
-                                  <div class="section-title">Weapon Used</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Weapon Option:</div>
-                                      <div class="detail-value">${item.weapon_option || 'N/A'}</div>
-                                  </div>
-                                  ${item.weapon_option === 'IF KNOWN' ? `
-                                  <div class="detail-row">
-                                      <div class="detail-label">Weapon Used:</div>
-                                      <div class="detail-value">${item.weapon_used || 'N/A'}</div>
-                                  </div>
-                                  ` : ''}
-                              </div>
-
-                              <!-- Vehicle Information -->
-                              <div class="section">
-                                  <div class="section-title">Vehicle Involved</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Vehicle Option:</div>
-                                      <div class="detail-value">${item.vehicle_option || 'N/A'}</div>
-                                  </div>
-                                  ${item.vehicle_option === 'IF KNOWN' ? `
-                                  <div class="detail-row">
-                                      <div class="detail-label">Vehicle Involved:</div>
-                                      <div class="detail-value">${item.vehicle_involved || 'N/A'}</div>
-                                  </div>
-                                  ` : ''}
-                              </div>
+                              <div class="section-title">WEAPON USED</div>
+                              <div class="row"><div class="label">WEAPON :</div><div class="value-line"><span class="value">${item.weapon_option === 'N/A' ? 'Unknown' : item.weapon_option === 'IF KNOWN' ? 'Known' : (item.weapon_option || 'Unknown')}</span></div></div>
+                              ${item.weapon_option === 'IF KNOWN' ? `<div class="row"><div class="label">WEAPON USED :</div><div class="value-line"><span class="value">${item.weapon_used || 'N/A'}</span></div></div>` : ''}
+                              <div class="section-title">VEHICLE INVOLVED</div>
+                              <div class="row"><div class="label">VEHICLE :</div><div class="value-line"><span class="value">${item.vehicle_option === 'N/A' ? 'Unknown' : item.vehicle_option === 'IF KNOWN' ? 'Known' : (item.vehicle_option || 'Unknown')}</span></div></div>
+                              ${item.vehicle_option === 'IF KNOWN' ? `<div class="row"><div class="label">VEHICLE INVOLVED :</div><div class="value-line"><span class="value">${item.vehicle_involved || 'N/A'}</span></div></div>` : ''}
                           </div>
-
                           <div class="column">
-                              <!-- Evidence Collection -->
-                              <div class="section">
-                                  <div class="section-title">Evidence Collection</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Area Secured:</div>
-                                      <div class="detail-value">${item.evidence_secured || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Items Left Behind:</div>
-                                      <div class="detail-value">${item.items_left_behind || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Items Stolen:</div>
-                                      <div class="detail-value">${item.items_stolen || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Evidence Details:</div>
-                                      <div class="detail-value">${item.evidence_details || 'N/A'}</div>
-                                  </div>
-                              </div>
-
-                              <!-- Motive & Context -->
-                              <div class="section">
-                                  <div class="section-title">Motive & Context</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Motive Known:</div>
-                                      <div class="detail-value">${item.motive_known || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Prior Conflict:</div>
-                                      <div class="detail-value">${item.prior_conflict || 'N/A'}</div>
-                                  </div>
-                              </div>
-
-                              <!-- Other Victim's Information -->
-                              <div class="section">
-                                  <div class="section-title">Other Victim's Information</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Victims Involved:</div>
-                                      <div class="detail-value">${item.victims_involved || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Injuries/Fatalities:</div>
-                                      <div class="detail-value">${item.injuries_fatalities || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Medical Help:</div>
-                                      <div class="detail-value">${item.medical_help || 'N/A'}</div>
-                                  </div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Security Cameras:</div>
-                                      <div class="detail-value">${item.security_cameras || 'N/A'}</div>
-                                  </div>
-                              </div>
-
-                              <!-- Other Details -->
-                              <div class="section">
-                                  <div class="section-title">Other Details</div>
-                                  <div class="detail-row">
-                                      <div class="detail-label">Description:</div>
-                                      <div class="detail-value">${item.description || 'N/A'}</div>
-                                  </div>
-                              </div>
+                              <div class="section-title first">EVIDENCE COLLECTION</div>
+                              <div class="row"><div class="label">AREA SECURED :</div><div class="value-line"><span class="value">${item.evidence_secured || 'N/A'}</span></div></div>
+                              <div class="row"><div class="label">ITEMS LEFT BEHIND :</div><div class="value-line"><span class="value">${item.items_left_behind || 'N/A'}</span></div></div>
+                              <div class="row"><div class="label">ITEMS STOLEN :</div><div class="value-line"><span class="value">${item.items_stolen || 'N/A'}</span></div></div>
+                              <div class="section-title">MOTIVE & CONTEXT</div>
+                              <div class="row"><div class="label">MOTIVE KNOWN :</div><div class="value-line"><span class="value">${item.motive_known || 'N/A'}</span></div></div>
+                              <div class="row"><div class="label">PRIOR CONFLICT :</div><div class="value-line"><span class="value">${item.prior_conflict || 'N/A'}</span></div></div>
+                              <div class="section-title">OTHER INFORMATION</div>
+                              <div class="row"><div class="label">VICTIMS INVOLVED :</div><div class="value-line"><span class="value">${item.victims_involved || 'N/A'}</span></div></div>
+                              <div class="row"><div class="label">INJURIES/FATALITIES :</div><div class="value-line"><span class="value">${item.injuries_fatalities || 'N/A'}</span></div></div>
+                              <div class="row"><div class="label">MEDICAL HELP :</div><div class="value-line"><span class="value">${item.medical_help || 'N/A'}</span></div></div>
+                              <div class="row"><div class="label">SECURITY CAMERAS :</div><div class="value-line"><span class="value">${item.security_cameras || 'N/A'}</span></div></div>
+                              <div class="section-title">OTHER DETAILS</div>
+                              <div class="row"><div class="label">DESCRIPTION :</div><div class="value-line"><span class="value">${item.description || 'N/A'}</span></div></div>
                           </div>
+                      </div>
+                      <div class="officer-box">
+                          <div class="officer-label">NAME OF OFFICER-ON-CASE</div>
+                          <div class="officer-value">${item.respondedBy || 'N/A'}</div>
+                          <div class="officer-label">RANK</div>
+                          <div class="officer-value">Police Officer I (PO1)</div>
+                          <div class="officer-label">DESIGNATION</div>
+                          <div class="officer-value">${item.station || 'Unknown'}</div>
+                          <div class="officer-label">STATUS</div>
+                          <div class="officer-value">${item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'N/A'}</div>
                       </div>
                   </body>
-              </html>
+                  ${includeFooter ? `
+                  <div style="width: 100%; text-align: center; font-size: 12px; color: #888; margin-top: 10px;">
+                    Exported on: ${new Date().toLocaleString('en-PH', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                      timeZone: 'Asia/Manila',
+                    })}
+                  </div>
+              </html>` : ''}
           `;
       }
 
@@ -799,6 +834,18 @@ export default function CrimeData() {
                       ${tableHeaders}
                       <tbody>${tableRows}</tbody>
                   </table>
+                  ${includeFooter ? `
+                  <div style="width: 100%; text-align: center; font-size: 12px; color: #888; margin-top: 32px;">
+                    Exported on: ${new Date().toLocaleString('en-PH', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                      timeZone: 'Asia/Manila',
+                    })}
+                  </div>` : ''}
               </body>
           </html>
       `;
@@ -812,39 +859,45 @@ export default function CrimeData() {
           alert('No data to export.');
           return;
       }
-  
+
       const reportTitle = `ALERTOMNL - Crime Data Report`;
-      const htmlContent = generatePdfHtml(filteredData, reportTitle);
-  
+      const htmlContent = generatePdfHtml(filteredData, reportTitle, false);
+
       if (Platform.OS === 'web') {
-          // Use html2pdf.js on Web to convert HTML to PDF and auto-download
+        try {
           const element = document.createElement('div');
           element.innerHTML = htmlContent;
-  
           const opt = {
-              margin:       0.5,
-              filename:     `CrimeData-All-${new Date().getTime()}.pdf`,
-              image:        { type: 'jpeg', quality: 0.98 },
-              html2canvas:  { scale: 2 },
-              jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            margin: 0.5,
+            filename: `${reportTitle.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
           };
-  
           // @ts-ignore - Assume html2pdf is loaded globally
-          html2pdf().from(element).set(opt).save();
-      } else {
-          // Native (mobile) fallback
-          try {
-              const { uri } = await Print.printToFileAsync({ html: htmlContent });
-              await Sharing.shareAsync(uri, {
-                  mimeType: 'application/pdf',
-                  dialogTitle: 'Share PDF Report'
-              });
-          } catch (error) {
-              console.error("Error exporting to PDF:", error);
-              alert('Failed to export PDF. Please try again.');
+          if (typeof html2pdf === 'undefined') {
+            alert('PDF export failed: html2pdf.js is not loaded.');
+            return;
           }
+          html2pdf().from(element).set(opt).save();
+        } catch (error) {
+          console.error('Error exporting to PDF:', error);
+          alert('Failed to export PDF. Please try again.');
+        }
+      } else {
+        // Native (mobile) fallback
+        try {
+          const { uri } = await Print.printToFileAsync({ html: htmlContent });
+          await Sharing.shareAsync(uri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Share PDF Report'
+          });
+        } catch (error) {
+          console.error('Error exporting to PDF:', error);
+          alert('Failed to export PDF. Please try again.');
+        }
       }
-  };
+    };
   
     
     /**
@@ -855,7 +908,7 @@ export default function CrimeData() {
         await logCrimeRecordDownload(record);
         
         const reportTitle = `ALERTOMNL - Crime Record #${record.alertId}`;
-        const htmlContent = generatePdfHtml([record], reportTitle);
+        const htmlContent = generatePdfHtml([record], reportTitle, true);
 
         if (Platform.OS === 'web') {
             // Use html2pdf.js on Web to convert HTML to PDF and auto-download
@@ -863,11 +916,11 @@ export default function CrimeData() {
             element.innerHTML = htmlContent;
 
             const opt = {
-                margin:       0.5,
-                filename:     `CrimeRecord-${record.alertId}-${new Date().getTime()}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                margin: 0.5,
+                filename: `${reportTitle.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
             };
 
             // @ts-ignore - Assume html2pdf is loaded globally
@@ -885,6 +938,50 @@ export default function CrimeData() {
                 alert('Failed to export PDF. Please try again.');
             }
         }
+    };
+
+    // Print single record as PDF and open print dialog
+    const printSingleRecord = async (record: CrimeRecord) => {
+      const reportTitle = `ALERTOMNL - Crime Record #${record.alertId}`;
+      const htmlContent = generatePdfHtml([record], reportTitle, true);
+      if (Platform.OS === 'web') {
+        try {
+          const element = document.createElement('div');
+          element.innerHTML = htmlContent;
+          const opt = {
+            margin: 0.5,
+            filename: `${reportTitle.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
+          };
+          // @ts-ignore
+          if (typeof html2pdf === 'undefined') {
+            alert('Print failed: html2pdf.js is not loaded.');
+            return;
+          }
+          // @ts-ignore
+          html2pdf().from(element).set(opt).toPdf().get('pdf').then(function (pdf) {
+            // @ts-ignore
+            const blobUrl = pdf.output('bloburl');
+            const printWindow = window.open(blobUrl, '_blank');
+            if (printWindow) {
+              printWindow.onload = function () {
+                printWindow.print();
+              };
+            }
+          });
+        } catch (error) {
+          alert('Failed to print PDF. Please try again.');
+        }
+      } else {
+        // Native (mobile) fallback
+        try {
+          await Print.printAsync({ html: htmlContent });
+        } catch (error) {
+          alert('Failed to print PDF. Please try again.');
+        }
+      }
     };
 
     /**
@@ -936,6 +1033,70 @@ export default function CrimeData() {
             console.error("Error exporting to Excel:", error);
             alert('Failed to export Excel file. Please try again.');
         }
+    };
+
+    // [EXPERIMENTAL] Export all filtered records as formal PDFs (multi-page, bond-paper style)
+    const exportFilteredFormalPdfs = async () => {
+      // Check if all filters are at default (no filter applied)
+      const noFilter =
+        selectedType === 'All Types' &&
+        selectedSeverity === 'All Severities' &&
+        selectedOfficer === 'All Officers' &&
+        selectedStatus === 'All Status' &&
+        !selectedDate &&
+        !startDate &&
+        !endDate &&
+        !searchQuery;
+      if (noFilter) {
+        alert('Please apply a filter before exporting. Exporting all records as formal PDFs is not allowed.');
+        return;
+      }
+      if (filteredData.length === 0) {
+        alert('No data to export.');
+        return;
+      }
+      if (filteredData.length > 20) {
+        if (!window.confirm('You are about to export more than 20 crime reports. This may take a while to generate a large PDF. Continue?')) {
+          return;
+        }
+      }
+      const reportTitle = `ALERTOMNL - Crime Records (Formal)`;
+      // Generate a formal PDF for every record, regardless of missing fields
+      const allHtml = filteredData
+        .map(record => generatePdfHtml([record], `ALERTOMNL - Crime Record #${record.alertId}`, true))
+        .join('<div style="page-break-after: always"></div>');
+
+      const htmlContent = `<html><body>${allHtml}</body></html>`;
+
+      if (Platform.OS === 'web') {
+        try {
+          const element = document.createElement('div');
+          element.innerHTML = htmlContent;
+          const opt = {
+            margin: 0.5,
+            filename: `${reportTitle.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
+          };
+          // @ts-ignore
+          if (typeof html2pdf === 'undefined') {
+            alert('PDF export failed: html2pdf.js is not loaded.');
+            return;
+          }
+          // @ts-ignore
+          html2pdf().from(element).set(opt).save();
+        } catch (error) {
+          alert('Failed to export PDF. Please try again.');
+        }
+      } else {
+        // Native (mobile) fallback
+        try {
+          await Print.printAsync({ html: htmlContent });
+        } catch (error) {
+          alert('Failed to print PDF. Please try again.');
+        }
+      }
     };
 
 
@@ -1023,6 +1184,7 @@ export default function CrimeData() {
                                   setShowOfficerDropdown(prev => !prev);
                                   setShowTypeDropdown(false);
                                   setShowSeverityDropdown(false);
+                                  setShowStatusDropdown(false);
                                 }}>
                                   <Filter size={16} color="#666" />
                                   <Text style={styles.filterButtonText}>{selectedOfficer}</Text>
@@ -1041,6 +1203,39 @@ export default function CrimeData() {
                                       >
                                         <Text style={selectedOfficer === officer ? [styles.dropdownItemText, styles.dropdownItemTextSelected] : styles.dropdownItemText}>
                                           {officer}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    ))}
+                                  </View>
+                                )}
+                              </View>
+                            </Pressable>
+                            {/* Status Filter */}
+                            <Pressable onPress={e => e.stopPropagation()}>
+                              <View>
+                                <TouchableOpacity style={styles.filterButton} onPress={() => {
+                                  setShowStatusDropdown(prev => !prev);
+                                  setShowTypeDropdown(false);
+                                  setShowSeverityDropdown(false);
+                                  setShowOfficerDropdown(false);
+                                }}>
+                                  <Filter size={16} color="#666" />
+                                  <Text style={styles.filterButtonText}>{selectedStatus}</Text>
+                                  <ChevronDown size={16} color="#666" />
+                                </TouchableOpacity>
+                                {showStatusDropdown && (
+                                  <View style={styles.dropdown}>
+                                    {statusOptions.map(status => (
+                                      <TouchableOpacity
+                                        key={status}
+                                        onPress={() => {
+                                          setSelectedStatus(status);
+                                          setShowStatusDropdown(false);
+                                        }}
+                                        style={styles.dropdownItem}
+                                      >
+                                        <Text style={selectedStatus === status ? [styles.dropdownItemText, styles.dropdownItemTextSelected] : styles.dropdownItemText}>
+                                          {status}
                                         </Text>
                                       </TouchableOpacity>
                                     ))}
@@ -1139,6 +1334,10 @@ export default function CrimeData() {
                             <TouchableOpacity style={styles.exportButton} onPress={exportToExcel}>
                                 <Text style={styles.exportText}>Export All to Excel</Text>
                             </TouchableOpacity>
+                            {/* [EXPERIMENTAL] Export all filtered as formal PDFs */}
+                            <TouchableOpacity style={styles.exportButton} onPress={exportFilteredFormalPdfs}>
+                                <Text style={styles.exportText}>Export Filtered to PDFs</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>
@@ -1153,14 +1352,14 @@ export default function CrimeData() {
                             ListHeaderComponent={() => (
                                 <View style={styles.tableHeader}>
                                     <Text style={[styles.headerCell, { flex: 1 }]}>ALERT ID</Text>
-                                    <Text style={[styles.headerCell, { flex: 2 }]}>NAME</Text>
+                                    <Text style={[styles.headerCell, { flex: 2 }]}>VICTIM NAME</Text>
                                     <Text style={[styles.headerCell, { flex: 3 }]}>ADDRESS</Text>
                                     <Text style={[styles.headerCell, { flex: 2 }]}>DATE</Text>
                                     <Text style={[styles.headerCell, { flex: 2 }]}>TYPE</Text>
                                     <Text style={[styles.headerCell, { flex: 2 }]}>SEVERITY</Text>
                                     <Text style={[styles.headerCell, { flex: 2 }]}>RESPONDED BY</Text>
+                                    <Text style={[styles.headerCell, { flex: 1.5 }]}>STATUS</Text>
                                     <Text style={[styles.headerCell, styles.viewHeaderCell]}>VIEW</Text>
-                                    <Text style={[styles.headerCell, styles.viewHeaderCell]}>DOWNLOAD</Text>
                                 </View>
                             )}
                             renderItem={({ item }) => (
@@ -1172,6 +1371,7 @@ export default function CrimeData() {
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={item.type || 'N/A'} highlight={searchQuery} />
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={item.severity || 'N/A'} highlight={searchQuery} />
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={item.respondedBy} highlight={searchQuery} />
+                                    <Text style={[styles.cell, { flex: 1.5 }]}>{item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'N/A'}</Text>
                                     <View style={[styles.cell, styles.viewCell]}>
                                         <TouchableOpacity
                                             style={styles.viewButton}
@@ -1182,14 +1382,6 @@ export default function CrimeData() {
                                             }}
                                         >
                                             <Text style={styles.viewButtonText}>View</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <View style={[styles.cell, styles.viewCell]}>
-                                        <TouchableOpacity
-                                            style={styles.downloadButton}
-                                            onPress={() => downloadSingleRecord(item)}
-                                        >
-                                            <Text style={styles.downloadButtonText}>PDF</Text>
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -1233,71 +1425,90 @@ export default function CrimeData() {
                     onRequestClose={() => setShowDetailsModal(false)}
                 >
                     <View style={styles.modalOverlay}>
-                        <View style={[styles.modalContent, { maxHeight: 600 }]}> {/* Set maxHeight for modal */}
-                            <ScrollView>
-                                <Text style={styles.modalTitle}>Crime Record Details</Text>
-                                {selectedRecord && (
-                                    <View>
-                                        {/* Incident Info */}
-                                        <Text style={styles.modalLabel}>Incident Type: <Text style={styles.modalValue}>{selectedRecord.type || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Severity Level: <Text style={styles.modalValue}>{selectedRecord.severity || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Responded By: <Text style={styles.modalValue}>{selectedRecord.respondedBy || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Date: <Text style={styles.modalValue}>{formatDate(selectedRecord.date)}</Text></Text>
-                                        <Text style={styles.modalLabel}>Address: <Text style={styles.modalValue}>{selectedRecord.address || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Name: <Text style={styles.modalValue}>{selectedRecord.name || 'N/A'}</Text></Text>
-
-                                        {/* Suspect Section */}
-                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Suspect</Text>
-                                        <Text style={styles.modalLabel}>Suspect Option: <Text style={styles.modalValue}>{selectedRecord.suspect_option || 'N/A'}</Text></Text>
-                                        {selectedRecord.suspect_option === 'Description' && (
-                                            <Text style={styles.modalLabel}>Suspect Description: <Text style={styles.modalValue}>{selectedRecord.suspect_description || 'N/A'}</Text></Text>
-                                        )}
-                                        {selectedRecord.suspect_option === 'IF KNOWN' && (
-                                            <>
-                                                <Text style={styles.modalLabel}>Name: <Text style={styles.modalValue}>{selectedRecord.suspect_name || 'N/A'}</Text></Text>
-                                                <Text style={styles.modalLabel}>Age: <Text style={styles.modalValue}>{selectedRecord.suspect_age || 'N/A'}</Text></Text>
-                                                <Text style={styles.modalLabel}>Sex: <Text style={styles.modalValue}>{selectedRecord.suspect_sex || 'N/A'}</Text></Text>
-                                                <Text style={styles.modalLabel}>Address: <Text style={styles.modalValue}>{selectedRecord.suspect_address || 'N/A'}</Text></Text>
-                                                <Text style={styles.modalLabel}>Description: <Text style={styles.modalValue}>{selectedRecord.suspect_known_description || 'N/A'}</Text></Text>
-                                            </>
-                                        )}
-
-                                        {/* Weapon Section */}
-                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Weapon Used</Text>
-                                        <Text style={styles.modalLabel}>Weapon Option: <Text style={styles.modalValue}>{selectedRecord.weapon_option || 'N/A'}</Text></Text>
-                                        {selectedRecord.weapon_option === 'IF KNOWN' && (
-                                            <Text style={styles.modalLabel}>Weapon Used: <Text style={styles.modalValue}>{selectedRecord.weapon_used || 'N/A'}</Text></Text>
-                                        )}
-
-                                        {/* Vehicle Section */}
-                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Vehicle Involved</Text>
-                                        <Text style={styles.modalLabel}>Vehicle Option: <Text style={styles.modalValue}>{selectedRecord.vehicle_option || 'N/A'}</Text></Text>
-                                        {selectedRecord.vehicle_option === 'IF KNOWN' && (
-                                            <Text style={styles.modalLabel}>Vehicle Involved: <Text style={styles.modalValue}>{selectedRecord.vehicle_involved || 'N/A'}</Text></Text>
-                                        )}
-
-                                        {/* Evidence Collection */}
-                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Evidence Collection</Text>
-                                        <Text style={styles.modalLabel}>Area Secured: <Text style={styles.modalValue}>{selectedRecord.evidence_secured || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Items Left Behind: <Text style={styles.modalValue}>{selectedRecord.items_left_behind || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Items Stolen: <Text style={styles.modalValue}>{selectedRecord.items_stolen || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Evidence Details: <Text style={styles.modalValue}>{selectedRecord.evidence_details || 'N/A'}</Text></Text>
-
-                                        {/* Motive & Context */}
-                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Motive & Context</Text>
-                                        <Text style={styles.modalLabel}>Motive Known: <Text style={styles.modalValue}>{selectedRecord.motive_known || 'N/A'}</Text></Text>
-                                        <Text style={styles.modalLabel}>Prior Conflict: <Text style={styles.modalValue}>{selectedRecord.prior_conflict || 'N/A'}</Text></Text>
-
-                                        {/* Other Victim's Information */}
-                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Other Victim's Information</Text>
-                                        <Text style={styles.modalLabel}>Victims Involved: <Text style={styles.modalValue}>{selectedRecord.victims_involved || 'N/A'}</Text></Text>
-
-                                        {/* Other Details */}
-                                        <Text style={[styles.modalLabel, {marginTop: 12}]}>Other Details</Text>
-                                        <Text style={styles.modalLabel}>Description: <Text style={styles.modalValue}>{selectedRecord.description || 'N/A'}</Text></Text>
-                                    </View>
+                        <View style={styles.bondPaperModalContent}>
+                            {/* Formal Crime Report Header */}
+                            <View style={styles.formalHeader}>
+                                <Text style={styles.formalHeaderTitle}>ALERTO MNL</Text>
+                                <Text style={styles.formalHeaderSub}>Crime Incident Report</Text>
+                                <Text style={styles.formalHeaderSub}>City of Manila Police District</Text>
+                            </View>
+                            <Text style={styles.formalSectionTitle}>CRIME REPORT</Text>
+                            <ScrollView contentContainerStyle={styles.bondPaperScrollContent}>
+                                {/* Formal format for all fields */}
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>NATURE OF CASE :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.type === 'N/A' ? 'None' : (selectedRecord?.type || 'None')}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>VICTIM NAME :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.name || 'N/A'}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>DATE & TIME :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{formatDate(selectedRecord?.date || '')}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>PLACE OF OCCURRENCE :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.address || ''}</Text></View></View>
+                                {/* Section: Suspect */}
+                                <Text style={styles.formalSectionTitle}>SUSPECT</Text>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>SUSPECT IDENTIFICATION :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{
+                                   selectedRecord?.suspect_option === 'N/A' ? 'Unknown' :
+                                   selectedRecord?.suspect_option?.toLowerCase() === 'if known' ? 'Known' :
+                                   selectedRecord?.suspect_option === 'Description' ? 'Described' :
+                                   selectedRecord?.suspect_option || 'Unknown'
+                                 }</Text></View></View>
+                                {selectedRecord?.suspect_option === 'Description' && (
+                                    <View style={styles.formalRow}><Text style={styles.formalLabel}>SUSPECT DESCRIPTION :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.suspect_description || 'N/A'}</Text></View></View>
                                 )}
+                                {selectedRecord?.suspect_option === 'IF KNOWN' && (
+                                    <>
+                                        <View style={styles.formalRow}><Text style={styles.formalLabel}>NAME :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.suspect_name || 'N/A'}</Text></View></View>
+                                        <View style={styles.formalRow}><Text style={styles.formalLabel}>AGE :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.suspect_age || 'N/A'}</Text></View></View>
+                                        <View style={styles.formalRow}><Text style={styles.formalLabel}>SEX :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.suspect_sex || 'N/A'}</Text></View></View>
+                                        <View style={styles.formalRow}><Text style={styles.formalLabel}>ADDRESS :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.suspect_address || 'N/A'}</Text></View></View>
+                                        <View style={styles.formalRow}><Text style={styles.formalLabel}>DESCRIPTION :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.suspect_known_description || 'N/A'}</Text></View></View>
+                                    </>
+                                )}
+                                {/* Section: Weapon */}
+                                <Text style={styles.formalSectionTitle}>WEAPON USED</Text>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>WEAPON :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.weapon_option === 'N/A' ? 'Unknown' : selectedRecord?.weapon_option === 'IF KNOWN' ? 'Known' : (selectedRecord?.weapon_option || 'Unknown')}</Text></View></View>
+                                {selectedRecord?.weapon_option === 'IF KNOWN' && (
+                                    <View style={styles.formalRow}><Text style={styles.formalLabel}>WEAPON USED :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.weapon_used || 'N/A'}</Text></View></View>
+                                )}
+                                {/* Section: Vehicle */}
+                                <Text style={styles.formalSectionTitle}>VEHICLE INVOLVED</Text>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>VEHICLE :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.vehicle_option === 'N/A' ? 'Unknown' : selectedRecord?.vehicle_option === 'IF KNOWN' ? 'Known' : (selectedRecord?.vehicle_option || 'Unknown')}</Text></View></View>
+                                {selectedRecord?.vehicle_option === 'IF KNOWN' && (
+                                    <View style={styles.formalRow}><Text style={styles.formalLabel}>VEHICLE INVOLVED :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.vehicle_involved || 'N/A'}</Text></View></View>
+                                )}
+                                {/* Section: Evidence */}
+                                <Text style={styles.formalSectionTitle}>EVIDENCE COLLECTION</Text>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>AREA SECURED :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.evidence_secured || 'N/A'}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>ITEMS LEFT BEHIND :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.items_left_behind || 'N/A'}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>ITEMS STOLEN :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.items_stolen || 'N/A'}</Text></View></View>
+                                {/* Section: Motive & Context */}
+                                <Text style={styles.formalSectionTitle}>MOTIVE & CONTEXT</Text>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>MOTIVE KNOWN :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.motive_known || 'N/A'}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>PRIOR CONFLICT :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.prior_conflict || 'N/A'}</Text></View></View>
+                                {/* Section: Victims/Other Info */}
+                                <Text style={styles.formalSectionTitle}>OTHER INFORMATION</Text>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>VICTIMS INVOLVED :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.victims_involved || 'N/A'}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>INJURIES/FATALITIES :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.injuries_fatalities || 'N/A'}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>MEDICAL HELP :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.medical_help || 'N/A'}</Text></View></View>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>SECURITY CAMERAS :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.security_cameras || 'N/A'}</Text></View></View>
+                                {/* Section: Other Details */}
+                                <Text style={styles.formalSectionTitle}>OTHER DETAILS</Text>
+                                <View style={styles.formalRow}><Text style={styles.formalLabel}>DESCRIPTION :</Text><View style={styles.formalValueLine}><Text style={styles.formalValue}>{selectedRecord?.description || 'N/A'}</Text></View></View>
+                                {/* Officer/Unit Info */}
+                                <View style={styles.formalOfficerBox}>
+                                    <Text style={styles.formalOfficerLabel}>NAME OF OFFICER-ON-CASE</Text>
+                                    <Text style={styles.formalOfficerValue}>{selectedRecord?.respondedBy || 'N/A'}</Text>
+                                    <Text style={styles.formalOfficerLabel}>RANK</Text>
+                                    <Text style={styles.formalOfficerValue}>Police Officer I (PO1)</Text>
+                                    <Text style={styles.formalOfficerLabel}>DESIGNATION</Text>
+                                    <Text style={styles.formalOfficerValue}>{selectedRecord?.station || 'Unknown'}</Text>
+                                    <Text style={styles.formalOfficerLabel}>STATUS</Text>
+                                    <Text style={styles.formalOfficerValue}>{selectedRecord?.status ? (selectedRecord.status.charAt(0).toUpperCase() + selectedRecord.status.slice(1)) : 'N/A'}</Text>
+                                </View>
                             </ScrollView>
+                            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12, marginBottom: 0, gap: 16 }}>
+                                <TouchableOpacity style={[styles.downloadButton, { flex: 1 }]} onPress={() => selectedRecord && downloadSingleRecord(selectedRecord)}>
+                                    <Text style={styles.downloadButtonText}>PDF</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.printButton, { flex: 1 }]} onPress={() => selectedRecord && printSingleRecord(selectedRecord)}>
+                                    <Text style={styles.printButtonText}>Print</Text>
+                                </TouchableOpacity>
+                            </View>
                             <TouchableOpacity style={styles.closeModalButton} onPress={() => setShowDetailsModal(false)}>
                                 <Text style={styles.closeModalButtonText}>Close</Text>
                             </TouchableOpacity>
@@ -1438,8 +1649,26 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         alignItems: 'center',
         justifyContent: 'center',
+        marginBottom: 0,
+        height: 40,
     },
     downloadButtonText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    printButton: {
+        backgroundColor: '#e02323',
+        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        marginLeft: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 0,
+        height: 40,
+    },
+    printButtonText: {
         color: 'white',
         fontWeight: '600',
         fontSize: 13,
@@ -1479,7 +1708,7 @@ const styles = StyleSheet.create({
         color: '#222',
     },
     closeModalButton: {
-        marginTop: 24,
+        marginTop: 10,
         backgroundColor: '#e02323',
         borderRadius: 8,
         paddingVertical: 10,
@@ -1501,5 +1730,126 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
+    },
+    bondPaperModalContent: {
+        backgroundColor: '#fff',
+        borderColor: '#ccc',
+        borderWidth: 1.5,
+        borderRadius: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        elevation: 12,
+        width: 595, // A4 width at 72dpi
+        maxWidth: '95%',
+        minHeight: 842, // A4 height at 72dpi
+        maxHeight: 842,
+        alignSelf: 'center',
+        padding: 40,
+        marginVertical: 24,
+        fontFamily: 'serif',
+        justifyContent: 'flex-start',
+        // overflow: 'hidden',
+    },
+    bondPaperScrollContent: {
+        flexGrow: 1,
+        justifyContent: 'flex-start',
+        // zIndex: 1,
+    },
+    sectionHeader: {
+        fontSize: 19,
+        fontWeight: 'bold',
+        color: '#e02323',
+        marginTop: 24,
+        marginBottom: 8,
+        letterSpacing: 0.5,
+        // No background, just bold and red
+    },
+    formalHeader: {
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    formalHeaderTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#222',
+        letterSpacing: 2,
+        marginBottom: 1,
+        textTransform: 'uppercase',
+    },
+    formalHeaderSub: {
+        fontSize: 13,
+        color: '#444',
+        marginBottom: 1,
+        letterSpacing: 1,
+    },
+    formalSectionTitle: {
+        fontWeight: 'bold',
+        fontSize: 16,
+        color: '#e02323',
+        marginBottom: 18,
+        marginTop: 8,
+        letterSpacing: 1,
+    },
+    formalRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    formalLabel: {
+        fontWeight: 'bold',
+        fontSize: 13,
+        color: '#222',
+        textTransform: 'uppercase',
+    },
+    formalColon: {}, // No longer used
+    formalValueLine: {
+        borderBottomWidth: 1,
+        borderColor: '#222',
+        borderStyle: 'solid',
+        flex: 1,
+        minHeight: 24,
+        justifyContent: 'center',
+    },
+    formalValue: {
+        fontSize: 13,
+        color: '#222',
+        paddingLeft: 4,
+    },
+    formalFactsTitle: {
+        fontWeight: 'bold',
+        fontSize: 13,
+        color: '#222',
+        marginTop: 18,
+        marginBottom: 4,
+        textTransform: 'uppercase',
+    },
+    formalFactsBox: {
+        borderWidth: 1,
+        borderColor: '#e02323',
+        borderRadius: 4,
+        minHeight: 60,
+        padding: 8,
+        marginBottom: 18,
+    },
+    formalFactsText: {
+        fontSize: 13,
+        color: '#222',
+    },
+    formalOfficerBox: {
+        alignItems: 'flex-end',
+        marginTop: 15,
+    },
+    formalOfficerLabel: {
+        fontSize: 12,
+        color: '#444',
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    formalOfficerValue: {
+        fontSize: 13,
+        color: '#222',
+        marginBottom: 6,
     },
 });
