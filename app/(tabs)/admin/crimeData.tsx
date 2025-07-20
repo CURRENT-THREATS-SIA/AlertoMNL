@@ -145,6 +145,23 @@ import {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     Platform, // Import Platform A
     Pressable,
     ScrollView,
@@ -215,7 +232,7 @@ const crimeTypes = [
     'Carnapping MV',
     'Carnapping MC'
   ];
-const severityLevels = ['All Severities', 'Low', 'Medium', 'High'];
+const severityLevels = ['All Severities', 'Low', 'Medium', 'High', 'N/A'];
 const itemsPerPage = 10;
 
 const formatDate = (dateString: string) => {
@@ -295,7 +312,7 @@ const getSeverityStyle = (severity: string | null) => {
     case 'low': return styles.severitylow;
     case 'medium': return styles.severitymedium;
     case 'high': return styles.severityhigh;
-    default: return {};
+    default: return { backgroundColor: '#bdbdbd' }; // light gray for N/A or unknown
   }
 };
 const getStatusStyle = (status: string | null) => {
@@ -303,7 +320,9 @@ const getStatusStyle = (status: string | null) => {
     case 'pending': return styles.statuspending;
     case 'responded': return styles.statusresponded;
     case 'resolved': return styles.statusresolved;
-    default: return {};
+    case 'active': return { backgroundColor: '#2196f3' }; // blue for active
+    case 'arrived': return { backgroundColor: '#8bc34a' }; // green for arrived
+    default: return { backgroundColor: '#bdbdbd' }; // light gray for N/A or unknown
   }
 };
 
@@ -335,12 +354,15 @@ export default function CrimeData() {
       return ['All Officers', ...officers];
     }, [masterCrimeData]);
 
-    // Compute unique status options
-    const statusOptions = useMemo(() => {
-      const statuses = Array.from(new Set(masterCrimeData.map(item => item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'N/A')));
-      statuses.sort();
-      return ['All Status', ...statuses.filter(s => s !== 'N/A')];
-    }, [masterCrimeData]);
+    // Use a static list of all possible statuses for the filter
+    const statusOptions = [
+      'All Status',
+      'Pending',
+      'Active',
+      'Arrived',
+      'Resolved',
+      'N/A'
+    ];
 
     const [selectedStatus, setSelectedStatus] = useState('All Status');
     const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -441,7 +463,7 @@ export default function CrimeData() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedType, selectedSeverity, searchQuery, selectedDate]);
+    }, [selectedType, selectedSeverity, selectedOfficer, selectedStatus, searchQuery, selectedDate, startDate, endDate]);
 
     const filteredData = useMemo(() => {
         let result = [...masterCrimeData];
@@ -466,16 +488,24 @@ export default function CrimeData() {
             result = result.filter(item => item.type === selectedType);
         }
         if (selectedSeverity !== 'All Severities') {
-            result = result.filter(item => item.severity === selectedSeverity);
+            if (selectedSeverity === 'N/A') {
+                result = result.filter(item => !item.severity || item.severity === 'N/A');
+            } else {
+                result = result.filter(item => item.severity === selectedSeverity);
+            }
         }
         if (selectedOfficer !== 'All Officers') {
             result = result.filter(item => item.respondedBy === selectedOfficer);
         }
         if (selectedStatus !== 'All Status') {
-            result = result.filter(item => {
-                if (!item.status) return false;
-                return (item.status.charAt(0).toUpperCase() + item.status.slice(1)) === selectedStatus;
-            });
+            if (selectedStatus === 'N/A') {
+                result = result.filter(item => !item.status || item.status === 'N/A');
+            } else {
+                result = result.filter(item => {
+                    if (!item.status) return false;
+                    return item.status.toLowerCase() === selectedStatus.toLowerCase();
+                });
+            }
         }
         // Date filter: only one type of filter should be active at a time
         const validStart = isValidDateString(startDate) ? toISODate(startDate) : null;
@@ -773,6 +803,7 @@ export default function CrimeData() {
                   <th>Type</th>
                   <th>Severity</th>
                   <th>Responded By</th>
+                  <th>Status</th>
               </tr>
           </thead>`;
   
@@ -787,6 +818,7 @@ export default function CrimeData() {
                   <td>${item.type || 'N/A'}</td>
                   <td>${item.severity || 'N/A'}</td>
                   <td>${item.respondedBy || 'N/A'}</td>
+                  <td>${item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'N/A'}</td>
               </tr>`;
   
           if ((index + 1) % 20 === 0 && index + 1 < data.length) {
@@ -1176,34 +1208,6 @@ export default function CrimeData() {
                                 )}
                             </View>
                         </Pressable>
-                        {/* Severity Filter */}
-                        <Pressable onPress={(e) => e.stopPropagation()}>
-                            <View>
-                                <TouchableOpacity style={styles.filterButton} onPress={toggleSeverityDropdown}>
-                                    <Filter size={16} color="#666" />
-                                    <Text style={styles.filterButtonText}>{selectedSeverity}</Text>
-                                    <ChevronDown size={16} color="#666" />
-                                </TouchableOpacity>
-                                {showSeverityDropdown && (
-                                    <View style={styles.dropdown}>
-                                        {severityLevels.map(level => (
-                                            <TouchableOpacity
-                                                key={level}
-                                                onPress={() => {
-                                                    setSelectedSeverity(level);
-                                                    setShowSeverityDropdown(false);
-                                                }}
-                                                style={styles.dropdownItem}
-                                            >
-                                                <Text style={[styles.dropdownItemText, selectedSeverity === level && styles.dropdownItemTextSelected]}>
-                                                    {level}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                )}
-                            </View>
-                        </Pressable>
                         {/* Officer Filter */}
                         <Pressable onPress={e => e.stopPropagation()}>
                           <View>
@@ -1236,6 +1240,34 @@ export default function CrimeData() {
                               </View>
                             )}
                           </View>
+                        </Pressable>
+                        {/* Severity Filter */}
+                        <Pressable onPress={(e) => e.stopPropagation()}>
+                            <View>
+                                <TouchableOpacity style={styles.filterButton} onPress={toggleSeverityDropdown}>
+                                    <Filter size={16} color="#666" />
+                                    <Text style={styles.filterButtonText}>{selectedSeverity}</Text>
+                                    <ChevronDown size={16} color="#666" />
+                                </TouchableOpacity>
+                                {showSeverityDropdown && (
+                                    <View style={styles.dropdown}>
+                                        {severityLevels.map(level => (
+                                            <TouchableOpacity
+                                                key={level}
+                                                onPress={() => {
+                                                    setSelectedSeverity(level);
+                                                    setShowSeverityDropdown(false);
+                                                }}
+                                                style={styles.dropdownItem}
+                                            >
+                                                <Text style={[styles.dropdownItemText, selectedSeverity === level && styles.dropdownItemTextSelected]}>
+                                                    {level}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
                         </Pressable>
                         {/* Status Filter */}
                         <Pressable onPress={e => e.stopPropagation()}>
@@ -1386,8 +1418,8 @@ export default function CrimeData() {
                                     <Text style={[styles.headerCell, { flex: 2 }]}>DATE</Text>
                                     <Text style={[styles.headerCell, { flex: 2 }]}>TYPE</Text>
                                     <Text style={[styles.headerCell, { flex: 2 }]}>SEVERITY</Text>
-                                    <Text style={[styles.headerCell, { flex: 2 }]}>RESPONDED BY</Text>
                                     <Text style={[styles.headerCell, { flex: 1.5 }]}>STATUS</Text>
+                                    <Text style={[styles.headerCell, { flex: 2 }]}>RESPONDED BY</Text>
                                     <Text style={[styles.headerCell, styles.viewHeaderCell]}>VIEW</Text>
                                 </View>
                             )}
@@ -1399,12 +1431,12 @@ export default function CrimeData() {
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={formatDate(item.date)} highlight={searchQuery} />
                                     <HighlightText style={[styles.cell, { flex: 2 }]} text={item.type || 'N/A'} highlight={searchQuery} />
                                     <View style={[styles.cell, { flex: 2 }]}> {/* Severity badge */}
-                                      <Text style={[styles.severityBadge, getSeverityStyle(item.severity ?? null)]}>{item.severity || 'N/A'}</Text>
+                                      <Text style={[styles.severityBadge, getSeverityStyle(item.severity ?? null)]}>{item.severity ? item.severity : 'N/A'}</Text>
                                     </View>
-                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={item.respondedBy} highlight={searchQuery} />
                                     <View style={[styles.cell, { flex: 1.5 }]}> {/* Status badge */}
                                       <Text style={[styles.statusBadge, getStatusStyle(item.status ?? null)]}>{item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'N/A'}</Text>
                                     </View>
+                                    <HighlightText style={[styles.cell, { flex: 2 }]} text={item.respondedBy} highlight={searchQuery} />
                                     <View style={[styles.cell, styles.viewCell]}>
                                         <TouchableOpacity
                                             style={styles.viewButton}
@@ -1664,7 +1696,7 @@ const styles = StyleSheet.create({
     dropdownItemTextSelected: {
         fontWeight: 'bold',
         color: '#e02323',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: 'transparent',
     },
     highlightedText: {
         backgroundColor: '#fff8b4'
@@ -1918,11 +1950,11 @@ const styles = StyleSheet.create({
         color: '#222',
         marginBottom: 6,
     },
-    severityBadge: { borderRadius: 12, paddingVertical: 2, paddingHorizontal: 10, fontSize: 13, fontWeight: '600', color: '#fff', alignSelf: 'center' },
+    severityBadge: { borderRadius: 12, paddingVertical: 2, paddingHorizontal: 10, fontSize: 13, fontWeight: '600', color: '#fff', alignSelf: 'center', width: 80, textAlign: 'center' },
     severitylow: { backgroundColor: '#4fc3f7' },
     severitymedium: { backgroundColor: '#ffb300' },
     severityhigh: { backgroundColor: '#e02323' },
-    statusBadge: { borderRadius: 12, paddingVertical: 2, paddingHorizontal: 10, fontSize: 13, fontWeight: '600', color: '#fff', alignSelf: 'center' },
+    statusBadge: { borderRadius: 12, paddingVertical: 2, paddingHorizontal: 10, fontSize: 13, fontWeight: '600', color: '#fff', alignSelf: 'center', width: 90, textAlign: 'center' },
     statuspending: { backgroundColor: '#ffb300' },
     statusresponded: { backgroundColor: '#4caf50' },
     statusresolved: { backgroundColor: '#4caf50' },
