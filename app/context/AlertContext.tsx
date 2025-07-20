@@ -82,9 +82,15 @@ export const AlertProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('🔍 API response:', data); // Debug log
 
       if (data.success && Array.isArray(data.notifications)) {
-        const newAlerts = data.notifications as AlertNotification[];
+        const newAlerts = data.notifications.map((alert: any) => ({
+          ...alert,
+          user_full_name: alert.f_name && alert.l_name ? `${alert.f_name} ${alert.l_name}` : (alert.user_full_name || ''),
+          location: alert.a_address && alert.a_address.trim() !== ''
+            ? alert.a_address
+            : (alert.a_latitude && alert.a_longitude ? `${alert.a_latitude}, ${alert.a_longitude}` : 'Unknown location'),
+        })) as AlertNotification[];
+        console.log('🔍 Mapped notifications:', newAlerts);
         console.log('🔍 Found', newAlerts.length, 'notifications'); // Debug log
-        
         // Only play sound for new alerts if there's no active alert
         if (!activeAlert) {
           const hasUnheardAlerts = newAlerts.some(alert => !playedAlertIds.current.has(alert.alert_id));

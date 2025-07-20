@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -21,6 +22,7 @@ const Profile: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [station, setStation] = useState('');
   const [badge, setBadge] = useState('');
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [emergencyResponded, setEmergencyResponded] = useState<number | null>(null);
   const [avgTimeResponse, setAvgTimeResponse] = useState<number | null>(null);
 
@@ -61,7 +63,8 @@ const Profile: React.FC = () => {
         const policeId = await AsyncStorage.getItem('police_id');
         console.log('policeId:', policeId); // Debug log
         if (!policeId) return;
-        const res = await fetch(`http://mnl911.atwebpages.com/get_officer_stats.php?police_id=${policeId}`);
+        // Add period as a query parameter
+        const res = await fetch(`http://mnl911.atwebpages.com/get_officer_stats.php?police_id=${policeId}&period=${period}`);
         const data = await res.json();
         console.log('Officer stats API response:', data); // Debug log
         if (data.success) {
@@ -74,7 +77,7 @@ const Profile: React.FC = () => {
       }
     };
     fetchOfficerStats();
-  }, []);
+  }, [period]);
 
   const updateShiftStatusOnServer = async (isOn: boolean) => {
     const policeId = await AsyncStorage.getItem('police_id');
@@ -172,6 +175,19 @@ const Profile: React.FC = () => {
           {/* Activity Dashboard */}
           <View style={styles.dashboardSection}>
             <Text style={[styles.dashboardTitle, { color: currentTheme.text }]}>Activity Dashboard</Text>
+            {/* Filter Picker */}
+            <View style={{ marginBottom: 8 }}>
+              <Picker
+                selectedValue={period}
+                onValueChange={(itemValue: 'day' | 'week' | 'month') => setPeriod(itemValue)}
+                style={{ color: currentTheme.text, backgroundColor: currentTheme.cardBackground }}
+                mode="dropdown"
+              >
+                <Picker.Item label="Today" value="day" />
+                <Picker.Item label="This Week" value="week" />
+                <Picker.Item label="This Month" value="month" />
+              </Picker>
+            </View>
             <View style={styles.activityCards}>
               <View style={[styles.activityCard, { backgroundColor: currentTheme.cardBackground }]}> 
                 <Text style={[styles.activityTitle, { color: '#E02323' }]}>Emergency Responded</Text>
