@@ -156,7 +156,7 @@ export default function Dashboard() {
                     
                     <View style={styles.tableHeader}>
                         <Text style={[styles.headerCell, { flex: 1.5 }]}>ALERT ID</Text>
-                        <Text style={[styles.headerCell, { flex: 2 }]}>NAME</Text>
+                        <Text style={[styles.headerCell, { flex: 2 }]}>VICTIM NAME</Text>
                         <Text style={[styles.headerCell, { flex: 3 }]}>ADDRESS</Text>
                         <Text style={[styles.headerCell, { flex: 3 }]}>DATE</Text>
                         <Text style={[styles.headerCell, { flex: 2 }]}>TYPE</Text>
