@@ -142,6 +142,9 @@ import {
 
 
 
+
+
+
     Platform, // Import Platform A
     Pressable,
     ScrollView,
@@ -1641,13 +1644,18 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#e5e5e5',
-        zIndex: 100,
+        zIndex: 9999, // ensure always on top
         maxHeight: 250, // Limit height for scroll
         overflow: 'scroll', // Enable scrolling for RN
+        pointerEvents: 'auto',
+        marginTop: 4, // add space below button
+        ...(Platform.OS === 'web' && { whiteSpace: 'nowrap', minWidth: 160 }),
     },
     dropdownItem: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+        paddingVertical: 14, // increase clickable area
+        paddingHorizontal: 18,
+        minHeight: 40,
+        ...(Platform.OS === 'web' && { whiteSpace: 'nowrap', minWidth: 160 }),
     },
     dropdownItemText: {
         fontSize: 14,
