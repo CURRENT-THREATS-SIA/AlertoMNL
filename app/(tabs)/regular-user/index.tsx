@@ -7,10 +7,12 @@ import * as SMS from 'expo-sms';
 import * as TaskManager from 'expo-task-manager';
 import { Mic } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Linking, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, Dimensions, Easing, Linking, Modal, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, Vibration, View } from "react-native";
 import WaveformVisualizer from "../../components/WaveformVisualizer";
+import { useSos } from '../../context/SosContext';
 import { theme, useTheme } from "../../context/ThemeContext";
 import { useVoiceRecords } from "../../context/VoiceRecordContext";
+import Profile from './Profile';
 
 // --- API URLs ---
 const API_TRIGGER_SOS_URL = 'http://mnl911.atwebpages.com/sosnotify.php';
@@ -41,19 +43,18 @@ TaskManager.defineTask('background-location-task', async ({ data, error }: TaskM
   return null; // Explicitly return a Promise that resolves to null
 });
 
+interface RegularUserHomeProps {
+  sosState: SOSState;
+  setSosState: React.Dispatch<React.SetStateAction<SOSState>>;
+}
+
 export default function RegularUserHome() {
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
-  const [locationAddress, setLocationAddress] = useState<string>("Fetching location...");
-  const [isRecording, setIsRecording] = useState(false);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const { sosState, setSosState, location, locationAddress, isRecording, isSendingSOS, countdown, setCountdown, startSOS, stopSOS, startManualRecording, stopManualRecording } = useSos();
   const [hasStoppedManualRecording, setHasStoppedManualRecording] = useState(false); // ← ADD HERE
-  const [isSendingSOS, setIsSendingSOS] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
   const [manualRecording, setManualRecording] = useState<Audio.Recording | null>(null);
   const { addRecord } = useVoiceRecords();
-  const [sosState, setSosState] = useState<SOSState>('idle');
   const [currentAlertId, setCurrentAlertId] = useState<number | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [sosDisabledUntil, setSosDisabledUntil] = useState<number | null>(null);
@@ -62,6 +63,10 @@ export default function RegularUserHome() {
   const [sosDelay, setSosDelay] = useState(3); // default to 3 seconds
   const cancelCountdownRef = useRef(false);
   const [testModeEnabled, setTestModeEnabled] = useState(false);
+  const [showCrimeMap, setShowCrimeMap] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // --- Refs for managing the automatic SOS recording ---
   const sosRecordingRef = useRef<Audio.Recording | null>(null);
@@ -135,7 +140,7 @@ export default function RegularUserHome() {
       // Reset SOS state and related UI
       setSosState('idle');
       setCountdown(null);
-      setIsSendingSOS(false);
+      // setIsSendingSOS(false); // REMOVED
       setCurrentAlertId(null);
 
       // Optionally clear polling interval if needed
@@ -165,7 +170,7 @@ export default function RegularUserHome() {
         console.log("Test Mode: Incident Resolved, transitioning to idle in 3s");
         timer = setTimeout(() => {
             setSosState('idle');
-            setIsSendingSOS(false);
+            // setIsSendingSOS(false); // REMOVED
         }, 3000);
     }
       
@@ -200,15 +205,14 @@ export default function RegularUserHome() {
           } catch (err) {
             console.error('Error auto-stopping manual recording:', err);
           } finally {
-            setManualRecording(null);
-            setIsRecording(false);
+            // setIsRecording(false); // REMOVED
             setHasStoppedManualRecording(true);
           }
         }
   
         const timer = setTimeout(() => {
           setSosState('idle');
-          setIsSendingSOS(false);
+          // setIsSendingSOS(false); // REMOVED
         }, 5000);
   
         return () => clearTimeout(timer);
@@ -229,8 +233,7 @@ export default function RegularUserHome() {
         console.log("Ignoring error during manual unload (it might be free already).");
       }
     }
-    setManualRecording(null);
-    setIsRecording(false);
+    // setIsRecording(false); // REMOVED
     
     await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -282,7 +285,7 @@ export default function RegularUserHome() {
         );
         // Still try to get foreground location for basic functionality
         const foregroundLocation = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
-        setLocation(foregroundLocation);
+        // setLocation(foregroundLocation); // REMOVED
         try {
           const addresses = await Location.reverseGeocodeAsync({
             latitude: foregroundLocation.coords.latitude,
@@ -296,10 +299,10 @@ export default function RegularUserHome() {
               address.subregion,
               address.city
             ].filter(Boolean).join(', ');
-            setLocationAddress(formattedAddress || 'Location found');
+            // setLocationAddress(formattedAddress || 'Location found'); // REMOVED
           }
         } catch (error) {
-          setLocationAddress('Location found (address unavailable)');
+          // setLocationAddress('Location found (address unavailable)'); // REMOVED
         }
         return;
       }
@@ -326,7 +329,7 @@ export default function RegularUserHome() {
           distanceInterval: 3,
         },
         async (newLocation) => {
-          setLocation(newLocation);
+          // setLocation(newLocation); // REMOVED
           try {
             // Reverse geocode with more detailed options
             const addresses = await Location.reverseGeocodeAsync({
@@ -341,11 +344,11 @@ export default function RegularUserHome() {
                 address.subregion,
                 address.city
               ].filter(Boolean).join(', ');
-              setLocationAddress(formattedAddress || 'Location found');
+              // setLocationAddress(formattedAddress || 'Location found'); // REMOVED
             }
           } catch (error) {
             console.error('Error getting address:', error);
-            setLocationAddress('Location found (address unavailable)');
+            // setLocationAddress('Location found (address unavailable)'); // REMOVED
           }
         }
       );
@@ -382,8 +385,8 @@ export default function RegularUserHome() {
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       
-      setRecording(newRecording);
-      setIsRecording(true);
+      // setRecording(newRecording); // REMOVED
+      // setIsRecording(true); // REMOVED
     } catch (error) {
       console.error('Error starting recording:', error);
       Alert.alert('Error', 'Failed to start recording.');
@@ -391,27 +394,27 @@ export default function RegularUserHome() {
   };
 
   const stopRecording = async () => {
-    if (!recording) return;
+    // if (!recording) return; // REMOVED
 
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      setRecording(null);
-      setIsRecording(false);
+      // await recording.stopAndUnloadAsync(); // REMOVED
+      // const uri = recording.getURI(); // REMOVED
+      // setRecording(null); // REMOVED
+      // setIsRecording(false); // REMOVED
 
-      if (uri) {
-        // Add the recording to the voice records
-        addRecord({
-          id: Date.now().toString(),
-          title: `Emergency Recording ${new Date().toLocaleDateString()}`,
-          duration: '1:30', // You would need to calculate actual duration
-          date: new Date().toLocaleDateString(),
-          uri: uri,
-        });
-      }
+      // if (uri) { // REMOVED
+      //   // Add the recording to the voice records // REMOVED
+      //   addRecord({ // REMOVED
+      //     id: Date.now().toString(), // REMOVED
+      //     title: `Emergency Recording ${new Date().toLocaleDateString()}`, // REMOVED
+      //     duration: '1:30', // You would need to calculate actual duration // REMOVED
+      //     date: new Date().toLocaleDateString(), // REMOVED
+      //     uri: uri, // REMOVED
+      //   }); // REMOVED
+      // } // REMOVED
     } catch (error) {
       console.error("Could not get initial location:", error);
-      setLocationAddress("Could not fetch location.");
+      // setLocationAddress("Could not fetch location."); // REMOVED
     }
   };
 
@@ -419,11 +422,11 @@ export default function RegularUserHome() {
     if (Platform.OS === 'web') {
       // For web, just get the location once
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation });
-      setLocation(location);
+      // setLocation(location); // REMOVED
       try {
         const addresses = await Location.reverseGeocodeAsync(location.coords);
         if (addresses && addresses[0]) {
-          setLocationAddress(formatAddress(addresses[0]));
+          // setLocationAddress(formatAddress(addresses[0])); // REMOVED
         }
       } catch (error) { /* handle error */ }
       return;
@@ -432,11 +435,11 @@ export default function RegularUserHome() {
     const subscription = await Location.watchPositionAsync(
       { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 5000, distanceInterval: 10 },
       async (newLocation) => {
-        setLocation(newLocation);
+        // setLocation(newLocation); // REMOVED
         try {
           const addresses = await Location.reverseGeocodeAsync(newLocation.coords);
           if (addresses && addresses[0]) {
-            setLocationAddress(formatAddress(addresses[0]));
+            // setLocationAddress(formatAddress(addresses[0])); // REMOVED
           }
         } catch (error) { /* handle error */ }
       }
@@ -498,9 +501,9 @@ export default function RegularUserHome() {
       console.error("Error stopping and uploading SOS recording:", e);
     } finally {
       sosRecordingRef.current = null;
-      if (!manualRecording) { // Only turn off indicator if no other recording is active
-        setIsRecording(false);
-      }
+      // if (!manualRecording) { // Only turn off indicator if no other recording is active // REMOVED
+      //   setIsRecording(false); // REMOVED
+      // } // REMOVED
     }
   };
 
@@ -511,7 +514,7 @@ export default function RegularUserHome() {
       return;
     }
 
-    setIsRecording(true);
+    // setIsRecording(true); // REMOVED
     try {
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
       const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
@@ -522,7 +525,7 @@ export default function RegularUserHome() {
 
     } catch (error) {
       console.error('Error starting SOS recording:', error);
-      setIsRecording(false); // Ensure this is reset on failure
+      // setIsRecording(false); // Ensure this is reset on failure // REMOVED
       if (sosRecordingRef.current) {
         try { await sosRecordingRef.current.stopAndUnloadAsync(); } catch (e) { /* ignore */ }
         sosRecordingRef.current = null;
@@ -532,7 +535,7 @@ export default function RegularUserHome() {
 
   // --- RECORDING LOGIC ---
   const recordAndUploadAudio = async (alertId: number) => {
-    setIsRecording(true);
+    // setIsRecording(true); // REMOVED
     let recordingObject: Audio.Recording | null = null;
     try {
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
@@ -558,57 +561,10 @@ export default function RegularUserHome() {
           console.error("Error stopping SOS recording:", e) 
         }
       }
-      setIsRecording(false);
+      // setIsRecording(false); // REMOVED
     }
   };
   
-  const startManualRecording = async () => {
-    if (sosState !== 'active') {
-      Alert.alert('Notice', 'Voice Recording cannot be triggered when SOS is not active.');
-      return;
-    }
-
-    if (hasStoppedManualRecording) {
-      Alert.alert('Not Allowed', 'You have already recorded. Recording again is not allowed.');
-      return;
-    }
-  
-    await ensureAudioIsFree();
-    try {
-      setIsRecording(true);
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setManualRecording(recording);
-    } catch (err) {
-      console.error('Failed to start manual recording', err);
-      setIsRecording(false);
-    }
-  };
-
-  const stopManualRecording = async () => {
-    if (!manualRecording) return;
-  
-    try {
-      await manualRecording.stopAndUnloadAsync();
-      const uri = manualRecording.getURI();
-      if (uri) {
-        addRecord({
-          id: Date.now().toString(),
-          title: `Manual Recording ${new Date().toLocaleDateString()}`,
-          duration: 'N/A',
-          date: new Date().toLocaleDateString(),
-          uri,
-        });
-        Alert.alert("Recording Saved");
-      }
-    } catch (error) {
-      console.error('Failed to stop manual recording', error);
-    } finally {
-      setManualRecording(null);
-      setHasStoppedManualRecording(true);
-    }
-  };
-  
-
   // Poll for police acceptance and resolution
   useEffect(() => {
     if ((sosState === 'active' || sosState === 'received' || sosState === 'arrived' || sosState === 'resolved') && currentAlertId) {
@@ -636,6 +592,27 @@ export default function RegularUserHome() {
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [sosState, currentAlertId]);
 
+  // --- NEW: Auto-send location updates when SOS is active ---
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (sosState === 'active' && currentAlertId && location) {
+      const sendLocation = async () => {
+        try {
+          await fetch('http://mnl911.atwebpages.com/update_alert_location.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `alert_id=${currentAlertId}&latitude=${location.coords.latitude}&longitude=${location.coords.longitude}`
+          });
+        } catch (e) {
+          // Optionally log error
+        }
+      };
+      sendLocation(); // Send immediately
+      interval = setInterval(sendLocation, 5000) as unknown as NodeJS.Timeout;
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [sosState, currentAlertId, location]);
+
   // --- MAIN SOS HANDLER ---
   const handleSOS = async () => {
     cancelCountdownRef.current = false;
@@ -648,13 +625,13 @@ export default function RegularUserHome() {
 
       if (isSendingSOS) return;
       await ensureAudioIsFree();
-      setIsSendingSOS(true);
+      // setIsSendingSOS(true); // REMOVED
       setSosState('countdown');
       setCountdown(sosDelay);
 
       for (let i = sosDelay; i > 0; i--) {
         if (cancelCountdownRef.current) {
-          setIsSendingSOS(false);
+          // setIsSendingSOS(false); // REMOVED
           setCountdown(null);
           setSosState('idle');
           return;
@@ -669,14 +646,14 @@ export default function RegularUserHome() {
 
     if (isSendingSOS || (sosDisabledUntil && Date.now() < sosDisabledUntil)) return;
     
-    setIsSendingSOS(true);
+    // setIsSendingSOS(true); // REMOVED
     setSosState('countdown');
     setCountdown(sosDelay);
     
     // Start countdown immediately
     for (let i = sosDelay; i > 0; i--) {
       if (cancelCountdownRef.current) {
-        setIsSendingSOS(false);
+        // setIsSendingSOS(false); // REMOVED
         setCountdown(null);
         setSosState('idle');
         return;
@@ -698,7 +675,7 @@ export default function RegularUserHome() {
         });
       }
       
-      setLocation(currentLocation);
+      // setLocation(currentLocation); // REMOVED
       
       // Create alert immediately
       const body = `nuser_id=${encodeURIComponent(nuserId)}&a_latitude=${encodeURIComponent(currentLocation.coords.latitude.toString())}&a_longitude=${encodeURIComponent(currentLocation.coords.longitude.toString())}&a_address=${encodeURIComponent(locationAddress)}`;
@@ -729,7 +706,7 @@ export default function RegularUserHome() {
       if (json.success && json.alert_id) {
         setSosState('active');
         setCurrentAlertId(json.alert_id);
-        setIsSendingSOS(false);
+        // setIsSendingSOS(false); // REMOVED
         // Asynchronous background tasks
         startSosRecording(json.alert_id);
         sendSOSMessages(`Emergency! I'm at ${locationAddress}. Latitude: ${currentLocation.coords.latitude}, Longitude: ${currentLocation.coords.longitude}`);
@@ -741,7 +718,7 @@ export default function RegularUserHome() {
       console.error("SOS ERROR: ", error);
       Alert.alert('SOS Failed', 'Could not send alert. Please check your connection and try again.');
       setSosState('idle');
-      setIsSendingSOS(false);
+      // setIsSendingSOS(false); // REMOVED
       setCountdown(null);
     }
   };
@@ -751,7 +728,7 @@ export default function RegularUserHome() {
     if (testModeEnabled) {
       Alert.alert('Simulation Stopped', 'You have stopped the SOS simulation.');
       setSosState('idle');
-      setIsSendingSOS(false);
+      // setIsSendingSOS(false); // REMOVED
       setCountdown(null);
       cancelCountdownRef.current = true;
       return;
@@ -813,12 +790,12 @@ export default function RegularUserHome() {
     
     // Since both manual and automatic recordings are now terminated,
     // we can safely turn off the recording indicator.
-    setIsRecording(false);
+    // setIsRecording(false); // REMOVED
 
     setSosState('idle');
     setCurrentAlertId(null);
     if (pollingRef.current) clearInterval(pollingRef.current);
-    setIsSendingSOS(false);
+    // setIsSendingSOS(false); // REMOVED
     setCountdown(null);
   };
 
@@ -879,7 +856,7 @@ export default function RegularUserHome() {
 
   // --- JSX / RENDER ---
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentTheme.background }]}> 
       <View style={styles.mainContent}>
         <View style={styles.sosSection}>
           <View style={styles.helpText}>
@@ -1001,7 +978,7 @@ export default function RegularUserHome() {
               cancelCountdownRef.current = true;
               setSosState('idle');
               setCountdown(null);
-              setIsSendingSOS(false);
+              // setIsSendingSOS(false); // REMOVED
               setSosDisabledUntil(null);
             }}
           >
@@ -1014,6 +991,19 @@ export default function RegularUserHome() {
           </TouchableOpacity>
         )}
       </View>
+      <Modal
+        visible={showProfile}
+        animationType="slide"
+        onRequestClose={() => setShowProfile(false)}
+      >
+        <Profile />
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 40, right: 20, backgroundColor: '#e02323', borderRadius: 20, padding: 10, zIndex: 100 }}
+          onPress={() => setShowProfile(false)}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Close</Text>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }

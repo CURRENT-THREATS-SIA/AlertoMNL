@@ -464,6 +464,24 @@ export default function MapStep() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!alert_id) return;
+    let interval: NodeJS.Timeout | undefined;
+    const fetchIncidentLocation = async () => {
+      try {
+        const response = await fetch(`http://mnl911.atwebpages.com/get_alert_location.php?alert_id=${alert_id}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.success && data.latitude && data.longitude) {
+          setAlertDetails(prev => prev ? { ...prev, a_latitude: parseFloat(data.latitude), a_longitude: parseFloat(data.longitude) } : prev);
+        }
+      } catch {}
+    };
+    fetchIncidentLocation();
+    interval = setInterval(fetchIncidentLocation, 3000);
+    return () => { if (interval) clearInterval(interval); };
+  }, [alert_id]);
+
   const getFormattedTime = (dateString: string) => {
     // Always show current Philippine time instead of database time
     const currentTime = getCurrentPhilippineTime();

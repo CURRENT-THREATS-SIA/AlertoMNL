@@ -1,9 +1,13 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Contacts from '../(tabs)/regular-user/Contacts';
+import CrimeMap from '../(tabs)/regular-user/CrimeMap';
+import History from '../(tabs)/regular-user/History';
 import { fonts } from '../config/fonts';
+import { useSos } from '../context/SosContext';
 import { theme, useTheme } from '../context/ThemeContext';
 
 
@@ -19,6 +23,8 @@ interface CustomTabBarProps {
 }
 
 const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
+  const { sosState } = useSos();
+  console.log('CustomTabBar sosState:', sosState);
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -33,6 +39,10 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
   if (activeScreen === 'History' && pathname.includes('/history/')) {
     return null;
   }
+
+  const [showCrimeMap, setShowCrimeMap] = React.useState(false);
+  const [showHistory, setShowHistory] = React.useState(false);
+  const [showContacts, setShowContacts] = React.useState(false);
 
   const navItems: NavItem[] = [
     { 
@@ -61,46 +71,97 @@ const CustomTabBar: React.FC<CustomTabBarProps> = ({ activeScreen }) => {
     },
   ];
 
-  const handleNavigation = (path: string, isCurrentTab: boolean) => {
-    if (isCurrentTab && pathname.includes('/history/')) return;
-    router.replace(path);
+  const handleTabPress = (label: string, isCurrentTab: boolean) => {
+    const isSosModal = sosState === 'active' || sosState === 'received' || sosState === 'arrived';
+    if (label === 'Home') {
+      if (!isCurrentTab) router.push('/regular-user');
+    } else if (isSosModal) {
+      if (label === 'Crime Map') setShowCrimeMap(true);
+      else if (label === 'History') setShowHistory(true);
+      else if (label === 'Contacts') setShowContacts(true);
+    } else {
+      // Normal navigation
+      const nav = navItems.find(item => item.label === label);
+      if (nav && !isCurrentTab) router.push(nav.path);
+    }
   };
 
   return (
-    <View style={[
-      styles.bottomNav, 
-      { 
-        paddingBottom: insets.bottom,
-        backgroundColor: currentTheme.cardBackground,
-        borderTopColor: currentTheme.border
-      }
-    ]}>
-      <View style={styles.bottomNavRow}>
-        {navItems.map((item, idx) => (
-          <TouchableOpacity 
-            key={idx} 
-            style={styles.bottomNavItem}
-            activeOpacity={0.7}
-            onPress={() => handleNavigation(item.path, item.active)}
-          >
-            <View style={[
-              styles.bottomNavIconContainer,
-            ]}>
-              {item.icon}
-            </View>
-            <Text 
-              style={[
-                item.active ? styles.bottomNavLabelActive : styles.bottomNavLabelInactive,
-                { color: item.active ? '#E02323' : currentTheme.subtitle }
-              ]}
-              numberOfLines={1}
+    <>
+      <View style={[
+        styles.bottomNav, 
+        { 
+          paddingBottom: insets.bottom,
+          backgroundColor: currentTheme.cardBackground,
+          borderTopColor: currentTheme.border
+        }
+      ]}>
+        <View style={styles.bottomNavRow}>
+          {navItems.map((item, idx) => (
+            <TouchableOpacity 
+              key={idx} 
+              style={styles.bottomNavItem}
+              activeOpacity={0.7}
+              onPress={() => handleTabPress(item.label, item.active)}
             >
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <View style={[
+                styles.bottomNavIconContainer,
+              ]}>
+                {item.icon}
+              </View>
+              <Text 
+                style={[
+                  item.active ? styles.bottomNavLabelActive : styles.bottomNavLabelInactive,
+                  { color: item.active ? '#E02323' : currentTheme.subtitle }
+                ]}
+                numberOfLines={1}
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-    </View>
+      <Modal
+        visible={showCrimeMap}
+        animationType="slide"
+        onRequestClose={() => setShowCrimeMap(false)}
+      >
+        <CrimeMap />
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 40, right: 20, backgroundColor: '#e02323', borderRadius: 20, padding: 10, zIndex: 100 }}
+          onPress={() => setShowCrimeMap(false)}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Close</Text>
+        </TouchableOpacity>
+      </Modal>
+      <Modal
+        visible={showHistory}
+        animationType="slide"
+        onRequestClose={() => setShowHistory(false)}
+      >
+        <History />
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 40, right: 20, backgroundColor: '#e02323', borderRadius: 20, padding: 10, zIndex: 100 }}
+          onPress={() => setShowHistory(false)}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Close</Text>
+        </TouchableOpacity>
+      </Modal>
+      <Modal
+        visible={showContacts}
+        animationType="slide"
+        onRequestClose={() => setShowContacts(false)}
+      >
+        <Contacts />
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 40, right: 20, backgroundColor: '#e02323', borderRadius: 20, padding: 10, zIndex: 100 }}
+          onPress={() => setShowContacts(false)}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Close</Text>
+        </TouchableOpacity>
+      </Modal>
+    </>
   );
 };
 

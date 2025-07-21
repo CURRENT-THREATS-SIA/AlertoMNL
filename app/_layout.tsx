@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { AlertProvider } from './context/AlertContext';
+import { SosProvider } from './context/SosContext';
 import { theme, ThemeProvider, useTheme } from './context/ThemeContext';
 import { VoiceRecordProvider } from "./context/VoiceRecordContext";
 
@@ -63,7 +64,9 @@ export default function RootLayout() {
     <ThemeProvider>
       <VoiceRecordProvider>
         <AlertProvider>
-          <RootLayoutContent />
+          <SosProvider>
+            <RootLayoutContent />
+          </SosProvider>
         </AlertProvider>
       </VoiceRecordProvider>
     </ThemeProvider>
