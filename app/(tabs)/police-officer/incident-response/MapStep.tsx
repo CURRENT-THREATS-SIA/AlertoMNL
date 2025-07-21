@@ -349,10 +349,15 @@ export default function MapStep() {
           throw new Error(`Server responded with status ${res.status}`);
         }
         const data = await res.json();
-        if (data.success && data.location && isMountedRef.current) {
-          setOfficerLocation({ lat: parseFloat(data.location.latitude), lng: parseFloat(data.location.longitude) });
+        if (data.success && data.police_location && isMountedRef.current) {
+          setOfficerLocation({ lat: parseFloat(data.police_location.latitude), lng: parseFloat(data.police_location.longitude) });
           setError(''); // Clear error on success
-        } else if (!data.success) {
+        }
+        // Optionally update incident location if backend has new value
+        if (data.success && data.alert_location && isMountedRef.current) {
+          setAlertDetails(prev => prev ? { ...prev, a_latitude: parseFloat(data.alert_location.a_latitude), a_longitude: parseFloat(data.alert_location.a_longitude) } : prev);
+        }
+        else if (!data.success) {
           // Don't throw an error, but log it, as it might be a temporary issue.
           console.warn(`Could not get police location: ${data.error}`);
         }
@@ -466,7 +471,7 @@ export default function MapStep() {
 
   useEffect(() => {
     if (!alert_id) return;
-    let interval: NodeJS.Timeout | undefined;
+    let interval: any; // Fix linter error: Type 'number' is not assignable to type 'Timeout'.
     const fetchIncidentLocation = async () => {
       try {
         const response = await fetch(`http://mnl911.atwebpages.com/get_alert_location.php?alert_id=${alert_id}`);

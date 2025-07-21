@@ -130,14 +130,18 @@ export default function ArrivedStep() {
           throw new Error(alertResult.error || 'Failed to fetch alert details.');
         }
 
-        if (locationResult.success && locationResult.location) {
+        if (locationResult.success && locationResult.police_location) {
           setOfficerLocation({
-            lat: parseFloat(locationResult.location.latitude),
-            lng: parseFloat(locationResult.location.longitude)
+            lat: parseFloat(locationResult.police_location.latitude),
+            lng: parseFloat(locationResult.police_location.longitude)
           });
-        } else {
-          // It's okay if officer location fails, we can still show the incident
-          console.warn('Could not fetch officer location on ArrivedStep.');
+        }
+        if (locationResult.success && locationResult.alert_location) {
+          setAlertDetails(prev => prev ? {
+            ...prev,
+            a_latitude: String(locationResult.alert_location.a_latitude),
+            a_longitude: String(locationResult.alert_location.a_longitude)
+          } : prev);
         }
 
       } catch (e: any) {
