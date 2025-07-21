@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Animated, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from '../../../components/Header';
 import NavBottomBar from '../../../components/NavBottomBar';
@@ -419,6 +420,8 @@ const CrimeMap: React.FC = () => {
     refreshPushToken();
   }, []);
 
+  const router = useRouter();
+
   return (
     <SafeAreaView style={[styles.rootBg, { backgroundColor: currentTheme.background }]}>
       <AlertModal 
@@ -436,39 +439,62 @@ const CrimeMap: React.FC = () => {
       />
       <Header />
       
-      {/* Active Alert Banner */}
+      {/* Combined Active Alert Banner with Return to Map */}
       {activeAlert && (
-        <View style={[styles.activeAlertBanner, { backgroundColor: '#E02323' }]}>
-          <Ionicons name="warning" size={20} color="#fff" />
-          <Text style={styles.activeAlertText}>
-            🚨 ACTIVE CALL: Responding to Alert #{activeAlert.alert_id}
-          </Text>
-          <TouchableOpacity 
-            style={styles.clearActiveButton}
-            onPress={() => {
-              // Clear active alert - this should be used when call is completed
-              Alert.alert(
-                "Complete Call",
-                "Are you sure you want to mark this call as completed?",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  { 
-                    text: "Complete", 
-                    style: "destructive",
-                    onPress: () => {
-                      // This would typically call an API to mark the alert as resolved
-                      // For now, we'll just clear the active alert
-                      // You can add API call here later
-                      clearActiveAlert();
-                    }
-                  }
-                ]
-              );
-            }}
-          >
-            <Ionicons name="close" size={16} color="#fff" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={{
+            marginBottom: 12,
+            borderRadius: 12,
+            backgroundColor: '#E02323',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.12,
+            shadowRadius: 3,
+            elevation: 3,
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+          }}
+          activeOpacity={0.85}
+          onPress={() => router.push(`/police-officer/incident-response?alert_id=${activeAlert.alert_id}`)}
+          accessibilityLabel="Return to Map"
+        >
+          <Ionicons name="warning" size={22} color="#fff" style={{ marginRight: 10 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, marginBottom: 1, textAlign: 'center' }}>
+              🚨 ACTIVE CALL
+            </Text>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, textAlign: 'center', marginBottom: 1 }}>
+              Responding to Alert #{activeAlert.alert_id}
+            </Text>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, textAlign: 'center', marginTop: 2, letterSpacing: 0.5 }}>
+              Return to Map
+            </Text>
+          </View>
+          {/* Chevron and X button side by side */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 10 }}>
+            <Ionicons name="chevron-forward" size={22} color="#fff" />
+            <TouchableOpacity
+              style={{
+                marginLeft: 6,
+                backgroundColor: 'rgba(0,0,0,0.15)',
+                borderRadius: 16,
+                padding: 4,
+              }}
+              onPress={e => {
+                e.stopPropagation && e.stopPropagation();
+                clearActiveAlert();
+              }}
+              accessibilityLabel="Dismiss Active Alert"
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       )}
       
       <ScrollView 
@@ -1045,16 +1071,13 @@ const styles = StyleSheet.create({
   activeAlertBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    position: 'relative',
+    minHeight: 64,
   },
   activeAlertText: {
     flex: 1,

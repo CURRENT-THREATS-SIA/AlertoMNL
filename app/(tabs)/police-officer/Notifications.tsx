@@ -12,12 +12,15 @@ const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId:
   const { isDarkMode } = useTheme();
   const currentTheme = isDarkMode ? theme.dark : theme.light;
 
+  // Debug log to see what data is coming in
+  console.log('AlertCard notification:', notification);
+
   const getTimeSinceAlert = () => {
     if (!notification.a_created) return 'Just now';
-    const alertTime = new Date(notification.a_created);
+    // Parse as UTC to avoid timezone issues
+    const alertTime = new Date(notification.a_created + 'Z');
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
-    
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     const hours = Math.floor(diffInMinutes / 60);
@@ -26,7 +29,7 @@ const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId:
 
   const isUrgent = () => {
     if (!notification.a_created) return true;
-    const alertTime = new Date(notification.a_created);
+    const alertTime = new Date(notification.a_created + 'Z');
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - alertTime.getTime()) / (1000 * 60));
     return diffInMinutes < 5;
@@ -38,11 +41,11 @@ const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId:
       <Text style={[styles.title, { color: currentTheme.text }]}>
         {isUrgent() ? '🚨 URGENT: Response Required!' : 'Response Required'}
       </Text>
-      
       <View style={styles.detailsContainer}>
         <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>From:</Text><Text style={[styles.detailText, {color: currentTheme.text}]}>{notification.user_full_name}</Text></View>
         <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>Alert ID:</Text><Text style={[styles.detailText, {color: currentTheme.text}]}>{notification.alert_id}</Text></View>
         <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>Location:</Text><Text style={[styles.detailText, {color: currentTheme.text}]} numberOfLines={2}>{notification.location}</Text></View>
+        {/* Always show time row */}
         <View style={styles.detailRow}><Text style={[styles.detailLabel, {color: currentTheme.text}]}>Time:</Text><Text style={[styles.detailText, {color: currentTheme.text}]}>{getTimeSinceAlert()}</Text></View>
         {notification.distance && (
           <View style={styles.detailRow}>
@@ -51,7 +54,6 @@ const AlertCard: React.FC<{ notification: AlertNotification; onAccept: (alertId:
           </View>
         )}
       </View>
-
       <TouchableOpacity style={[styles.acceptButton, isUrgent() && styles.urgentAcceptButton]} onPress={() => onAccept(notification.alert_id)}>
         <Text style={styles.acceptButtonText}>{isUrgent() ? '🚨 ACCEPT URGENT' : 'Accept'}</Text>
       </TouchableOpacity>

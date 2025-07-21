@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, Modal, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Modal, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import MapComponent from '../../../components/MapComponent';
 import { theme, useTheme } from '../../../context/ThemeContext';
@@ -25,7 +25,7 @@ const PersonPinIcon = ({ color }: { color: string }) => (
 
 const ClockIcon = ({ color }: { color: string }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24">
-    <Path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 14a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm.5-7V8h-1v4.25l3.5 2.08.5-.86-3-1.77z" fill={color}/>
+    <Path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm0 14a6 6 0 1 1 0-12 6 6 0 0 1 0 12z" fill={color}/>
   </Svg>
 );
 
@@ -331,8 +331,8 @@ export default function MapStep() {
     };
     // Initial fetch
     fetchAndSendLocation();
-    // Repeat every 10 seconds (reduced from 20 for faster updates)
-    locationInterval = setInterval(fetchAndSendLocation, 10000) as unknown as number;
+    // Repeat every 1 second (reduced from 10 for faster updates)
+    locationInterval = setInterval(fetchAndSendLocation, 1000) as unknown as number;
     return () => {
       if (locationInterval) clearInterval(locationInterval);
     };
@@ -349,10 +349,15 @@ export default function MapStep() {
           throw new Error(`Server responded with status ${res.status}`);
         }
         const data = await res.json();
-        if (data.success && data.location && isMountedRef.current) {
-          setOfficerLocation({ lat: parseFloat(data.location.latitude), lng: parseFloat(data.location.longitude) });
+        if (data.success && data.police_location && isMountedRef.current) {
+          setOfficerLocation({ lat: parseFloat(data.police_location.latitude), lng: parseFloat(data.police_location.longitude) });
           setError(''); // Clear error on success
-        } else if (!data.success) {
+        }
+        // Optionally update incident location if backend has new value
+        if (data.success && data.alert_location && isMountedRef.current) {
+          setAlertDetails(prev => prev ? { ...prev, a_latitude: parseFloat(data.alert_location.a_latitude), a_longitude: parseFloat(data.alert_location.a_longitude) } : prev);
+        }
+        else if (!data.success) {
           // Don't throw an error, but log it, as it might be a temporary issue.
           console.warn(`Could not get police location: ${data.error}`);
         }
@@ -362,7 +367,7 @@ export default function MapStep() {
       }
     };
     fetchOfficerLocation();
-    const interval = setInterval(fetchOfficerLocation, 10000); // Reduced from 20000 to 10000
+    const interval = setInterval(fetchOfficerLocation, 1000); // Reduced from 10000 to 1000
     return () => {
       clearInterval(interval);
     };
@@ -464,6 +469,24 @@ export default function MapStep() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!alert_id) return;
+    let interval: any; // Fix linter error: Type 'number' is not assignable to type 'Timeout'.
+    const fetchIncidentLocation = async () => {
+      try {
+        const response = await fetch(`http://mnl911.atwebpages.com/get_alert_location.php?alert_id=${alert_id}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.success && data.latitude && data.longitude) {
+          setAlertDetails(prev => prev ? { ...prev, a_latitude: parseFloat(data.latitude), a_longitude: parseFloat(data.longitude) } : prev);
+        }
+      } catch {}
+    };
+    fetchIncidentLocation();
+    interval = setInterval(fetchIncidentLocation, 3000);
+    return () => { if (interval) clearInterval(interval); };
+  }, [alert_id]);
+
   const getFormattedTime = (dateString: string) => {
     // Always show current Philippine time instead of database time
     const currentTime = getCurrentPhilippineTime();
@@ -497,23 +520,6 @@ export default function MapStep() {
   // --- Improved error display logic ---
   const isIndoor = alertDetails ? isIndoorLocation(alertDetails.a_address) : false;
   const shouldShowError = !!error && (!officerLocation || !routeCoords) && !isIndoor;
-
-  if (error && !isIndoor) {
-    return (
-      <View style={[styles.centered, { backgroundColor: currentTheme.background }]}> 
-        <Text style={{ color: currentTheme.statusResolved }}>{error}</Text>
-      </View>
-    );
-  }
-
-  if (!alertDetails) {
-    return (
-      <View style={[styles.centered, { backgroundColor: currentTheme.background }]}> 
-        <ActivityIndicator size="large" color={currentTheme.iconBackground} />
-        <Text style={{ color: currentTheme.text }}>Loading incident details...</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: currentTheme.background }]}>
@@ -561,7 +567,7 @@ export default function MapStep() {
         >
           <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Map</Text>
           <Text style={[styles.instructions, { color: isDarkMode ? currentTheme.subtitle : '#333' }]}>
-            {isIndoorLocation(alertDetails.a_address) 
+            {isIndoorLocation(alertDetails?.a_address || "") 
               ? "Indoor incident detected. Navigate to the location using the map markers."
               : "Navigate to the incident location and follow the route for the fastest response."
             }
@@ -570,7 +576,7 @@ export default function MapStep() {
             <PinIcon color="#E02323" />
             <View style={styles.infoTextContainer}>
               <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Incident Address</Text>
-              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails.a_address || 'Unknown address'}</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{alertDetails?.a_address || 'Unknown address'}</Text>
             </View>
           </View>
           <View style={styles.infoRow}>
@@ -585,7 +591,7 @@ export default function MapStep() {
             <View style={styles.infoTextContainer}>
               <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Estimated Time Arrival</Text>
               <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}> 
-                {isIndoorLocation(alertDetails.a_address) 
+                {isIndoorLocation(alertDetails?.a_address || "") 
                   ? "Indoor location - use map markers"
                   : getETA(routeCoords) !== null ? `${getETA(routeCoords)} minutes` : 'Calculating...'
                 }
@@ -596,14 +602,14 @@ export default function MapStep() {
             <CalendarIcon color="#E02323" />
             <View style={styles.infoTextContainer}>
               <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Current Time (PH)</Text>
-              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails.a_created)}</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{getFormattedTime(alertDetails?.a_created || "")}</Text>
             </View>
           </View>
           <View style={styles.infoRow}>
             <UserIcon color="#E02323" />
             <View style={styles.infoTextContainer}>
               <Text style={[styles.label, { color: isDarkMode ? '#fff' : '#222' }]}>Victim</Text>
-              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails.f_name} ${alertDetails.l_name} (${alertDetails.m_number})`}</Text>
+              <Text style={[styles.value, { color: isDarkMode ? currentTheme.subtitle : '#444' }]}>{`${alertDetails?.f_name || ''} ${alertDetails?.l_name || ''} (${alertDetails?.m_number || ''})`}</Text>
             </View>
           </View>
           <TouchableOpacity
