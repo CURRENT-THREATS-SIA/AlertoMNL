@@ -12,6 +12,7 @@ export default function PoliceOfficerLayout() {
         screenOptions={{ 
           headerShown: false,
           contentStyle: { backgroundColor: currentTheme.background },
+          animation: 'none',
         }}
       >
         <Stack.Screen name="Home" />
@@ -22,21 +23,24 @@ export default function PoliceOfficerLayout() {
           name="settings/app-permissions" 
           options={{
             presentation: 'modal',
-            contentStyle: { backgroundColor: currentTheme.background }
+            contentStyle: { backgroundColor: currentTheme.background },
+            animation: 'none',
           }}
         />
         <Stack.Screen 
           name="settings/privacy-policy" 
           options={{
             presentation: 'modal',
-            contentStyle: { backgroundColor: currentTheme.background }
+            contentStyle: { backgroundColor: currentTheme.background },
+            animation: 'none',
           }}
         />
         <Stack.Screen 
           name="settings/about" 
           options={{
             presentation: 'modal',
-            contentStyle: { backgroundColor: currentTheme.background }
+            contentStyle: { backgroundColor: currentTheme.background },
+            animation: 'none',
           }}
         />
         <Stack.Screen name="Notifications" />

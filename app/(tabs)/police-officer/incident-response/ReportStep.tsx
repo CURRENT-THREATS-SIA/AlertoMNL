@@ -4,19 +4,19 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    LayoutAnimation,
-    Modal,
-    Platform,
-    Platform as RNPlatform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity, // <-- Import Modal
-    TouchableWithoutFeedback,
-    UIManager, // <-- Import TouchableWithoutFeedback
-    View
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Modal,
+  Platform,
+  Platform as RNPlatform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity, // <-- Import Modal
+  TouchableWithoutFeedback,
+  UIManager, // <-- Import TouchableWithoutFeedback
+  View
 } from 'react-native';
 import { Path, Svg } from 'react-native-svg'; // <-- Import Svg for the dropdown arrow
 import Header from '../../../../components/Header';

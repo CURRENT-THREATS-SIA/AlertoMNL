@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -46,53 +45,8 @@ export default function ArrivedStep() {
   const [alertDetails, setAlertDetails] = useState<AlertDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [officerLocation, setOfficerLocation] = useState<{ lat: number; lng: number } | undefined>();
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | undefined>();
   const [sosReceivedTime, setSosReceivedTime] = useState<string>(''); // Store captured SOS time
 
-  // Get user's current location
-  useEffect(() => {
-    let locationSubscription: Location.LocationSubscription | null = null;
-
-    const startLocationTracking = async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.BestForNavigation,
-          });
-          setUserLocation({
-            lat: location.coords.latitude,
-            lng: location.coords.longitude,
-          });
-
-          locationSubscription = await Location.watchPositionAsync(
-            {
-              accuracy: Location.Accuracy.BestForNavigation,
-              timeInterval: 5000,
-              distanceInterval: 10,
-            },
-            (location) => {
-              setUserLocation({
-                lat: location.coords.latitude,
-                lng: location.coords.longitude,
-              });
-            }
-          );
-        }
-      } catch (error) {
-        console.error('Error getting location:', error);
-      }
-    };
-
-    startLocationTracking();
-
-    return () => {
-      if (locationSubscription) {
-        locationSubscription.remove();
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!alert_id) {
@@ -115,14 +69,9 @@ export default function ArrivedStep() {
           setSosReceivedTime(capturedTime);
         }
 
-        // Fetch alert and officer location details in parallel
-        const [alertRes, locationRes] = await Promise.all([
-          fetch(`http://mnl911.atwebpages.com/get_alert_details.php?alert_id=${alert_id}`),
-          fetch(`http://mnl911.atwebpages.com/get_police_location.php?police_id=${policeId}&alert_id=${alert_id}`)
-        ]);
-
+        // Fetch alert details
+        const alertRes = await fetch(`http://mnl911.atwebpages.com/get_alert_details.php?alert_id=${alert_id}`);
         const alertResult = await alertRes.json();
-        const locationResult = await locationRes.json();
 
         if (alertResult.success) {
           setAlertDetails(alertResult.data);
@@ -169,7 +118,7 @@ export default function ArrivedStep() {
       console.error('Date formatting error:', error);
       return 'Invalid Date';
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -196,10 +145,8 @@ export default function ArrivedStep() {
           selectedStation={null}
           userType={'police'}
           data={{ type: 'FeatureCollection', features: [] }}
-          officerLocation={officerLocation}
-          userLocation={userLocation}
           incidentLocation={alertDetails && alertDetails.a_latitude && alertDetails.a_longitude ? { lat: Number(alertDetails.a_latitude), lng: Number(alertDetails.a_longitude) } : undefined}
-          hideIncidentMarker={true}
+          hideControls={true}
         />
       </View>
       
